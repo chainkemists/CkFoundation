@@ -16,6 +16,7 @@
 #include "CkGroundNav/Cook/CkGroundNav_CookedFieldIndex.h"
 #include "CkGroundNav/Cook/CkGroundNav_CookedFieldLoad.h"
 #include "CkGroundNav/Facade/CkGroundNav_WorldFieldRegistry.h"
+#include "CkGroundNav/Streaming/CkGroundNav_StreamPartitionLifecycle.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldLinks.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldMarkupCost.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldSerialize.h"
@@ -139,6 +140,25 @@ namespace ck
         }
 
         /**
+         * Generated source blobs describe geometry/profile/config/selector only. Logical markup and
+         * links are owner-level derives applied after a source is composed, so including them here
+         * would falsely stale an immutable tile blob whenever those logical records change.
+         * This deliberately matches FCk_GroundNav_FieldCooker's manifest fingerprint.
+         */
+        auto Get_ManifestSourceFingerprint(
+            const FFragment_GroundNavVolume_Params& InParams,
+            const groundnav::FCk_GroundNav_DataLayerSelector& InDataLayerSelector) -> uint64
+        {
+            auto Variants = TArray<TPair<FName, FCk_GroundNav_AgentProfile>>{};
+            Variants.Reserve(InParams.Get_ProfileVariants().Num());
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            { Variants.Emplace(Variant.Get_ProfileTag().GetTagName(), Variant.Get_Profile()); }
+            return groundnav::Get_InputFingerprint(
+                InParams.Get_VolumeBounds(), InParams.Get_Config(), InParams.Get_Profile(), {}, {},
+                InParams.Get_MergeTunables(), InParams.Get_MaxClearanceUu(), Variants, InDataLayerSelector)._Value;
+        }
+
+        /**
          * The params of every field this volume bakes: the untagged default FIRST, then one per
          * authored variant differing from it in nothing but the profile.
          *
@@ -233,7 +253,7 @@ namespace ck
                    Get_ProfileVariantProfilesAreBakeable(InParams) &&
                    SelectorIsValid &&
                    InParams.Get_ProbeBudgetPerTick() > 0 &&
-                   (InParams.Get_StreamingBuildScope() != ECk_GroundNav_StreamingBuildScope::InvokerDriven ||
+                   (InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::WholeVolume ||
                     groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()}.Get_IsStreamingValid());
         }
 
@@ -756,14 +776,62 @@ namespace ck
         if (NOT CookKeyIsUnique)
         { return; }
 
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
+
+        // A manifest-driven owner publishes only its canonical all-profile lattice here. Runtime-cell
+        // manifests own every source handle and coordinate, so setup must not create the bootstrap
+        // source used by whole-volume and invoker-driven producers or resolve a legacy full-field cook.
+        if (InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::ManifestDriven)
+        {
+            const auto VolumeId = groundnav::FCk_GroundNav_VolumeId{InParams.Get_StreamingVolumeId()};
+            const auto MarkupRecords = Get_MarkupRecordsOf(
+                UCk_Utils_GroundNavVolume_UE::Get_MarkupRecords(InVolumeEntity));
+            const auto LinkRecords = Get_LinkRecordsOf(
+                UCk_Utils_GroundNavVolume_UE::Get_LinkEntries(InVolumeEntity));
+            auto Bundle = Get_EmptyStreamBundle(InParams, MarkupRecords, LinkRecords);
+            const auto ManifestFingerprint = Get_ManifestSourceFingerprint(InParams, DataLayerSelector);
+            auto VariantFingerprints = TMap<FGameplayTag, uint64>{};
+            for (const auto& Variant : InParams.Get_ProfileVariants())
+            { VariantFingerprints.Add(Variant.Get_ProfileTag(), ManifestFingerprint); }
+            const auto SourceLevelPackage = InParams.Get_CookLevelPackage().IsNone()
+                ? groundnav::Get_LevelPackageKey(World)
+                : groundnav::Get_PackageLookupKey(InParams.Get_CookLevelPackage().ToString());
+            const auto Registration = groundnav::stream_partitions::Register_ManifestOwner(
+                World, InVolumeEntity, VolumeId, Bundle, ManifestFingerprint,
+                VariantFingerprints, DataLayerSelector, SourceLevelPackage, InParams.Get_CookKey());
+            const auto RegistrationSucceeded = Registration.Get_Succeeded() &&
+                NOT Registration._Registry._Source.Get_IsValid() && Registration._OwnerInstance != 0;
+            CK_ENSURE_IF_NOT(RegistrationSucceeded,
+                TEXT("GroundNav manifest-driven Volume [{}] could not register its source-free canonical lattice: "
+                     "registry status [{}]"),
+                InVolumeEntity, static_cast<int32>(Registration._Status))
+            {}
+            if (NOT RegistrationSucceeded)
+            { return; }
+
+            Bundle._DefaultField._Epoch = Registration._Registry._Epoch;
+            for (auto& Variant : Bundle._VariantFields)
+            { Variant.Value._Epoch = Registration._Registry._Epoch; }
+            InBuiltField._Field = MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Bundle._DefaultField));
+            InBuiltField._VariantFields.Reset();
+            for (auto& Variant : Bundle._VariantFields)
+            {
+                InBuiltField._VariantFields.Emplace(
+                    Variant.Key, MakeShared<const groundnav::FCk_GroundNav_Field>(MoveTemp(Variant.Value)));
+            }
+            InBuiltField._Epoch = Registration._Registry._Epoch;
+            InBuiltField.Set_StreamOwnerRegistered(true);
+            InBuiltField.Set_ManifestOwnerInstance(Registration._OwnerInstance);
+            InBuiltField._CookStatus = ECk_GroundNav_CookStatus::RuntimeOnly;
+            return;
+        }
+
         auto CookResolution = Get_CookResolution(InVolumeEntity, InParams);
 
         // Stamped whatever the outcome. Three of the four values are the volume saying why the ground
         // it is about to bake is not coming from a cook, which is the half of the question a caller
         // asking "did this level ship cooked ground" actually needs answered.
         InBuiltField._CookStatus = CookResolution._Status;
-
-        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InVolumeEntity);
 
         if (CookResolution._Status == ECk_GroundNav_CookStatus::Cooked)
         {
@@ -1077,6 +1145,12 @@ namespace ck
         {}
 
         if (NOT ParamsAreBakeable)
+        {
+            InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
+            return;
+        }
+
+        if (InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::ManifestDriven)
         {
             InRequest.TryFireCompletion(InVolumeEntity, ECk_Request_OperationResult::Failed);
             return;
@@ -2900,7 +2974,9 @@ namespace ck
             return;
         }
 
-        const auto Result = groundnav::world_fields::Unregister_StreamOwner(World, InVolumeEntity, VolumeId);
+        const auto Result = InParams.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::ManifestDriven
+            ? groundnav::stream_partitions::Purge_OwnerPartitions(World, InVolumeEntity, VolumeId)._Registry
+            : groundnav::world_fields::Unregister_StreamOwner(World, InVolumeEntity, VolumeId);
         const auto TeardownSucceeded = Result.Get_Succeeded() ||
             Result._Status == groundnav::world_fields::ECk_GroundNav_StreamRegistryStatus::OwnerNotRegistered;
         CK_ENSURE_IF_NOT(TeardownSucceeded,

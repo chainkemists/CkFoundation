@@ -1098,7 +1098,8 @@ namespace
 
 auto ck::groundnav::world_fields::Register_StreamOwner(
     UWorld* InWorld, const FCk_Handle& InOwnerEntity, FCk_GroundNav_VolumeId InVolumeId,
-    const FCk_GroundNav_StreamFieldBundle& InInitialBundle) -> FCk_GroundNav_StreamRegistryResult
+    const FCk_GroundNav_StreamFieldBundle& InInitialBundle,
+    const bool InCreateBootstrapSource) -> FCk_GroundNav_StreamRegistryResult
 {
     const auto WorldIsValid = ck::IsValid(InWorld);
     CK_ENSURE_IF_NOT(WorldIsValid, TEXT("GroundNav stream registration requires a valid world"))
@@ -1132,29 +1133,36 @@ auto ck::groundnav::world_fields::Register_StreamOwner(
     DoStamp_TileEpochs(InitialBundle, InitialTileIndices, InitialEpoch);
 
     auto Owner = ck_groundnav_world_fields::FStreamOwner{InVolumeId, InOwnerEntity, MoveTemp(InitialBundle)};
-    auto Bootstrap = ck_groundnav_world_fields::FStreamSource{DoAllocate_StreamSourceHandle(), {}};
-    const auto BootstrapHandle = Bootstrap._Handle;
-    for (auto TileIndex = 0; TileIndex < Owner._Bundle._DefaultField._Tiles.Num(); ++TileIndex)
+    auto Bootstrap = ck_groundnav_world_fields::FStreamSource{};
+    auto BootstrapHandle = FCk_GroundNav_StreamSourceHandle{};
+    if (InCreateBootstrapSource)
     {
-        if (NOT Owner._Bundle._DefaultField._Tiles[TileIndex].Get_IsBuilt()) { continue; }
-        auto Tile = ck_groundnav_world_fields::FStreamTileState{};
-        const auto Coord = Get_TileCoord(Owner._Bundle._DefaultField._Params._Divisions, TileIndex);
-        Tile._Coord = Coord;
-        Write_Tile(Owner._Bundle._DefaultField, Coord, Tile._DefaultBlob);
-        for (const auto& Variant : Owner._Bundle._VariantFields)
+        Bootstrap._Handle = DoAllocate_StreamSourceHandle();
+        BootstrapHandle = Bootstrap._Handle;
+        for (auto TileIndex = 0; TileIndex < Owner._Bundle._DefaultField._Tiles.Num(); ++TileIndex)
         {
-            const auto VariantHasTile = Variant.Value._Tiles.IsValidIndex(TileIndex) &&
-                Variant.Value._Tiles[TileIndex].Get_IsBuilt();
-            CK_ENSURE_IF_NOT(VariantHasTile,
-                TEXT("GroundNav stream registration bundle lost a variant tile during preparation"))
-            {}
-            if (NOT VariantHasTile) { return DoMake_Result(ECk_GroundNav_StreamRegistryStatus::InvalidBundle); }
-            Write_Tile(Variant.Value, Coord, Tile._VariantBlobs.FindOrAdd(Variant.Key));
+            if (NOT Owner._Bundle._DefaultField._Tiles[TileIndex].Get_IsBuilt()) { continue; }
+            auto Tile = ck_groundnav_world_fields::FStreamTileState{};
+            const auto Coord = Get_TileCoord(Owner._Bundle._DefaultField._Params._Divisions, TileIndex);
+            Tile._Coord = Coord;
+            Write_Tile(Owner._Bundle._DefaultField, Coord, Tile._DefaultBlob);
+            for (const auto& Variant : Owner._Bundle._VariantFields)
+            {
+                const auto VariantHasTile = Variant.Value._Tiles.IsValidIndex(TileIndex) &&
+                    Variant.Value._Tiles[TileIndex].Get_IsBuilt();
+                CK_ENSURE_IF_NOT(VariantHasTile,
+                    TEXT("GroundNav stream registration bundle lost a variant tile during preparation"))
+                {}
+                if (NOT VariantHasTile) { return DoMake_Result(ECk_GroundNav_StreamRegistryStatus::InvalidBundle); }
+                Write_Tile(Variant.Value, Coord, Tile._VariantBlobs.FindOrAdd(Variant.Key));
+            }
+            Bootstrap._Tiles.Emplace(TileIndex, MoveTemp(Tile));
         }
-        Bootstrap._Tiles.Emplace(TileIndex, MoveTemp(Tile));
+        Owner._Sources.Emplace(FCk_GroundNav_StreamRegistryAccess::Get(Bootstrap._Handle), MoveTemp(Bootstrap));
     }
-    Owner._Sources.Emplace(FCk_GroundNav_StreamRegistryAccess::Get(Bootstrap._Handle), MoveTemp(Bootstrap));
-    const auto InitialChangedBounds = Owner._Bundle._DefaultField._Params.Get_Bounds();
+    const auto InitialChangedBounds = InCreateBootstrapSource
+        ? Owner._Bundle._DefaultField._Params.Get_Bounds()
+        : FBox{ForceInit};
 
     auto PublishedEntry = ck_groundnav_world_fields::FEntry{};
     PublishedEntry._VolumeEntity = InOwnerEntity;

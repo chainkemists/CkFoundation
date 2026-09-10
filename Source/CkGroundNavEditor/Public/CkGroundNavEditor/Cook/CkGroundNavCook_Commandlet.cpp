@@ -9,6 +9,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 #include "CkEntitySpawner/CkEntitySpawner_Actor.h"
 #include "CkGroundNav/Cook/CkGroundNav_CookedFieldIndex.h"
+#include "CkGroundNav/Streaming/CkGroundNav_StreamManifestBinding_UE.h"
 #include "CkGroundNav/Volume/CkGroundNavVolume_EntityScript.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
 #include "CkJoltEditor/Cook/CkJoltCook_MapSelection.h"
@@ -39,6 +40,16 @@ namespace ck_groundnav_cook_commandlet
         FCk_Fragment_GroundNavVolume_ParamsData _Params;
         FName _SourceLevel;
         TArray<ck::groundnav::cook::FCk_GroundNav_CookFieldPlan> _Plans;
+    };
+
+    /** A value copy of a cell-resident manifest binding. Descriptor-owned actors are released after each callback. */
+    struct FSourceManifestBindingCandidate
+    {
+        int32 _StreamingVolumeId = INDEX_NONE;
+        int32 _PartitionId = INDEX_NONE;
+        ck::groundnav::FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+        TArray<FIntPoint> _TileCoords;
+        FString _AuthoredManifestPath;
     };
 
     static auto Discover_AlwaysCookMapCandidates(const TArray<FString>& InDirectories) -> TArray<FString>
@@ -192,6 +203,9 @@ namespace ck_groundnav_cook_commandlet
         { return false; }
 
         const auto SourceLevel = ck::groundnav::Get_PackageLookupKey(Level->GetOutermost()->GetName());
+        // Keep the params consumed by runtime owner registration on the same canonical source-level
+        // identity used to name this commandlet's generated field and manifest assets.
+        PlacedParams.Set_CookLevelPackage(SourceLevel);
         OutIdentities.Emplace(ck::groundnav::cook::FCk_GroundNav_CookIdentity{
             SourceLevel, PlacedParams.Get_CookKey(), PlacedParams.Get_StreamingVolumeId(),
             PlacedParams.Get_DataLayerSelector()});
@@ -202,6 +216,43 @@ namespace ck_groundnav_cook_commandlet
         Candidate._SourceLevel = SourceLevel;
         OutCandidates.Emplace(MoveTemp(Candidate));
         return true;
+    }
+
+    static auto
+        Try_AddSourceManifestBinding(
+            const AActor& InActor,
+            TArray<FSourceManifestBindingCandidate>& OutBindings)
+        -> bool
+    {
+        const auto* Binding = Cast<ACk_GroundNav_StreamManifestBinding_UE>(&InActor);
+        if (Binding == nullptr)
+        { return true; }
+
+        auto Selector = ck::groundnav::FCk_GroundNav_DataLayerSelector{};
+        const auto BindingIsValid = Binding->Get_HasValidIdentity() &&
+            Binding->TryGet_DataLayerSelector(Selector);
+        CK_ENSURE_IF_NOT(BindingIsValid,
+            TEXT("GroundNavCook: stream manifest binding [{}] needs positive ids, canonical selector, and sorted tile coordinates"),
+            Binding->GetName())
+        { }
+        if (NOT BindingIsValid)
+        { return false; }
+
+        auto Candidate = FSourceManifestBindingCandidate{};
+        Candidate._StreamingVolumeId = Binding->_StreamingVolumeId;
+        Candidate._PartitionId = Binding->_PartitionId;
+        Candidate._DataLayerSelector = MoveTemp(Selector);
+        Candidate._TileCoords = Binding->_TileCoords;
+        Candidate._AuthoredManifestPath = Binding->_Manifest.IsNull()
+            ? FString{}
+            : Binding->_Manifest.ToSoftObjectPath().ToString();
+        OutBindings.Emplace(MoveTemp(Candidate));
+        return true;
+    }
+
+    static auto Get_IsManifestDriven(const FCookCandidate& InCandidate) -> bool
+    {
+        return InCandidate._Params.Get_StreamingBuildScope() == ECk_GroundNav_StreamingBuildScope::ManifestDriven;
     }
 }
 
@@ -333,6 +384,7 @@ auto
 
     auto Candidates = TArray<ck_groundnav_cook_commandlet::FCookCandidate>{};
     auto Identities = TArray<ck::groundnav::cook::FCk_GroundNav_CookIdentity>{};
+    auto SourceManifestBindings = TArray<ck_groundnav_cook_commandlet::FSourceManifestBindingCandidate>{};
 
     // Seed the identity set before the descriptor walk. World Partition may return an actor that is
     // already present in a loaded cell; baking it twice would silently create duplicate cook identity
@@ -351,6 +403,11 @@ auto
     for (TActorIterator<ACk_EntitySpawner_UE> It{World}; It; ++It)
     {
         if (NOT ck_groundnav_cook_commandlet::Try_AddCookCandidate(**It, Candidates, Identities))
+        { return 1; }
+    }
+    for (TActorIterator<ACk_GroundNav_StreamManifestBinding_UE> It{World}; It; ++It)
+    {
+        if (NOT ck_groundnav_cook_commandlet::Try_AddSourceManifestBinding(**It, SourceManifestBindings))
         { return 1; }
     }
 
@@ -384,7 +441,8 @@ auto
                 { DescriptorWalkSucceeded = false; return false; }
 
                 DescriptorWalkSucceeded = ck_groundnav_cook_commandlet::Try_AddCookCandidate(
-                    *Actor, Candidates, Identities);
+                    *Actor, Candidates, Identities) &&
+                    ck_groundnav_cook_commandlet::Try_AddSourceManifestBinding(*Actor, SourceManifestBindings);
                 return DescriptorWalkSucceeded;
             });
 
@@ -429,21 +487,121 @@ auto
             Candidate._SpawnerName, Stats._NumFields, Stats._NumTiles);
     }
 
+    // Bindings are authored source ownership, never inferred from a World Partition cell or descriptor.
+    // Validate every relation after every pure bake succeeds, before any generated asset package is created.
+    auto SourceManifestPlans = TArray<ck::groundnav::cook::FCk_GroundNav_CookSourceManifestPlan>{};
+    auto SeenSourcePartitionKeys = TSet<FString>{};
+    for (const auto& Binding : SourceManifestBindings)
+    {
+        const auto PartitionKey = FString::Printf(TEXT("%d:%d"), Binding._StreamingVolumeId, Binding._PartitionId);
+        const auto PartitionIsUnique = !SeenSourcePartitionKeys.Contains(PartitionKey);
+        CK_ENSURE_IF_NOT(PartitionIsUnique,
+            TEXT("GroundNavCook: duplicate stream manifest binding for {volume {}, partition {}}"),
+            Binding._StreamingVolumeId, Binding._PartitionId)
+        { }
+        if (NOT PartitionIsUnique)
+        { return 1; }
+        SeenSourcePartitionKeys.Add(PartitionKey);
+
+        auto MatchingCandidateIndices = TArray<int32>{};
+        for (auto CandidateIndex = 0; CandidateIndex < Candidates.Num(); ++CandidateIndex)
+        {
+            const auto& Candidate = Candidates[CandidateIndex];
+            if (ck_groundnav_cook_commandlet::Get_IsManifestDriven(Candidate) &&
+                Candidate._Params.Get_StreamingVolumeId() == Binding._StreamingVolumeId)
+            { MatchingCandidateIndices.Add(CandidateIndex); }
+        }
+
+        const auto HasOneManifestDrivenOwner = MatchingCandidateIndices.Num() == 1;
+        CK_ENSURE_IF_NOT(HasOneManifestDrivenOwner,
+            TEXT("GroundNavCook: stream manifest binding {volume {}, partition {}} must match exactly one ManifestDriven volume"),
+            Binding._StreamingVolumeId, Binding._PartitionId)
+        { }
+        if (NOT HasOneManifestDrivenOwner)
+        { return 1; }
+
+        const auto& Owner = Candidates[MatchingCandidateIndices[0]];
+        const auto SelectorMatchesOwner = Owner._Params.Get_DataLayerSelector().Get_LayerNames() ==
+            Binding._DataLayerSelector.Get_LayerNames();
+        CK_ENSURE_IF_NOT(SelectorMatchesOwner,
+            TEXT("GroundNavCook: stream manifest binding {volume {}, partition {}} selector differs from its ManifestDriven volume"),
+            Binding._StreamingVolumeId, Binding._PartitionId)
+        { }
+        if (NOT SelectorMatchesOwner)
+        { return 1; }
+    }
+
+    for (auto CandidateIndex = 0; CandidateIndex < Candidates.Num(); ++CandidateIndex)
+    {
+        const auto& Candidate = Candidates[CandidateIndex];
+        if (NOT ck_groundnav_cook_commandlet::Get_IsManifestDriven(Candidate))
+        { continue; }
+
+        auto Partitions = TArray<ck::groundnav::cook::FCk_GroundNav_CookSourcePartition>{};
+        for (const auto& Binding : SourceManifestBindings)
+        {
+            if (Binding._StreamingVolumeId != Candidate._Params.Get_StreamingVolumeId())
+            { continue; }
+
+            auto Partition = ck::groundnav::cook::FCk_GroundNav_CookSourcePartition{};
+            Partition._StreamingVolumeId = Binding._StreamingVolumeId;
+            Partition._PartitionId = Binding._PartitionId;
+            Partition._DataLayerSelector = Binding._DataLayerSelector;
+            Partition._TileCoords = Binding._TileCoords;
+            Partitions.Emplace(MoveTemp(Partition));
+        }
+
+        const auto HasBindings = !Partitions.IsEmpty();
+        CK_ENSURE_IF_NOT(HasBindings,
+            TEXT("GroundNavCook: ManifestDriven volume [{}] has no explicit stream manifest bindings"),
+            Candidate._SpawnerName)
+        { }
+        if (NOT HasBindings)
+        { return 1; }
+
+        auto CandidateManifestPlans = TArray<ck::groundnav::cook::FCk_GroundNav_CookSourceManifestPlan>{};
+        if (NOT ck::groundnav::cook::FCk_GroundNav_FieldCooker::Try_BuildSourceManifestPlans(
+            Candidate._Plans, Partitions, CandidateManifestPlans))
+        { return 1; }
+
+        for (const auto& ManifestPlan : CandidateManifestPlans)
+        {
+            const auto* Binding = SourceManifestBindings.FindByPredicate([&ManifestPlan](const auto& InBinding)
+            {
+                return InBinding._StreamingVolumeId == ManifestPlan._StreamingVolumeId &&
+                    InBinding._PartitionId == ManifestPlan._PartitionId;
+            });
+            const auto AssetPathMatchesBinding = Binding != nullptr &&
+                (Binding->_AuthoredManifestPath.IsEmpty() || Binding->_AuthoredManifestPath == ManifestPlan._AssetPath);
+            CK_ENSURE_IF_NOT(AssetPathMatchesBinding,
+                TEXT("GroundNavCook: binding for {volume {}, partition {}} names a different generated manifest asset"),
+                ManifestPlan._StreamingVolumeId, ManifestPlan._PartitionId)
+            { }
+            if (NOT AssetPathMatchesBinding)
+            { return 1; }
+        }
+
+        SourceManifestPlans.Append(MoveTemp(CandidateManifestPlans));
+    }
+
     if (IsDryRun)
     { return 0; }
 
     // All authored identities and pure bakes held before any package is created. An unsupported volume
     // therefore rejects the map with zero generated output rather than after another volume was saved.
+    auto FieldPlans = TArray<ck::groundnav::cook::FCk_GroundNav_CookFieldPlan>{};
     for (const auto& Candidate : Candidates)
-    {
-        const auto Stats = ck::groundnav::cook::FCk_GroundNav_FieldCooker::Save_Plans(Candidate._Plans);
+    { FieldPlans.Append(Candidate._Plans); }
+    const auto Stats = ck::groundnav::cook::FCk_GroundNav_FieldCooker::Save_Plans(FieldPlans);
+    if (NOT Stats._Success)
+    { return 1; }
 
-        if (NOT Stats._Success)
-        { return 1; }
+    if (!SourceManifestPlans.IsEmpty() &&
+        NOT ck::groundnav::cook::FCk_GroundNav_FieldCooker::Save_SourceManifestPlans(SourceManifestPlans))
+    { return 1; }
 
-        ck::groundnav_editor::Log(TEXT("GroundNavCook: [{}] wrote {} asset(s)"),
-            Candidate._SpawnerName, Stats._NumAssetsWritten);
-    }
+    ck::groundnav_editor::Log(TEXT("GroundNavCook: wrote {} field asset(s) and {} source manifest(s)"),
+        Stats._NumAssetsWritten, SourceManifestPlans.Num());
 
     return 0;
 }

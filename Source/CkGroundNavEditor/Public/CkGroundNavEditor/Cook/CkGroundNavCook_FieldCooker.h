@@ -56,6 +56,35 @@ namespace ck::groundnav::cook
         FCk_GroundNav_DataLayerSelector _DataLayerSelector;
     };
 
+    /**
+     * The durable ownership input for one source-manifest asset. The caller supplies this from a
+     * World Partition catalog; the cooker deliberately does not derive a partition id from a cell
+     * name or a transient editor object.
+     */
+    struct FCk_GroundNav_CookSourcePartition
+    {
+        int32 _StreamingVolumeId = INDEX_NONE;
+        int32 _PartitionId = INDEX_NONE;
+        FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+        TArray<FIntPoint> _TileCoords;
+    };
+
+    /** A fully resolved, deterministic source-manifest save request. */
+    struct FCk_GroundNav_CookSourceManifestPlan
+    {
+        FName _SourceLevelPackage;
+        FName _CookKey;
+        int32 _StreamingVolumeId = INDEX_NONE;
+        int32 _PartitionId = INDEX_NONE;
+        FCk_GroundNav_DataLayerSelector _DataLayerSelector;
+        FCk_GroundNav_CookedLatticeKey _LatticeKey;
+        TArray<FIntPoint> _TileCoords;
+        TArray<FGameplayTag> _ProfileTags;
+        TArray<uint64> _ProfileFingerprints;
+        TArray<TArray<FString>> _ProfileTilePaths;
+        FString _AssetPath;
+    };
+
     /// Pure bake plus optional asset persistence. The commandlet and the hermetic driver both call this
     /// one implementation; DryRun executes the identical bake and serialization path, then stops before
     /// package creation or writes.
@@ -89,6 +118,29 @@ namespace ck::groundnav::cook
         Save_Plans(
             TConstArrayView<FCk_GroundNav_CookFieldPlan> InPlans)
             -> FCk_GroundNav_CookFieldStats;
+
+        /**
+         * Resolves explicit World Partition ownership inputs into deterministic manifest save plans.
+         * Every partition is checked against the complete default-plus-variant field-plan set before
+         * OutPlans changes. Returned plans are ordered by partition id; coordinates must be sorted
+         * and cannot be claimed by two partitions.
+         */
+        static auto
+        Try_BuildSourceManifestPlans(
+            TConstArrayView<FCk_GroundNav_CookFieldPlan>     InFieldPlans,
+            TConstArrayView<FCk_GroundNav_CookSourcePartition> InPartitions,
+            TArray<FCk_GroundNav_CookSourceManifestPlan>&    OutPlans)
+            -> bool;
+
+        /**
+         * Persists already-resolved manifest plans only after every referenced tile package already
+         * exists on disk. Call this after a successful Save_Plans for the exact field-plan batch;
+         * it deliberately refuses to publish a manifest that can dangle from its tile assets.
+         */
+        static auto
+        Save_SourceManifestPlans(
+            TConstArrayView<FCk_GroundNav_CookSourceManifestPlan> InPlans)
+            -> bool;
     };
 }
 

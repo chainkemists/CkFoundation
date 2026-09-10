@@ -229,11 +229,17 @@ namespace ck::groundnav::world_fields
 
     // Streaming owns a separate positive-VolumeId sidecar. The legacy handle-keyed methods above
     // intentionally do not consult it, so INDEX_NONE callers retain their existing behavior.
+    /**
+     * Registers the immutable all-profile lattice for one positive volume id. Whole-volume and
+     * invoker producers request a bootstrap source; generated-manifest owners pass false so no
+     * coordinate can be reserved before its durable partition source loads.
+     */
     CKGROUNDNAV_API auto Register_StreamOwner(
         UWorld*                                  InWorld,
         const FCk_Handle&                        InOwnerEntity,
         FCk_GroundNav_VolumeId                   InVolumeId,
-        const FCk_GroundNav_StreamFieldBundle&   InInitialBundle) -> FCk_GroundNav_StreamRegistryResult;
+        const FCk_GroundNav_StreamFieldBundle&   InInitialBundle,
+        bool                                     InCreateBootstrapSource = true) -> FCk_GroundNav_StreamRegistryResult;
 
     CKGROUNDNAV_API auto Load_StreamSource(
         UWorld*                                             InWorld,
