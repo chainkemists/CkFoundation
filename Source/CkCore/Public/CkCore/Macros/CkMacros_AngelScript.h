@@ -1,18 +1,16 @@
 #pragma once
 
-#include <Containers/Map.h>
 #include <Containers/Set.h>
 
 #include <Delegates/IDelegateInstance.h>
-
-#include <HAL/UnrealMemory.h>
 
 #include <Templates/Function.h>
 
 #include <CkCore/AngelScript/CkAngelScript_TypeValidation.h>
 
-// Get_InternedBindName takes the std::string ck::Format_ANSI produces.
+// Get_InternedBindName takes the std::string ck::Format_ANSI produces and interns it in a node-stable pool.
 #include <string>
+#include <unordered_set>
 
 #if WITH_ANGELSCRIPT_CK
 
@@ -264,19 +262,14 @@ public:
     Get_InternedBindName(
         const std::string& InName) -> const ANSICHAR*
     {
-        static TMap<FString, const ANSICHAR*> Pool;
+        // std::unordered_set is node-based: an element's storage never moves on rehash, so the c_str()
+        // handed out stays valid for the life of the pool. The comparison is exact and byte-wise, which
+        // is load-bearing: AngelScript identifiers are case-sensitive, and an FString-keyed pool (whose
+        // hash and equality both fold case) would intern Get_foo and Get_Foo to ONE pointer - re-creating
+        // the real-but-wrong-method class this function exists to kill.
+        static std::unordered_set<std::string> Pool;
 
-        const auto Key = FString{InName.c_str()};
-
-        if (const auto* const Found = Pool.Find(Key))
-        { return *Found; }
-
-        const auto LengthWithNull = InName.size() + 1;
-        auto* const Copy = new ANSICHAR[LengthWithNull];
-        FMemory::Memcpy(Copy, InName.c_str(), LengthWithNull);
-
-        Pool.Add(Key, Copy);
-        return Copy;
+        return Pool.insert(InName).first->c_str();
     }
 
     static auto
