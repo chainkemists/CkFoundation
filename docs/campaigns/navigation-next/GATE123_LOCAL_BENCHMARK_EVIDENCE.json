@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "evidenceClass": "local-correctness-only",
+  "date": "2026-09-10",
+  "rootRevision": "fd9f6abf7d0c9d4de95d1f98b714d11c48ca7101",
+  "foundationRevision": "ea6f8bf0b714bd4a398022c87f72a8e3f2d06ccb",
+  "testsRevision": "cfd3ea1704ba45f5ec1feca48b4ac46ac541dc35",
+  "toolboxRevision": "5532971dbbb821bf8e5420e350a61afb79d0eb3a",
+  "uncommitted": true,
+  "fixture": {
+    "path": "Plugins/CkTests/Content/GroundNavBenchmark/Maps/GroundNavMatchedBenchmark.umap",
+    "md5": "3969ce9a7287f6b9eb43b07283e692c5"
+  },
+  "gates": {
+    "Gate123": {
+      "passed": 5,
+      "failed": 0,
+      "skipped": 0,
+      "contaminated": 0,
+      "exit": 0
+    },
+    "Gate122": {
+      "passed": 7,
+      "failed": 0,
+      "skipped": 0,
+      "contaminated": 0,
+      "exit": 0
+    },
+    "offlineValidator": {
+      "passed": 21,
+      "realEligibleRecords": 4
+    }
+  },
+  "crowdBoundary": "3s warmup plus 6s sample after all 240 initially Walking/reached; snapshot before public Stop; wait for Idle before deferred captured-position validation",
+  "crowd": [
+    {
+      "provider": "GroundNav",
+      "ready": 240,
+      "reached": 1,
+      "goalFailures": 0,
+      "offSurface": 0,
+      "replanned": 240,
+      "frames": 136,
+      "terminal": {
+        "Walking": 0,
+        "PathPending": 239,
+        "Idle": 1,
+        "None": 0
+      }
+    },
+    {
+      "provider": "Recast",
+      "ready": 240,
+      "reached": 0,
+      "goalFailures": 0,
+      "offSurface": 0,
+      "replanned": 240,
+      "frames": 174,
+      "terminal": {
+        "Walking": 233,
+        "PathPending": 7,
+        "Idle": 0,
+        "None": 0
+      }
+    }
+  ],
+  "queryBurst": {
+    "GroundNav": {
+      "Ready": 128,
+      "Partial": 0,
+      "Failed": 0
+    },
+    "Recast": {
+      "Ready": 128,
+      "Partial": 0,
+      "Failed": 0
+    }
+  },
+  "claimsExcluded": [
+    "crowd convergence",
+    "behavioral equivalence",
+    "performance win",
+    "build-machine performance",
+    "packaged acceptance",
+    "human editor and World Partition acceptance"
+  ],
+  "performanceDeferredTo": "BusterBlock integration",
+  "preservation": {
+    "originalUnrelatedFiles": 13,
+    "approvedPresentationArtifacts": 21,
+    "hashesMatched": 34
+  },
+  "source": [
+    {
+      "path": "Plugins/CkFoundation/Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment.h",
+      "sha256": "23ee0bd3c9276c241426cbd7cdda1555f121d6d2253d38d051f1034806ceb60b"
+    },
+    {
+      "path": "Plugins/CkFoundation/Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h",
+      "sha256": "d00aa66f3258d9387afaf2cc04ec01bf9f10949f1231b4c9e85949ea9890c144"
+    },
+    {
+      "path": "Plugins/CkFoundation/Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+      "sha256": "0eb0ecbfb2e034cd795f0520f3d738f59d6dde88f677b5fc018f12e3dd97ee5f"
+    },
+    {
+      "path": "Plugins/CkFoundation/Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Algorithm.cpp",
+      "sha256": "7ce66012171e86080f685b2598614de3ac1e158c01a5f4db383bdbe686a28f38"
+    },
+    {
+      "path": "Plugins/CkFoundation/Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Fragment_Data.h",
+      "sha256": "b948ba3e2358288bb4c13d9371c647b39bc41f71d21b0caeeb14ff22f5347f70"
+    },
+    {
+      "path": "Plugins/CkFoundation/Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Processor.cpp",
+      "sha256": "90efc1ec1d6ac12da7e29b38cf00c31bd334dca2a0684ac418a01970e4cd752d"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/CkTests.Build.cs",
+      "sha256": "addfdd456b89ec5e820d1d44ae3b81e607d4f165f2e9bf0c1609dba3639a1be5"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PathDiagnostics.cpp",
+      "sha256": "24da9a964f0558ce4e82f2f89736cfe78bf4cd97a55ce2f175d0a8bdb0f71656"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Private/UnitTests/CkNavigation/Test_NavSurface_PathSync_Contract.cpp",
+      "sha256": "7177b812e2fd86d6f4b0b8e2975bcdc75214b74470012aa08a527cb68681e71b"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTestsEditor/CkTestsEditor.Build.cs",
+      "sha256": "630925d09cfd451bfd47608b1b7ceb95cdded49ec3fb79dab50cf73d704edc25"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Private/CkGroundNav_BenchmarkNavigationConfig.cpp",
+      "sha256": "b7ee59758b6738c828f7441d1273a0f632da3604bd08250f09d9d657bdac4767"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Private/CkGroundNav_MatchedBenchmarkActor.cpp",
+      "sha256": "dfad2523a558be42c4dedf9dcf17001bf21153da3403d5c032064b6cd9eb5795"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_BenchmarkNavigationConfig.h",
+      "sha256": "2d4aa9177a444af9ae05f36b93ad5bb4b5ae99fd8269b8edd988c51af58cc8f3"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_MatchedBenchmarkActor.h",
+      "sha256": "e421421201bdf9b08dd753a1e85e23b22ef84224b3be992ae1bcb6d6147ef5e2"
+    },
+    {
+      "path": "Plugins/CkTests/Source/CkTestsEditor/Private/GroundNav/Test_GroundNav_MatchedBenchmark.cpp",
+      "sha256": "342d076a8075b20bf7656246ee5969a31d52a42d722f092fbe0b72ee5d92027b"
+    },
+    {
+      "path": "Plugins/CkTests/Tools/nav_benchmark_report.py",
+      "sha256": "ecb2c7cababa69cabed2fa07536717b3bb25ca5c741f5706eb74a06861924f02"
+    },
+    {
+      "path": "Plugins/CkTests/Tools/test_nav_benchmark_report.py",
+      "sha256": "a885d9ca45caf1412c56743bde7da97ff0787b96330c0a755da6f06fc966704a"
+    }
+  ],
+  "binaries": [
+    {
+      "path": "Binaries/Win64/CkPluginsEditor-CkTests.dll",
+      "sha256": "2a5179ab093b446ccbe2f2b4c4939be699fedc447810f7d427dceb3567ae5301"
+    },
+    {
+      "path": "Binaries/Win64/CkPluginsEditor-CkTestsEditor.dll",
+      "sha256": "34136e0d5d72c03b314006bf04059e13eb98db232cd4265b8a57064accddc9a9"
+    },
+    {
+      "path": "Binaries/Win64/CkPluginsEditor-CkNavigation.dll",
+      "sha256": "50f2259de791e4013c06f024801cc02c4dbc2947a6ca98d6d81f6910248c1880"
+    },
+    {
+      "path": "Binaries/Win64/CkPluginsEditor-CkGroundNav.dll",
+      "sha256": "ea26b5381349554db885571e0a4e2ca9d2eecb87baeca216de7145956e956e7e"
+    }
+  ],
+  "logs": [
+    {
+      "path": "Saved/Logs/S14-Gate123-MatchedBenchmarkFinal.log",
+      "sha256": "4649f895c26e07c940c6298b2a6b83769515ad52823a7322747f142d52f79157"
+    },
+    {
+      "path": "Saved/Logs/S14-Gate122-PathDiagnostics.log",
+      "sha256": "4252ba9676b4278caa5b9a4c32238870cdf87678d95fac6366116f14a111411a"
+    },
+    {
+      "path": "Saved/Logs/CkPlugins.log",
+      "sha256": "211d6f3da2d51cea905300ad900c0f175a565034f82a3226b3fa2fbf31417eaa"
+    },
+    {
+      "path": "Saved/Logs/CkPlugins-backup-2026.09.10-12.34.39.log",
+      "sha256": "7227227bc973284401df66bf829ba93ead481e6e069960b64c8035e86a95e21d"
+    },
+    {
+      "path": "Saved/Logs/CkPlugins_2.log",
+      "sha256": "796721058e7d57096ab491b37274807fb3513453d1589871f9f18fd9266b00ee"
+    }
+  ],
+  "logNote": "Runtime log paths can rotate on future boots; hashes identify this gate, not future files at those paths."
+}
