@@ -451,7 +451,11 @@ auto
         for (const auto& Child : From->Children)
         {
             auto* Existing = Into->Children.FindByPredicate([&Child](const auto& Other)
-            { return Other->RawName == Child->RawName && Other->Breadcrumbs == Child->Breadcrumbs; });
+            {
+                return Other->TimerIndex == Child->TimerIndex
+                    && Other->RawName == Child->RawName
+                    && Other->Breadcrumbs == Child->Breadcrumbs;
+            });
             if (Existing != nullptr) { MergeNode(*Existing, Child); }
             else { Into->Children.Add(Child); }
         }
@@ -478,6 +482,7 @@ auto
             Index = Children[0];
         }
         const auto& Path = Paths[Index];
+        Node->TimerIndex = Path.Timer;
         Node->RawName = GetTimerName(TimerNames, Path.Timer);
         Node->DisplayName = FCk_TimerCategorizer::SimplifyName(Node->RawName);
         Node->InclusiveMs = Path.InclusiveMs;
@@ -488,7 +493,11 @@ auto
         {
             auto Child = BuildNode(ChildIndex, Depth + 1);
             auto* Existing = Node->Children.FindByPredicate([&Child](const auto& Other)
-            { return Other->RawName == Child->RawName && Other->Breadcrumbs == Child->Breadcrumbs; });
+            {
+                return Other->TimerIndex == Child->TimerIndex
+                    && Other->RawName == Child->RawName
+                    && Other->Breadcrumbs == Child->Breadcrumbs;
+            });
             if (Existing != nullptr) { MergeNode(*Existing, Child); }
             else { Node->Children.Add(MoveTemp(Child)); }
         }
@@ -507,7 +516,11 @@ auto
         }
         auto Node = BuildNode(Index, 0);
         auto* Existing = Roots.FindByPredicate([&Node](const auto& Other)
-        { return Other->RawName == Node->RawName && Other->Breadcrumbs == Node->Breadcrumbs; });
+        {
+            return Other->TimerIndex == Node->TimerIndex
+                && Other->RawName == Node->RawName
+                && Other->Breadcrumbs == Node->Breadcrumbs;
+        });
         if (Existing != nullptr) { MergeNode(*Existing, Node); }
         else { Roots.Add(MoveTemp(Node)); }
     };
