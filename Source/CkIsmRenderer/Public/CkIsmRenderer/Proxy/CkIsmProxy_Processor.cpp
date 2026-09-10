@@ -91,6 +91,30 @@ namespace ck_ism_proxy_processor
 #endif
     }
 
+#if !WITH_EDITOR
+    auto
+        FindRendererIsmCompForTransform(
+            const UWorld* InWorld,
+            const UCk_IsmRenderer_Data* InRendererData,
+            const FCk_Handle_IsmProxy& InProxyHandle,
+            TMap<const UCk_IsmRenderer_Data*, TWeakObjectPtr<UInstancedStaticMeshComponent>>& InComponentsByRendererData)
+        -> TWeakObjectPtr<UInstancedStaticMeshComponent>
+    {
+        if (const auto* CachedIsmComp = InComponentsByRendererData.Find(InRendererData);
+            CachedIsmComp != nullptr && ck::IsValid(*CachedIsmComp))
+        { return *CachedIsmComp; }
+
+        const auto IsmComp = FindRendererIsmComp(InWorld, InRendererData, InProxyHandle);
+
+        if (ck::IsValid(IsmComp))
+        {
+            InComponentsByRendererData.Add(InRendererData, IsmComp);
+        }
+
+        return IsmComp;
+    }
+#endif
+
     auto
         ApplyCustomPrimitiveDataToComponent(
             UInstancedStaticMeshComponent* InComponent,
@@ -330,6 +354,9 @@ namespace ck
         _World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(_TransientEntity);
 
         _Isms.Reset();
+#if !WITH_EDITOR
+        _IsmComponentsByRendererData.Reset();
+#endif
         TProcessor::DoTick(InDeltaT);
 
         for (const auto Ism : _Isms)
@@ -351,7 +378,12 @@ namespace ck
         using namespace ck_ism_proxy_processor;
 
         const auto& RendererData = InParams.Get_IsmRenderer().Get();
+#if WITH_EDITOR
         const auto& IsmComp = FindRendererIsmComp(_World.Get(), RendererData, InHandle);
+#else
+        const auto& IsmComp = FindRendererIsmCompForTransform(
+            _World.Get(), RendererData, InHandle, _IsmComponentsByRendererData);
+#endif
         const auto InstanceId = InCurrent.Get_IsmInstanceIndex();
 
         if (ck::Is_NOT_Valid(IsmComp) || NOT IsmComp->IsValidId(InstanceId))

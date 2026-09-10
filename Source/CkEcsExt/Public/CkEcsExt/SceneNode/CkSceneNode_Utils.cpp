@@ -94,12 +94,23 @@ auto
 
     State._LastPublishedWorldTransform = InWorldTransform;
     State._HasPublishedWorldTransform = true;
+    if (Enabled)
+    { cpu_work::Add(ECk_CpuWorkCounter::SceneChangedParents, 1); }
 
     auto ChildrenVisited = int32{0};
     ck::FUtils_RecordOfSceneNodes::ForEach_ValidEntry(InParent, [&](FCk_Handle_SceneNode InChild)
     {
         if (Enabled)
-        { ++ChildrenVisited; }
+        {
+            ++ChildrenVisited;
+            cpu_work::Add(ECk_CpuWorkCounter::SceneQueueAttempts, 1);
+            if (ck::IsValid(InChild) &&
+                InChild.Has_All<ck::SceneNodeParent, ck::FFragment_SceneNode_Current>() &&
+                NOT InChild.Has<ck::FFragment_SceneNode_UnrealAnchor>())
+            {
+                cpu_work::Add(ECk_CpuWorkCounter::SceneQueueAccepted, 1);
+            }
+        }
         Queue(InChild);
     });
     if (Enabled)

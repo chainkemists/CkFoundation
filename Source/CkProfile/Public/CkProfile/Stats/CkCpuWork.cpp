@@ -30,6 +30,8 @@ namespace ck_cpu_work
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticsPruned, TEXT("CkCpuWork_CosmeticsPruned"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticSocketMisses, TEXT("CkCpuWork_CosmeticSocketMisses"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformRequests, TEXT("CkCpuWork_CosmeticTransformRequests"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformTargetUnchanged, TEXT("CkCpuWork_CosmeticTransformTargetUnchanged"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_CosmeticTransformTargetChanged, TEXT("CkCpuWork_CosmeticTransformTargetChanged"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentEntries, TEXT("CkCpuWork_ComponentEntries"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentSetupRejected, TEXT("CkCpuWork_ComponentSetupRejected"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_ComponentPushDisabled, TEXT("CkCpuWork_ComponentPushDisabled"));
@@ -42,7 +44,11 @@ namespace ck_cpu_work
     TRACE_DECLARE_INT_COUNTER(CpuWork_SceneParentsVisited, TEXT("CkCpuWork_SceneParentsVisited"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_SceneMissingRecord, TEXT("CkCpuWork_SceneMissingRecord"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_SceneUnchangedParents, TEXT("CkCpuWork_SceneUnchangedParents"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_SceneChangedParents, TEXT("CkCpuWork_SceneChangedParents"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_SceneChildrenVisited, TEXT("CkCpuWork_SceneChildrenVisited"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_SceneQueueAttempts, TEXT("CkCpuWork_SceneQueueAttempts"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_SceneQueueAccepted, TEXT("CkCpuWork_SceneQueueAccepted"));
+    TRACE_DECLARE_INT_COUNTER(CpuWork_SceneL0QueueParents, TEXT("CkCpuWork_SceneL0QueueParents"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_LodEntities, TEXT("CkCpuWork_LodEntities"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_LodHidden, TEXT("CkCpuWork_LodHidden"));
     TRACE_DECLARE_INT_COUNTER(CpuWork_LodPromoted, TEXT("CkCpuWork_LodPromoted"));
@@ -139,6 +145,8 @@ auto ck::cpu_work::EndFrame() -> void
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticsPruned, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticsPruned)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticSocketMisses, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticSocketMisses)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformRequests, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformRequests)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformTargetUnchanged, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformTargetUnchanged)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_CosmeticTransformTargetChanged, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::CosmeticTransformTargetChanged)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentEntries, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentEntries)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentSetupRejected, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentSetupRejected)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_ComponentPushDisabled, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::ComponentPushDisabled)]);
@@ -151,7 +159,11 @@ auto ck::cpu_work::EndFrame() -> void
     TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneParentsVisited, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneParentsVisited)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneMissingRecord, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneMissingRecord)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneUnchangedParents, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneUnchangedParents)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneChangedParents, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneChangedParents)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneChildrenVisited, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneChildrenVisited)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneQueueAttempts, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneQueueAttempts)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneQueueAccepted, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneQueueAccepted)]);
+    TRACE_COUNTER_SET_ALWAYS(CpuWork_SceneL0QueueParents, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::SceneL0QueueParents)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_LodEntities, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::LodEntities)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_LodHidden, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::LodHidden)]);
     TRACE_COUNTER_SET_ALWAYS(CpuWork_LodPromoted, FrameCounts[static_cast<uint32>(ECk_CpuWorkCounter::LodPromoted)]);

@@ -9,6 +9,8 @@
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
+#include "CkProfile/Stats/CkCpuWork.h"
+
 #include "Components/SceneComponent.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -234,6 +236,12 @@ namespace ck
             const FFragment_RecordOfSceneNodes& InChildren)
         -> void
     {
+        if constexpr (std::is_same_v<T_Layer, FTag_SceneNode_Layer0>)
+        {
+            if (cpu_work::Get_Enabled())
+            { cpu_work::Add(ECk_CpuWorkCounter::SceneL0QueueParents, 1); }
+        }
+
         FUtils_SceneNodePropagation::PublishChildrenIfChanged(InHandle, InTransform.Get_Transform());
     }
 
