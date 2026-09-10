@@ -430,6 +430,12 @@ private:
               meta = (AllowPrivateAccess = true))
     float _SearchDurationMs = 0.0f;
 
+    // A terminal result can honestly measure zero milliseconds; false instead says the episode
+    // never performed provider work (for example, it timed out parked on unbuilt ground).
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    bool _HasSearchDuration = false;
+
     /** The field epoch this plan was made against, as its bare counter: FCk_GroundNav_Epoch is a plain
      *  struct and is not reflected. Staleness is DERIVED by comparing this against the field's current
      *  epoch at the install boundary, and is never stored as a flag. */
@@ -457,6 +463,7 @@ public:
     CK_PROPERTY(_LengthUu);
     CK_PROPERTY(_ExpansionCount);
     CK_PROPERTY(_SearchDurationMs);
+    CK_PROPERTY(_HasSearchDuration);
     CK_PROPERTY(_PlannedAgainstEpoch);
     CK_PROPERTY(_RepairVerdict);
     CK_PROPERTY(_LinkWaypoints);
