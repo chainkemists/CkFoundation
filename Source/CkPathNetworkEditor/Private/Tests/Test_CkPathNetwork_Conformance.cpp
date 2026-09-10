@@ -145,4 +145,36 @@ bool FCk_PathNetworkEditor_Conformance_NoSurfaceIsReportedAsNoSurface_Test::RunT
 
 // --------------------------------------------------------------------------------------------------------------------
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCk_PathNetworkEditor_GroundNavSnap_ProjectionStatusMapsWithoutMutation_Test,
+    "Ck.PathNetworkEditor.GroundNavSnap.ProjectionStatusMapsWithoutMutation",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCk_PathNetworkEditor_GroundNavSnap_ProjectionStatusMapsWithoutMutation_Test::RunTest(const FString& InParameters)
+{
+    using namespace ck::pathnetwork_editor::conformance::test;
+
+    const auto SourcePoint = Get_SourcePoint();
+    const auto Success = Make_ProjectionResult(ECk_NavSurface_QueryStatus::Success, SourcePoint);
+    const auto NoSurface = Make_ProjectionResult(ECk_NavSurface_QueryStatus::NoSurface, SourcePoint);
+    const auto Unbuilt = Make_ProjectionResult(ECk_NavSurface_QueryStatus::Unbuilt, SourcePoint);
+    const auto NoProvider = Make_ProjectionResult(ECk_NavSurface_QueryStatus::NoProvider, SourcePoint);
+
+    TestEqual(TEXT("a successful GroundNav projection is eligible to mutate"),
+        ck_pathnetwork_editor::Get_GroundNavSnapStatus(Success),
+        ECk_PathNetworkEditor_GroundNavSnapStatus::Projected);
+    TestEqual(TEXT("a missing surface keeps the authored point and reports NoSurface"),
+        ck_pathnetwork_editor::Get_GroundNavSnapStatus(NoSurface),
+        ECk_PathNetworkEditor_GroundNavSnapStatus::NoSurface);
+    TestEqual(TEXT("an unbuilt GroundNav field keeps the authored point and reports Unavailable"),
+        ck_pathnetwork_editor::Get_GroundNavSnapStatus(Unbuilt),
+        ECk_PathNetworkEditor_GroundNavSnapStatus::Unavailable);
+    TestEqual(TEXT("an unavailable GroundNav provider keeps the authored point and reports Unavailable"),
+        ck_pathnetwork_editor::Get_GroundNavSnapStatus(NoProvider),
+        ECk_PathNetworkEditor_GroundNavSnapStatus::Unavailable);
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 #endif

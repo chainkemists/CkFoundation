@@ -8,6 +8,8 @@
 
 #include "CkNavigation/NavSurface/CkNavSurface_Utils.h"
 
+#include <Engine/Level.h>
+#include <Engine/World.h>
 #include <ScopedTransaction.h>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -58,6 +60,21 @@ namespace ck_pathnetwork_editor
             && InConformance._VerticalDelta <= InMaxVerticalProjectionDelta;
     }
 
+    auto
+    Get_GroundNavSnapStatus(
+        const FCk_NavSurface_ProjectionResult& InProjection)
+        -> ECk_PathNetworkEditor_GroundNavSnapStatus
+    {
+        if (InProjection.Get_Status() == ECk_NavSurface_QueryStatus::NoSurface)
+        { return ECk_PathNetworkEditor_GroundNavSnapStatus::NoSurface; }
+
+        const auto HasFiniteSuccessfulProjection = InProjection.Get_Status() == ECk_NavSurface_QueryStatus::Success
+            && NOT InProjection.Get_Location().ContainsNaN();
+        return HasFiniteSuccessfulProjection
+            ? ECk_PathNetworkEditor_GroundNavSnapStatus::Projected
+            : ECk_PathNetworkEditor_GroundNavSnapStatus::Unavailable;
+    }
+
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -69,6 +86,128 @@ auto
     -> FString
 {
     return InRibbon.Get_RibbonId().ToString(EGuidFormats::Digits);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_PathNetworkEditor_UE::
+    Snap_RibbonPointToGroundNav(
+        ACk_PathNetwork_UE* InActor,
+        const int32 InRibbonIndex,
+        const int32 InPointIndex,
+        const FVector InDesiredWorldLocation,
+        const FVector InProjectionExtent)
+    -> FCk_PathNetworkEditor_GroundNavSnapResult
+{
+    auto Result = FCk_PathNetworkEditor_GroundNavSnapResult{};
+    Result._SourceLocation = InDesiredWorldLocation;
+    Result._ProjectedLocation = InDesiredWorldLocation;
+
+    const auto ActorIsValid = ck::IsValid(InActor);
+    CK_ENSURE_IF_NOT(ActorIsValid,
+        TEXT("Snap_RibbonPointToGroundNav requires a valid PathNetwork actor"))
+    { }
+    if (NOT ActorIsValid)
+    { return Result; }
+
+    auto* World = InActor->GetWorld();
+    const auto WorldIsEditor = ck::IsValid(World) && World->WorldType == EWorldType::Editor;
+    CK_ENSURE_IF_NOT(WorldIsEditor,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] requires an editor world"), InActor)
+    { }
+    if (NOT WorldIsEditor)
+    { return Result; }
+
+    auto* Level = InActor->GetLevel();
+    const auto LevelIsValid = ck::IsValid(Level);
+    CK_ENSURE_IF_NOT(LevelIsValid,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] requires an owning level"), InActor)
+    { }
+    if (NOT LevelIsValid)
+    { return Result; }
+
+    const auto DesiredLocationIsFinite = NOT InDesiredWorldLocation.ContainsNaN();
+    CK_ENSURE_IF_NOT(DesiredLocationIsFinite,
+        TEXT("Snap_RibbonPointToGroundNav requires a finite desired location, received [{}]"), InDesiredWorldLocation)
+    { }
+    if (NOT DesiredLocationIsFinite)
+    { return Result; }
+
+    const auto ProjectionExtentIsValid = NOT InProjectionExtent.ContainsNaN()
+        && InProjectionExtent.X > 0.0f
+        && InProjectionExtent.Y > 0.0f
+        && InProjectionExtent.Z > 0.0f;
+    CK_ENSURE_IF_NOT(ProjectionExtentIsValid,
+        TEXT("Snap_RibbonPointToGroundNav requires finite positive projection extents, received [{}]"), InProjectionExtent)
+    { }
+    if (NOT ProjectionExtentIsValid)
+    { return Result; }
+
+    const auto& RelativeRibbons = InActor->Get_Ribbons();
+    const auto RibbonIndexIsValid = RelativeRibbons.IsValidIndex(InRibbonIndex);
+    CK_ENSURE_IF_NOT(RibbonIndexIsValid,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] received invalid ribbon index [{}] for [{}] ribbons"),
+        InActor, InRibbonIndex, RelativeRibbons.Num())
+    { }
+    if (NOT RibbonIndexIsValid)
+    { return Result; }
+
+    const auto PointIndexIsValid = RelativeRibbons[InRibbonIndex].Get_Points().IsValidIndex(InPointIndex);
+    CK_ENSURE_IF_NOT(PointIndexIsValid,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] received invalid point index [{}] for ribbon [{}] with [{}] points"),
+        InActor, InPointIndex, InRibbonIndex, RelativeRibbons[InRibbonIndex].Get_Points().Num())
+    { }
+    if (NOT PointIndexIsValid)
+    { return Result; }
+
+    const auto ProviderIsGroundNav = UCk_Utils_NavSurface_UE::Get_Provider(World)
+        == ECk_NavSurface_Provider::GroundNav;
+    CK_ENSURE_IF_NOT(ProviderIsGroundNav,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] requires GroundNav to be the active navigation-surface provider"), InActor)
+    { }
+    if (NOT ProviderIsGroundNav)
+    { return Result; }
+
+    const auto Query = FCk_NavSurface_ProjectionQuery{InDesiredWorldLocation}
+        .Set_SearchHalfExtents(InProjectionExtent)
+        .Set_Mode(ECk_NavSurface_ProjectionMode::Closest);
+    const auto Projection = UCk_Utils_NavSurface_UE::Try_ProjectPoint(World, Query);
+
+    const auto SnapStatus = ck_pathnetwork_editor::Get_GroundNavSnapStatus(Projection);
+    if (SnapStatus == ECk_PathNetworkEditor_GroundNavSnapStatus::NoSurface)
+    {
+        Result._Status = SnapStatus;
+        return Result;
+    }
+
+    if (SnapStatus != ECk_PathNetworkEditor_GroundNavSnapStatus::Projected)
+    { return Result; }
+
+    auto WorldRibbons = InActor->Get_WorldRibbons();
+    const auto RibbonCountsMatch = WorldRibbons.Num() == RelativeRibbons.Num();
+    CK_ENSURE_IF_NOT(RibbonCountsMatch,
+        TEXT("Snap_RibbonPointToGroundNav on [{}] found mismatched relative/world ribbon counts: [{}] / [{}]"),
+        InActor, RelativeRibbons.Num(), WorldRibbons.Num())
+    { }
+    if (NOT RibbonCountsMatch)
+    { return Result; }
+
+    WorldRibbons[InRibbonIndex].Get_Points()[InPointIndex].Set_Location(Projection.Get_Location());
+    auto NewRelativeRibbons = RelativeRibbons;
+    NewRelativeRibbons[InRibbonIndex] = InActor->Convert_WorldRibbonToRelative(WorldRibbons[InRibbonIndex]);
+
+    const FScopedTransaction Transaction{
+        NSLOCTEXT("CkPathNetworkEditor", "SnapRibbonPointToGroundNavTransaction",
+                  "Path Network: Snap Ribbon Point To GroundNav")};
+    InActor->Modify();
+    InActor->Set_Ribbons(MoveTemp(NewRelativeRibbons));
+    InActor->PostEditChange();
+    Level->MarkPackageDirty();
+
+    Result._Status = ECk_PathNetworkEditor_GroundNavSnapStatus::Projected;
+    Result._ProjectedLocation = Projection.Get_Location();
+    return Result;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
