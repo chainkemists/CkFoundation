@@ -1,0 +1,287 @@
+{
+  "schema": 1,
+  "capturedUtc": "2026-09-10T22:15:06.438718+00:00",
+  "evidenceClass": "unchanged-game-focused-editor-baseline",
+  "project": "D:\\Repos\\BusterBlock",
+  "arguments": [
+    "--test",
+    "--test-pattern=NpcAI",
+    "--no-live",
+    "--parallel=1",
+    "--serial-lane=*",
+    "--project=D:\\Repos\\BusterBlock",
+    "--output=D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124-RecastBaseline-20260910.log"
+  ],
+  "configuration": "Development",
+  "editorBoots": 1,
+  "toolboxPid": 25612,
+  "toolboxExit": 1,
+  "editorExit": 255,
+  "editorExitAfterAllTests": true,
+  "total": 27,
+  "passed": 22,
+  "failed": 5,
+  "skipped": 0,
+  "contaminatedReportedByToolbox": 0,
+  "duration": "3m 37s",
+  "results": [
+    {
+      "name": "Bb_AutoTest_NpcAI_AffordabilityPredicate",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_AffordabilityPredicate",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_BelowFloorRecovery",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_BelowFloorRecovery",
+      "result": "Fail"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_CheckoutQueueRebalancesWhenCounterRegistered",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CheckoutQueueRebalancesWhenCounterRegistered",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_CloseBasketIfPartial",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CloseBasketIfPartial",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_CombatAtCheckoutFrontDoesNotFalsePay",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CombatAtCheckoutFrontDoesNotFalsePay",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_DormancyFlipLeavesCheckoutQueue",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_DormancyFlipLeavesCheckoutQueue",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_DownedOnDamage",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_DownedOnDamage",
+      "result": "Fail"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_EmptyShelfNotPicked",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_EmptyShelfNotPicked",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_GiveUpLeavesCheckoutQueue",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_GiveUpLeavesCheckoutQueue",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_HitreactAfterRevive",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_HitreactAfterRevive",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_HitreactOnDamage",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_HitreactOnDamage",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_LivenessWatchdogAccrual",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_LivenessWatchdogAccrual",
+      "result": "Fail"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_PermeableRoleParity",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_PermeableRoleParity",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_QueueRebalancesFromProbeOverlappedSlot",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_QueueRebalancesFromProbeOverlappedSlot",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_QueueRebalancesToShorterLine",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_QueueRebalancesToShorterLine",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_SidewalkForeignFollower",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkForeignFollower",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_SidewalkOwnedRoute",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkOwnedRoute",
+      "result": "Fail"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_SidewalkProviders",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkProviders",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_SmTransitions",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SmTransitions",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_StopRoll",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StopRoll",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_StorageShelfCustomerExcluded",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StorageShelfCustomerExcluded",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_StuckDetection",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckDetection",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_StuckInLineLeavesCheckoutQueue",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckInLineLeavesCheckoutQueue",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_StuckRecoverySuppression",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckRecoverySuppression",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_TrackerBlacklistAges",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TrackerBlacklistAges",
+      "result": "Success"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot",
+      "result": "Fail"
+    },
+    {
+      "name": "Bb_AutoTest_NpcAI_TripBudgetSeeding",
+      "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TripBudgetSeeding",
+      "result": "Success"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "Saved\\Logs\\Nav-Gate124-RecastBaseline-20260910.log",
+      "sha256": "19d81e10db635c687fcc92f5543db5c1824268a7611b49668d087a2278778c04",
+      "bytes": 90718
+    },
+    {
+      "path": "Saved\\Logs\\Nav-Gate124-RecastBaseline-20260910-Runtime.log",
+      "sha256": "bdff6ffee6b4cd19be04331ce5c0c8d73cf87c5d7d67ed257931c0b422109edf",
+      "bytes": 531247
+    },
+    {
+      "path": "Binaries\\Win64\\BusterBlockEditor.target",
+      "sha256": "3251b1b47b218cb3b35272d785d1a9ccca1df1f85f894a42cadbf2a3434e4849",
+      "bytes": 998400
+    },
+    {
+      "path": "Config\\DefaultCkFoundation.ini",
+      "sha256": "76f0d22069211b4ee3dff1ca9c0550e1e87e7919105371ea81cb7576a193c0fa",
+      "bytes": 16728
+    },
+    {
+      "path": "Config\\DefaultEngine.ini",
+      "sha256": "6ddb928636dd95c62b154fae429dc6778e9db2c038a98ded382b11cb23635c0f",
+      "bytes": 50943
+    },
+    {
+      "path": "Source\\BusterBlock\\AI\\Navigation\\BB_NavQueryFilters.cpp",
+      "sha256": "9e4375e49c4883944b6f23705e14d116f259f2c26e91a4b6fc93a9cdc95e4192",
+      "bytes": 2368
+    },
+    {
+      "path": "Source\\BusterBlock\\AI\\Navigation\\BB_NavQueryFilters.h",
+      "sha256": "3bcc6688cd07bb212298968a2c4955fd0a2bd87a3b598c2566330ccd09e9735b",
+      "bytes": 3667
+    },
+    {
+      "path": "Source\\BusterBlock\\AI\\Navigation\\Bb_SidewalkPathNetworkDetector.cpp",
+      "sha256": "774180e5c1f1c1baa43f961c757ec1b88089c7ad6de40f41ce424e5b71084f50",
+      "bytes": 148549
+    },
+    {
+      "path": "Script\\ECS\\AccessZone\\BB_AccessZone_EntityScript.as",
+      "sha256": "fb0e0569b84c69bd6c294489368b72ea92d5b1a79d541c0d20fd8ad3c16debe0",
+      "bytes": 3195
+    },
+    {
+      "path": "Script\\ECS\\Entryway\\BB_Entryway_Processor_ShoppingBoundary.as",
+      "sha256": "bcea3c7186c70c86398abe1f77ded09a341d0929e75d753b33bff12a2396399a",
+      "bytes": 7416
+    },
+    {
+      "path": "Script\\Npc\\BB_Npc_Feature.as",
+      "sha256": "ae0c4a8f6e801735bcf307e09f76b15615dc93b744896d18a4d380c89eddb331",
+      "bytes": 56339
+    },
+    {
+      "path": "Script\\Npc\\BB_Npc_EntityScript.as",
+      "sha256": "b8eb6bc41f5a14641d3702b70a4bfd1cb00670db941b438ca193b7798440f6e1",
+      "bytes": 112129
+    },
+    {
+      "path": "Script\\Npc\\AI\\BB_NpcAI_Shopping.as",
+      "sha256": "537684a1c2a8049119248a9afd49c17f25efb08930803230354296174931e9d6",
+      "bytes": 125410
+    },
+    {
+      "path": "Content\\BusterBlock\\Map\\AutoTests\\AutoTests_BB_MAP.umap",
+      "sha256": "4d757597160a3aad6dc30d145a43925aa083e85795d59a0f2137564238ff1ef1",
+      "bytes": 9012
+    },
+    {
+      "path": "Binaries\\Win64\\BusterBlockEditor-BusterBlock.dll",
+      "sha256": "67c1ba8c9c1f1170e6459483f16a8f765acaf432ba964d702e79cee0bf9a2e92",
+      "bytes": 8562176
+    },
+    {
+      "path": "Binaries\\Win64\\BusterBlockEditor-CkNavigation.dll",
+      "sha256": "9e651ed3d3bdd1dceeb240906e1e0ae22c9062d4b46c60df8a0ee072ded58d93",
+      "bytes": 2083840
+    },
+    {
+      "path": "Binaries\\Win64\\BusterBlockEditor-CkCrowd.dll",
+      "sha256": "7a1dfd69eae3157734ab7bc1f25ffc71fe90900c3b8325eadaac3554f40b0f80",
+      "bytes": 9226240
+    },
+    {
+      "path": "Binaries\\Win64\\BusterBlockEditor-CkTests.dll",
+      "sha256": "cc8ed47c89efc872bc2e9ccb6f2c0bb3eaf12c3a8ac0898d18050334896d27da",
+      "bytes": 25841664
+    }
+  ],
+  "diagnostics": {
+    "toolboxErrors": [
+      "[2026.09.10-22.09.38:288][404]LogAutomationController: Error: Test Completed. Result={Fail} Name={Bb_AutoTest_NpcAI_BelowFloorRecovery} Path={Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_BelowFloorRecovery}",
+      "[2026.09.10-22.09.38:288][404]LogAutomationController: Error: SourceControl: fatal: bad revision '..origin/feature/npc-voice-transform-follow' [log] ",
+      "[2026.09.10-22.10.03:500][150]LogAutomationController: Error: Test Completed. Result={Fail} Name={Bb_AutoTest_NpcAI_DownedOnDamage} Path={Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_DownedOnDamage}",
+      "[2026.09.10-22.10.03:500][150]LogAutomationController: Error: SourceControl: fatal: bad revision '..origin/feature/npc-voice-transform-follow' [log] ",
+      "[2026.09.10-22.10.41:313][239]LogAutomationController: Error: Test Completed. Result={Fail} Name={Bb_AutoTest_NpcAI_LivenessWatchdogAccrual} Path={Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_LivenessWatchdogAccrual}",
+      "[2026.09.10-22.10.41:313][239]LogAutomationController: Error: SourceControl: fatal: bad revision '..origin/feature/npc-voice-transform-follow' [log] ",
+      "[2026.09.10-22.10.41:313][239]LogAutomationController: Error: Bb_AutoTest_NpcAI_LivenessWatchdogAccrual: FinishTest TestResult=Failed. Failed: a member waiting its turn in a live line is exempt (stalled 1.066671s) (1/15 assertions failed) [D:\\Repos\\BusterBlock\\Plugins\\CkTests\\Source\\CkTests\\Private\\CkAutoTestRunner.cpp(344)]",
+      "[2026.09.10-22.11.08:835][ 48]LogAutomationController: Error: Test Completed. Result={Fail} Name={Bb_AutoTest_NpcAI_SidewalkOwnedRoute} Path={Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkOwnedRoute}",
+      "[2026.09.10-22.11.08:835][ 48]LogAutomationController: Error: SourceControl: fatal: bad revision '..origin/feature/npc-voice-transform-follow' [log] ",
+      "[2026.09.10-22.11.36:478][859]LogAutomationController: Error: Test Completed. Result={Fail} Name={Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot} Path={Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot}",
+      "[2026.09.10-22.11.36:478][859]LogAutomationController: Error: SourceControl: fatal: bad revision '..origin/feature/npc-voice-transform-follow' [log] "
+    ],
+    "scriptErrors": 0,
+    "scriptWarnings": 0,
+    "ensureFailureLines": [],
+    "sourceControlBadRevisionOccurrences": 11,
+    "expectedCkEnsure": {
+      "count": 1,
+      "message": "Expected one Ck PathNetwork actor in the current world, found 2",
+      "test": "Bb_AutoTest_NpcAI_SidewalkProviders"
+    },
+    "externalActorErrors": [
+      "[2026.09.10-22.09.11:446][  1]LogLevel: Error: Failed to load Actor for External Actor Package /Game/__ExternalActors__/BusterBlock/Map/AutoTests/AutoTests_BB_MAP/3/S6/NUJERUDLLN9AULVDNRX9YE",
+      "[2026.09.10-22.09.11:536][  1]LogLevel: Error: Failed to load Actor for External Actor Package /Game/__ExternalActors__/BusterBlock/Map/AutoTests/AutoTests_BB_MAP/C/PV/26IN50RP1WEH21NITR6X8X",
+      "[2026.09.10-22.09.20:965][122]LogLevel: Error: Failed to load Actor for External Actor Package /Game/__ExternalActors__/BusterBlock/Map/AutoTests/AutoTests_BB_MAP/3/S6/NUJERUDLLN9AULVDNRX9YE",
+      "[2026.09.10-22.09.21:047][122]LogLevel: Error: Failed to load Actor for External Actor Package /Game/__ExternalActors__/BusterBlock/Map/AutoTests/AutoTests_BB_MAP/C/PV/26IN50RP1WEH21NITR6X8X"
+    ]
+  },
+  "editorExitInterpretation": "Requested failed-test exit: TEST COMPLETE. EXIT CODE: -1 followed by RequestExitWithStatus(1,255); not evidence of a separate crash"
+}

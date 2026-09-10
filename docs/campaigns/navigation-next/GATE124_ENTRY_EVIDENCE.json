@@ -1,0 +1,462 @@
+{
+  "schema": 1,
+  "capturedUtc": "2026-09-10T22:06:49.571097+00:00",
+  "evidenceClass": "entry-source-and-ancestry-only",
+  "repositories": [
+    {
+      "path": "D:\\Repos\\CkPlugins_3",
+      "branch": "feature/ck-navigation",
+      "head": "fd9f6abf7d0c9d4de95d1f98b714d11c48ca7101",
+      "localDev": {
+        "exit": 0,
+        "output": "a4c40cfed551349d3240fe83d08378fea2676536"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "477122a36b89ccaa185365f0cfeeaf4a3b5a7fe0"
+      },
+      "status": "M Config/DefaultGameplayTags.ini\n m Plugins/CkFoundation\n m Plugins/CkTests\n M Script/Generated/CkPlugins_EntitySpawnParams.as\n?? CONTINUATION_PROMPT_CkNavigationReplacementCampaign.md\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.ckexport\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.uasset\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.ckexport\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.uasset\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.ckexport\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.uasset\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.ckexport\n?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.uasset",
+      "dirtyFiles": [
+        {
+          "path": "CONTINUATION_PROMPT_CkNavigationReplacementCampaign.md",
+          "sha256": "902339898335636eac7fb49382b53b840a6bebcb4643d5f1d11fb0e606d12708",
+          "bytes": 17303
+        },
+        {
+          "path": "Config/DefaultGameplayTags.ini",
+          "sha256": "58f2d444b94d264451a60827ca59e1d2e7dfd46e9d0ff0b5df7ecb5bc397aac8",
+          "bytes": 100013
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.ckexport",
+          "sha256": "3245792258eef88df904f7bad62dff5d6f6eea28671f6b2e5b9d7509a7a24c77",
+          "bytes": 2297
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.uasset",
+          "sha256": "ffb9e6d27b4a832df3066c51e7da7edbe8a1807c702fcb71e383edd832fd1b40",
+          "bytes": 3745
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.ckexport",
+          "sha256": "36ef21d513aea5f238c743fc5e6f2646494267455f1bfe38b51061ee42b3ecfa",
+          "bytes": 2323
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.uasset",
+          "sha256": "eaf5c2d160fa29e3dff6f1af26e437a38af2a5a0e6989d0e89453bc2ca22023a",
+          "bytes": 3739
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.ckexport",
+          "sha256": "1bf762b42d057c847323e19dee02f4eb914c0c65473f8cd710397ee2d4646870",
+          "bytes": 3491
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.uasset",
+          "sha256": "577381e90e093ca282063884f48aad89b68af32df6bd978afb4e1b2eb96caa98",
+          "bytes": 4743
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.ckexport",
+          "sha256": "42c80782e172a47c568e7cd03ca01672258df781ac021c103adf9491e0cd4562",
+          "bytes": 2678
+        },
+        {
+          "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.uasset",
+          "sha256": "334286206acf3a84782094a199c51463ff3bba598917a2ffde5ec538a4674f60",
+          "bytes": 3894
+        },
+        {
+          "path": "Script/Generated/CkPlugins_EntitySpawnParams.as",
+          "sha256": "ee096c5a51786cf852e29b096bda7d0b05ba926b7890238455f48a26591f01c5",
+          "bytes": 3606
+        }
+      ],
+      "gitlinks": "160000 commit 5532971dbbb821bf8e5420e350a61afb79d0eb3a\tCkAuto\n040000 tree c96ce2b9e7944afbcf2bf6a8585b916cfe7dd2ba\tPlugins",
+      "submoduleStatus": "5532971dbbb821bf8e5420e350a61afb79d0eb3a CkAuto (5532971)\n 65b8ad6b56dc9238f63ac6136259a76d08cf9c34 Plugins/AutoSizeComments (remotes/origin/dev)\n 4cfebc6036ac6e310343700c025defe3fd4f94a6 Plugins/BlueprintAssist (remotes/origin/dev)\n 7ca8b5890722629faeb4c8fe573110fcd879294d Plugins/CkApplication (heads/dev)\n ea6f8bf0b714bd4a398022c87f72a8e3f2d06ccb Plugins/CkFoundation (backup/pre-branch-audit-dev-1155-gea6f8bf0b)\n f2527bafcecf0e91473af78d2d442dc66b69218c Plugins/CkGameplayDebugger (multi-refactor-complete-and-tested-939-gf2527ba)\n cfd3ea1704ba45f5ec1feca48b4ac46ac541dc35 Plugins/CkTests (backup/pre-branch-audit-647-gcfd3ea17)\n 103ccc54287997d126c62770f1ba0307809206f5 Plugins/GitLink (heads/main)\n c1ab0ed2c6d0508a32aba57f9d92716d074a727a Plugins/GitSourceControl (2.9-beta-498-gc1ab0ed)\n d24f70f8a087faa4aed86a39da5664e55172ed35 Plugins/NodeGraphAssistant (remotes/origin/dev)\n 58c394d46b0a56ccf573ee4c5f9b1eccb4c0317a Plugins/ZenMode (heads/dev)"
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\Plugins\\CkFoundation",
+      "branch": "feature/ck-navigation",
+      "head": "ea6f8bf0b714bd4a398022c87f72a8e3f2d06ccb",
+      "localDev": {
+        "exit": 0,
+        "output": "a25ec9539241ac135f2c081d42717a4fe7cc2507"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "54e9e6943cd075025673a600d7279a3e412b2fa4"
+      },
+      "status": "M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment.h\n M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h\n M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp\n M Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Algorithm.cpp\n M Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Fragment_Data.h\n M Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Processor.cpp\n M Source/CkNavigation/Public/CkNavigation/Settings/CkNav_ProjectSettings.h\n M docs/campaigns/navigation-next/PROGRESS.md\n M docs/campaigns/navigation-next/VALIDATION.md\n?? docs/campaigns/navigation-next/CONTINUATION_PROMPT_BusterBlockCompatibilityAndABReadiness.md\n?? docs/campaigns/navigation-next/CONTINUATION_PROMPT_GroundNavShowcaseBenchmarkAndAcceptance.md\n?? docs/campaigns/navigation-next/GATE119_CAPTURE_RUNBOOK.md\n?? docs/campaigns/navigation-next/GATE119_PRESENTATION_ARTIFACTS.md\n?? docs/campaigns/navigation-next/GATE119_SHOWCASE_BASELINE_AND_CONTRACT.md\n?? docs/campaigns/navigation-next/GATE121_MATCHED_BENCHMARK_CONTRACT.md\n?? docs/campaigns/navigation-next/GATE123_LOCAL_BENCHMARK_EVIDENCE.json\n?? docs/campaigns/navigation-next/GROUNDNAV_ACCEPTANCE_GUIDE.html",
+      "dirtyFiles": [
+        {
+          "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment.h",
+          "sha256": "23ee0bd3c9276c241426cbd7cdda1555f121d6d2253d38d051f1034806ceb60b",
+          "bytes": 17951
+        },
+        {
+          "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Fragment_Data.h",
+          "sha256": "d00aa66f3258d9387afaf2cc04ec01bf9f10949f1231b4c9e85949ea9890c144",
+          "bytes": 28005
+        },
+        {
+          "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+          "sha256": "0eb0ecbfb2e034cd795f0520f3d738f59d6dde88f677b5fc018f12e3dd97ee5f",
+          "bytes": 55679
+        },
+        {
+          "path": "Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Algorithm.cpp",
+          "sha256": "7ce66012171e86080f685b2598614de3ac1e158c01a5f4db383bdbe686a28f38",
+          "bytes": 16091
+        },
+        {
+          "path": "Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Fragment_Data.h",
+          "sha256": "b948ba3e2358288bb4c13d9371c647b39bc41f71d21b0caeeb14ff22f5347f70",
+          "bytes": 12493
+        },
+        {
+          "path": "Source/CkNavigation/Public/CkNavigation/Nav/CkNav_Processor.cpp",
+          "sha256": "90efc1ec1d6ac12da7e29b38cf00c31bd334dca2a0684ac418a01970e4cd752d",
+          "bytes": 24637
+        },
+        {
+          "path": "Source/CkNavigation/Public/CkNavigation/Settings/CkNav_ProjectSettings.h",
+          "sha256": "23614676ea7fc14488cdafb26ff60d43139b464f5d9e585921eb9916e5037b7f",
+          "bytes": 4745
+        },
+        {
+          "path": "docs/campaigns/navigation-next/CONTINUATION_PROMPT_BusterBlockCompatibilityAndABReadiness.md",
+          "sha256": "36816ad08b9886ff98360163d1cd64c488d343f7c03c91fe156489606f646d35",
+          "bytes": 25277
+        },
+        {
+          "path": "docs/campaigns/navigation-next/CONTINUATION_PROMPT_GroundNavShowcaseBenchmarkAndAcceptance.md",
+          "sha256": "3a44b5ad3a68469ca0a177dd6a730f64fbdbde777b114aa661e1ea42778447ab",
+          "bytes": 18584
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GATE119_CAPTURE_RUNBOOK.md",
+          "sha256": "f5526b957ccecc83fc062ed19dc6570201616522b448d05cedd116001db616c0",
+          "bytes": 6827
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GATE119_PRESENTATION_ARTIFACTS.md",
+          "sha256": "b636805af4f0bfbc0693ac20be8323fb849810efe112c53dcd572100020ce18f",
+          "bytes": 5129
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GATE119_SHOWCASE_BASELINE_AND_CONTRACT.md",
+          "sha256": "da4435944ed112260d6f4473e9f0a2b200ecf5f5f4c0bd8cfb53501e6677f7bd",
+          "bytes": 10447
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GATE121_MATCHED_BENCHMARK_CONTRACT.md",
+          "sha256": "dfadb2b40a0c6701e49405bd57d1060e400aebdcf17b0e5e314fcdac58597e91",
+          "bytes": 6523
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GATE123_LOCAL_BENCHMARK_EVIDENCE.json",
+          "sha256": "36dc7dfd77ca5afad7ceb7f2f236fcde331d2c438249eec7fcec1dde9ff14a38",
+          "bytes": 7102
+        },
+        {
+          "path": "docs/campaigns/navigation-next/GROUNDNAV_ACCEPTANCE_GUIDE.html",
+          "sha256": "507e8c4edc6b87a812f28322591019b9e268e46ff345a7aff227edbe4880a314",
+          "bytes": 25807
+        },
+        {
+          "path": "docs/campaigns/navigation-next/PROGRESS.md",
+          "sha256": "0d2f236e0521d1c57efcbaeacc807b308110fd98b1208ae89206e5fdd93bfffd",
+          "bytes": 923430
+        },
+        {
+          "path": "docs/campaigns/navigation-next/VALIDATION.md",
+          "sha256": "c4520245a80006aa7605ffe7ea15e2a701cb7ecd02fd0bb955fecd4eaef15f00",
+          "bytes": 66249
+        }
+      ]
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\Plugins\\CkTests",
+      "branch": "feature/ck-navigation",
+      "head": "cfd3ea1704ba45f5ec1feca48b4ac46ac541dc35",
+      "localDev": {
+        "exit": 0,
+        "output": "bde15e9f23f0ffebaa2876fa45f60e3f340ecc21"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "68533b5e6416f901deffbecf7cec880084dc407f"
+      },
+      "status": "M Script/CkGroundNav/CkGroundNavGym_Common.as\n M Script/CkGroundNav/CkGroundNavGym_Links_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_Links_PlayerController.as\n M Script/CkGroundNav/CkGroundNavGym_Markup_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_Markup_PlayerController.as\n M Script/CkGroundNav/CkGroundNavGym_Obstacle_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_Obstacle_PlayerController.as\n M Script/CkGroundNav/CkGroundNavGym_Parity_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_Parity_PlayerController.as\n M Script/CkGroundNav/CkGroundNavGym_TuningRange_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_TuningRange_PlayerController.as\n M Script/CkGroundNav/CkGroundNavGym_Walk_GameMode.as\n M Script/CkGroundNav/CkGroundNavGym_Walk_PlayerController.as\n M Script/CkPathNetwork/CkPathNetworkGym_Following_GameMode.as\n M Script/CkPathNetwork/CkPathNetworkGym_Following_PlayerController.as\n M Script/Common/CkGym_ControlPanelHUD.as\n M Script/Generated/CkTests_AutoTestActors.as\n M Source/CkTests/CkTests.Build.cs\n M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PathDiagnostics.cpp\n M Source/CkTests/Private/UnitTests/CkNavigation/Test_NavSurface_PathSync_Contract.cpp\n M Source/CkTestsEditor/CkTestsEditor.Build.cs\n?? Content/GroundNavBenchmark/Maps/GroundNavMatchedBenchmark.umap\n?? Content/__ExternalActors__/AutoTests/AutoTests_CkTests_Level/D/B9/1J8TN2AMOLHHONH0UD0PS6.uasset\n?? Script/CkGroundNav/CONTINUATION_PROMPT_GroundNavTuningRange.md\n?? Script/CkGroundNav/CkAutoTest_GroundNav_GymPresentationRestoresState.as\n?? Script/Common/CkNavigationGym_Presentation_HUD.as\n?? Script/Common/CkNavigationGym_Presentation_PlayerController.as\n?? Source/CkTests/Private/CkGroundNav_BenchmarkNavigationConfig.cpp\n?? Source/CkTests/Private/CkGroundNav_MatchedBenchmarkActor.cpp\n?? Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_BenchmarkNavigationConfig.h\n?? Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_MatchedBenchmarkActor.h\n?? Source/CkTestsEditor/Private/GroundNav/Test_GroundNav_MatchedBenchmark.cpp\n?? Tools/nav_benchmark_report.py\n?? Tools/test_nav_benchmark_report.py",
+      "dirtyFiles": [
+        {
+          "path": "Content/GroundNavBenchmark/Maps/GroundNavMatchedBenchmark.umap",
+          "sha256": "fdfdcb8efe188f8e845103f1f38e9df42a45fa149562f5c8d2645d82149a3158",
+          "bytes": 46492
+        },
+        {
+          "path": "Content/__ExternalActors__/AutoTests/AutoTests_CkTests_Level/D/B9/1J8TN2AMOLHHONH0UD0PS6.uasset",
+          "sha256": "b3c4d990f5bca93d5637a057c89316c1f8ba2b6fdabb71aee0bd61cd6364199b",
+          "bytes": 5307
+        },
+        {
+          "path": "Script/CkGroundNav/CONTINUATION_PROMPT_GroundNavTuningRange.md",
+          "sha256": "c66e2a33e0ad7f71f00f9376d052e9f1ac60572b6fb1820bd2788cc4b94f683a",
+          "bytes": 11365
+        },
+        {
+          "path": "Script/CkGroundNav/CkAutoTest_GroundNav_GymPresentationRestoresState.as",
+          "sha256": "f783f989dcc11d9f23cdc310d72b1759a267352717cf79418b6f3259b6909d4b",
+          "bytes": 10231
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Common.as",
+          "sha256": "b416d1b5102bc6f8451d5b8f6205dcf224d3b0edb319878e762d48f535f40cd2",
+          "bytes": 44653
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Links_GameMode.as",
+          "sha256": "b0f256819309b58f065532b4d810aead5bc1fb73ebd3c4c91b4e1940b6c63a87",
+          "bytes": 1532
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Links_PlayerController.as",
+          "sha256": "1a70125f89ccef8eccc33b651eaac4d26134bd0fc5bfd0568c8b380662a74720",
+          "bytes": 35089
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Markup_GameMode.as",
+          "sha256": "f1c018677bfdbdb01ccbfac53f0f5a983986988eca6b84d48e0dcd27224f7f4f",
+          "bytes": 1293
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Markup_PlayerController.as",
+          "sha256": "10393d1c811c1409c17d8f164dfa5ee679dc9803f240441f935b8196774d530d",
+          "bytes": 25488
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Obstacle_GameMode.as",
+          "sha256": "d73e717b824df36516237ce3e6012eed020b24c208e5a2764e3a8331390738e4",
+          "bytes": 1404
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Obstacle_PlayerController.as",
+          "sha256": "c6dfcc773c2862bd8502c80d1e31ad697067fd7380f1d4b474d0441406380087",
+          "bytes": 30926
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Parity_GameMode.as",
+          "sha256": "4448150fafbdadfb2685e9e7f5e2652270b2c3604c1e8a98e87cc9b83dc0ac42",
+          "bytes": 1183
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Parity_PlayerController.as",
+          "sha256": "232e0c1f318498b3141c4515daacb0936cd252f542eebb763bc2fca6f33a4fdf",
+          "bytes": 24972
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_TuningRange_GameMode.as",
+          "sha256": "2d7ccd7eba95349de0793be9400db8bc3b185f40b6f59a802467b203a29f50cf",
+          "bytes": 2944
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_TuningRange_PlayerController.as",
+          "sha256": "05926d5995986387648e2bf6f2ae15d7aa6fb6bd71e34e5da9da0419f4bbd354",
+          "bytes": 55037
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Walk_GameMode.as",
+          "sha256": "f1ea1b312b2cd3376ca9079e381302b83f4a54c527a66e33643041221f1ac637",
+          "bytes": 1433
+        },
+        {
+          "path": "Script/CkGroundNav/CkGroundNavGym_Walk_PlayerController.as",
+          "sha256": "ddf0580136794b29b4932bbc96f1aa980a3dc8f558d6c14a5863455a5850e85f",
+          "bytes": 31147
+        },
+        {
+          "path": "Script/CkPathNetwork/CkPathNetworkGym_Following_GameMode.as",
+          "sha256": "c1a49c457b1f61870c0d17d3db41baf718352129390fe7d19f1eb4edce104e61",
+          "bytes": 2094
+        },
+        {
+          "path": "Script/CkPathNetwork/CkPathNetworkGym_Following_PlayerController.as",
+          "sha256": "fb9a82e0e3694a8dd5ad3b50b69130121440bad194c5d30a9bdbe7d9b479e197",
+          "bytes": 17468
+        },
+        {
+          "path": "Script/Common/CkGym_ControlPanelHUD.as",
+          "sha256": "e5dec2dd0e1df5a581aa9db608907fb406d588a516fd275fb6eabfc6e77b2772",
+          "bytes": 12594
+        },
+        {
+          "path": "Script/Common/CkNavigationGym_Presentation_HUD.as",
+          "sha256": "6e84e160af46257fbce64eff7e90ba70d6e22fdb4ae21f90966a3bfa09518f38",
+          "bytes": 2807
+        },
+        {
+          "path": "Script/Common/CkNavigationGym_Presentation_PlayerController.as",
+          "sha256": "34a00dbeb7b487019f0b06254fe30a87c2a48e9aa9e9ffd5d31138faf0c3624f",
+          "bytes": 9036
+        },
+        {
+          "path": "Script/Generated/CkTests_AutoTestActors.as",
+          "sha256": "a3ca7f1c2a10516895b319a745b8a2fbccdf4cd256915a84ec041606f34fbe40",
+          "bytes": 388261
+        },
+        {
+          "path": "Source/CkTests/CkTests.Build.cs",
+          "sha256": "addfdd456b89ec5e820d1d44ae3b81e607d4f165f2e9bf0c1609dba3639a1be5",
+          "bytes": 4920
+        },
+        {
+          "path": "Source/CkTests/Private/CkGroundNav_BenchmarkNavigationConfig.cpp",
+          "sha256": "b7ee59758b6738c828f7441d1273a0f632da3604bd08250f09d9d657bdac4767",
+          "bytes": 3788
+        },
+        {
+          "path": "Source/CkTests/Private/CkGroundNav_MatchedBenchmarkActor.cpp",
+          "sha256": "dfad2523a558be42c4dedf9dcf17001bf21153da3403d5c032064b6cd9eb5795",
+          "bytes": 43817
+        },
+        {
+          "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PathDiagnostics.cpp",
+          "sha256": "24da9a964f0558ce4e82f2f89736cfe78bf4cd97a55ce2f175d0a8bdb0f71656",
+          "bytes": 25201
+        },
+        {
+          "path": "Source/CkTests/Private/UnitTests/CkNavigation/Test_NavSurface_PathSync_Contract.cpp",
+          "sha256": "7177b812e2fd86d6f4b0b8e2975bcdc75214b74470012aa08a527cb68681e71b",
+          "bytes": 13606
+        },
+        {
+          "path": "Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_BenchmarkNavigationConfig.h",
+          "sha256": "2d4aa9177a444af9ae05f36b93ad5bb4b5ae99fd8269b8edd988c51af58cc8f3",
+          "bytes": 691
+        },
+        {
+          "path": "Source/CkTests/Public/CkTests/GroundNav/CkGroundNav_MatchedBenchmarkActor.h",
+          "sha256": "e421421201bdf9b08dd753a1e85e23b22ef84224b3be992ae1bcb6d6147ef5e2",
+          "bytes": 4745
+        },
+        {
+          "path": "Source/CkTestsEditor/CkTestsEditor.Build.cs",
+          "sha256": "630925d09cfd451bfd47608b1b7ceb95cdded49ec3fb79dab50cf73d704edc25",
+          "bytes": 976
+        },
+        {
+          "path": "Source/CkTestsEditor/Private/GroundNav/Test_GroundNav_MatchedBenchmark.cpp",
+          "sha256": "342d076a8075b20bf7656246ee5969a31d52a42d722f092fbe0b72ee5d92027b",
+          "bytes": 30715
+        },
+        {
+          "path": "Tools/nav_benchmark_report.py",
+          "sha256": "ecb2c7cababa69cabed2fa07536717b3bb25ca5c741f5706eb74a06861924f02",
+          "bytes": 12928
+        },
+        {
+          "path": "Tools/test_nav_benchmark_report.py",
+          "sha256": "a885d9ca45caf1412c56743bde7da97ff0787b96330c0a755da6f06fc966704a",
+          "bytes": 10931
+        }
+      ]
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\CkAuto",
+      "branch": "",
+      "head": "5532971dbbb821bf8e5420e350a61afb79d0eb3a",
+      "localDev": {
+        "exit": 0,
+        "output": "676b70c457500d6f9f139042743c6eea3aadd068"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "676b70c457500d6f9f139042743c6eea3aadd068"
+      },
+      "status": "",
+      "dirtyFiles": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock",
+      "branch": "feature/npc-voice-transform-follow",
+      "head": "eab2de2ab8ab83bee512e605cc7e4dca518a86c1",
+      "localDev": {
+        "exit": 0,
+        "output": "c0adc330e5d32bf392e9677f7cdbf104c74eb27b"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "a16b2bce594dc125787b8b702ce7bd1543076a23"
+      },
+      "status": "",
+      "dirtyFiles": [],
+      "gitlinks": "160000 commit 676b70c457500d6f9f139042743c6eea3aadd068\tCkAuto\n040000 tree 9466570e6572ca36d695293608e7b2ba381579ae\tPlugins",
+      "submoduleStatus": "676b70c457500d6f9f139042743c6eea3aadd068 CkAuto (backup-tag-38-g676b70c)\n 29b4f575ce5f2f480ca3a2c6724d70bd857ca035 Plugins/AdaptiveGizmo (heads/dev)\n afb56d0bd95a9666b2e65ba6f1c79b5570a25b7e Plugins/AdvancedCommenting (heads/dev)\n b896b313429e0acd375225fe9da71e41ec2e3411 Plugins/AnimatedBookMenu (heads/dev)\n 65b8ad6b56dc9238f63ac6136259a76d08cf9c34 Plugins/AutoSizeComments (heads/dev)\n 4cfebc6036ac6e310343700c025defe3fd4f94a6 Plugins/BlueprintAssist (heads/dev)\n 3c3618702ea0704414d187619f1079d841108ffb Plugins/BlueprintGraphScreenshot (heads/dev)\n daaa2f3eb6dd80d9875eae3c0930a3e71c95aae8 Plugins/BlueprintNodeTemp (heads/dev)\n 24994476a0c45e2ab66b8ee5e237eb839c384fd1 Plugins/CableTie (heads/dev)\n b46cc762bc6d5a0452ad2470eba760b85955848d Plugins/CkFoundation (backup/pre-branch-audit-dev-1123-gb46cc762b)\n 570c9115093a51490080c9619da35b38998f5f91 Plugins/CkGameplayDebugger (multi-refactor-complete-and-tested-945-g570c9115)\n c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2 Plugins/CkTests (backup/pre-branch-audit-583-gc3b7c8ff)\n 27ae3220a7305334ccbb25dfe2d5a0464959ea8b Plugins/EIK (remotes/origin/dev)\n f3edfa90affa66a7d72df2ada80f066f8f799ba4 Plugins/EasyAssetCreator (heads/dev)\n 8e0e7f3f86420579419bfd6411430745dcf1a4f4 Plugins/EditorScriptingTools (backup-tag-1-g8e0e7f3)\n 3553c191bbf13412df9e2a369db1753ce2717b52 Plugins/EmmsUI (remotes/origin/HEAD)\n a0f35a060ad12337dc0b099b97d36c6c923bedd6 Plugins/GitLink (backup-tag-7-ga0f35a0)\n c1ab0ed2c6d0508a32aba57f9d92716d074a727a Plugins/GitSourceControl (2.9-beta-498-gc1ab0ed)\n 1267e7960b9a1cd64faa698729227164b351b1cc Plugins/LogViewerPro (heads/dev)\n d24f70f8a087faa4aed86a39da5664e55172ed35 Plugins/NodeGraphAssistant (heads/dev)\n 234030e22a37b06ae913520c3e90ea0436b3ab74 Plugins/PhysicalLayoutTool (heads/bugfix/physical-layout-mode-entry)\n 69ab999a38479279d5203bb7b98fd49dd8a561c9 Plugins/Prefabricator (heads/dev)\n 3ab214d454e9b975ab1098e8c7b56696e5d0614b Plugins/Prismatiscape-Interaction-Plugin (heads/dev)\n c5ed46e3be4b2bd3d0ceb3902994d482e5d688da Plugins/ProInstanceTools (heads/dev)\n 48b857648224104f7174e831aef91abef7efc140 Plugins/Projectile-Physics-Plugin (unreal-5-5-4-2-g48b8576)\n 82d2ea68da23ba34f605cd151186ee4600cdd574 Plugins/SIK (heads/upgrade/ue5.7)\n 0be40f7ea72886625441e9b87817c2b6f3234bf7 Plugins/ScreenSpaceFogScattering (heads/dev)\n 83f943984acb8d94cd87c42c74c37008d299ce35 Plugins/VerticalTabs (dev-5-5-4-1-g83f9439)\n f484fa6a523ec807f5da6db47ed23981f36955ad Plugins/WorldSpaceWidgets (remotes/origin/upgrade/ue5.7)\n 58c394d46b0a56ccf573ee4c5f9b1eccb4c0317a Plugins/ZenMode (heads/dev)\n a9c5c333eef3e919752d67f6d510f864584e6557 Plugins/fresh_cooked_tweens (heads/dev)"
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\Plugins\\CkFoundation",
+      "branch": "bugfix/late-game-jolt-contact-churn",
+      "head": "b46cc762bc6d5a0452ad2470eba760b85955848d",
+      "localDev": {
+        "exit": 0,
+        "output": "fb2204beb9e160361323e607c01648a321e26c41"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "54e9e6943cd075025673a600d7279a3e412b2fa4"
+      },
+      "status": "",
+      "dirtyFiles": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\Plugins\\CkTests",
+      "branch": "bugfix/late-game-jolt-contact-churn-tests",
+      "head": "c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2",
+      "localDev": {
+        "exit": 0,
+        "output": "e35fb5214f91b11b4069ad3b75b83a8e55a584d7"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "68533b5e6416f901deffbecf7cec880084dc407f"
+      },
+      "status": "",
+      "dirtyFiles": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\CkAuto",
+      "branch": "",
+      "head": "676b70c457500d6f9f139042743c6eea3aadd068",
+      "localDev": {
+        "exit": 0,
+        "output": "66429b4b8315d17556856d9a2ca9dbfb01212234"
+      },
+      "originDev": {
+        "exit": 0,
+        "output": "676b70c457500d6f9f139042743c6eea3aadd068"
+      },
+      "status": "",
+      "dirtyFiles": []
+    }
+  ],
+  "ancestry": [
+    {
+      "repository": "CkFoundation",
+      "gamePin": "b46cc762bc6d5a0452ad2470eba760b85955848d",
+      "gamePinInCandidate": false,
+      "gamePinInRefreshedDev": true,
+      "devBehindAhead": "35\t66",
+      "mergeBase": "fdfb9f406c07c14f38e3f1bbf6838c2724d3daf0"
+    },
+    {
+      "repository": "CkTests",
+      "gamePin": "c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2",
+      "gamePinInCandidate": false,
+      "gamePinInRefreshedDev": true,
+      "devBehindAhead": "14\t77",
+      "mergeBase": "658ae56756eaa4306eacc3493cd25a4719a846c1"
+    }
+  ]
+}
