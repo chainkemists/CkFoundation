@@ -39,7 +39,6 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_LevelAdd"), STAT_CkJolt_StaticWorldLevelAdd, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_LevelRemove"), STAT_CkJolt_StaticWorldLevelRemove, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_RemoveBodies"), STAT_CkJolt_StaticWorldRemoveBodies, STATGROUP_CkJolt);
 DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_DestroyBodies"), STAT_CkJolt_StaticWorldDestroyBodies, STATGROUP_CkJolt);
@@ -234,7 +233,12 @@ auto
         UWorld& InWorld)
         -> void
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BeginPlaySweep);
+    // NOT the whole static-world build. UWorld::AddToWorld broadcasts LevelAddedToWorld during
+    // FlushLevelStreaming, which runs BEFORE OnWorldBeginPlay, so every streaming sublevel was already
+    // added by the delegate and hits the _LevelBodies early-out here. In practice this scope covers the
+    // persistent level plus any level deferred for a missing transient entity. Do not read it as "the
+    // sweep cost" -- the streaming levels' cost lives under UWorld::AddToWorld -> Ck_JoltStaticWorld_LevelAdd.
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BeginPlaySweep_PersistentAndDeferred);
 
     Super::OnWorldBeginPlay(InWorld);
 
@@ -1011,9 +1015,6 @@ auto
         ULevel& InLevel)
         -> ck::jolt::bake::FCk_Jolt_ExtractionStats
 {
-    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LevelAdd);
-    SCOPE_CYCLE_COUNTER(STAT_CkJolt_StaticWorldLevelAdd);
-
     // The explicit flag, not the entry's mere presence: a request bake files its entity in this level's
     // list too, and a level whose only entries came that way has not been swept yet.
     if (const auto* AlreadyListed = _LevelBodies.Find(&InLevel);
@@ -1029,6 +1030,14 @@ auto
             "to the BeginPlay sweep"), InLevel.GetOutermost()->GetName());
         return {};
     }
+
+    // BELOW the early-outs on purpose: above them the scope counted every no-op re-entry, so its call
+    // count read 87 on a 43-level map (43 real adds from the LevelAddedToWorld delegate + 44 no-op
+    // re-attempts from the sweep) and meant nothing. Here, n == levels that actually did work.
+    // ONE profiling macro per site: SCOPE_CYCLE_COUNTER already emits a CPU trace event under
+    // -statnamedevents (Stats.h:578), so keeping both nested the STAT inside this scope and pushed
+    // this one's exclusive time to ~0.
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LevelAdd);
 
     auto ActorEntities = TArray<FCk_Handle_JoltStaticActor>{};
     auto BodyIds = TArray<uint32>{};
@@ -1482,6 +1491,12 @@ auto
     auto* BodyInterface = Get_BodyInterface();
     if (BodyInterface == nullptr)
     { return; }
+
+    // Below the early-outs, same reason as LevelAdd: a scope above them counts no-op calls and its
+    // call count stops meaning anything. This is the INSERTION half of the sweep -- without it the
+    // trace can only say "shape loading vs everything else", which is not the loading-vs-insertion
+    // split this instrumentation exists to produce.
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BatchAddBodies);
 
     auto BodyIds = TArray<JPH::BodyID>{};
     BodyIds.Reserve(InBodyIds.Num());
