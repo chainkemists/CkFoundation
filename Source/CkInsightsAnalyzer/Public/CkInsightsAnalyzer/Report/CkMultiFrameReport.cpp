@@ -60,18 +60,20 @@ namespace ck_multi_frame_report
     // node that ran for no measurable time, and the strip has to draw the two differently.
     constexpr auto AbsentInclusiveMs = -1.0f;
 
-    // Identity of a hot-path row within one parent. The raw name alone is not enough: the same timer
-    // legitimately appears under different collapsed wrapper chains, and merging those would
-    // attribute cost to a call path that never ran.
+    // Identity of a hot-path row within one parent. Real rows retain their source timer ID because
+    // distinct timers can share a raw name; the same timer can also appear through different
+    // collapsed wrapper chains. Aggregates deliberately collapse to their synthetic identity.
     struct FHotPathNodeKey
     {
+        uint32 TimerIndex = static_cast<uint32>(INDEX_NONE);
         FString RawName;
         TArray<FString> Breadcrumbs;
         bool IsAggregate = false;
 
         auto operator==(const FHotPathNodeKey& InOther) const -> bool
         {
-            return RawName == InOther.RawName
+            return TimerIndex == InOther.TimerIndex
+                && RawName == InOther.RawName
                 && Breadcrumbs == InOther.Breadcrumbs
                 && IsAggregate == InOther.IsAggregate;
         }
@@ -79,7 +81,8 @@ namespace ck_multi_frame_report
 
     auto GetTypeHash(const FHotPathNodeKey& InKey) -> uint32
     {
-        auto Hash = GetTypeHash(InKey.RawName);
+        auto Hash = ::GetTypeHash(InKey.TimerIndex);
+        Hash = HashCombine(Hash, GetTypeHash(InKey.RawName));
 
         ck::algo::ForEach(InKey.Breadcrumbs, [&Hash](const FString& InBreadcrumb)
         {
@@ -132,6 +135,7 @@ namespace ck_multi_frame_report
             { continue; }
 
             const auto Key = FHotPathNodeKey{
+                Source->bIsAggregate ? static_cast<uint32>(INDEX_NONE) : Source->TimerIndex,
                 Source->bIsAggregate ? TEXT("(other children)") : Source->RawName,
                 Source->bIsAggregate ? TArray<FString>{} : Source->Breadcrumbs,
                 Source->bIsAggregate};
@@ -145,6 +149,7 @@ namespace ck_multi_frame_report
             if (EntryIndex == INDEX_NONE)
             {
                 auto Entry = FHotPathMergeEntry{};
+                Entry.Node.TimerIndex = Key.TimerIndex;
                 Entry.Node.RawName = Key.RawName;
                 Entry.Node.DisplayName = Source->bIsAggregate ? TEXT("(other children)") : Source->DisplayName;
                 Entry.Node.Breadcrumbs = Key.Breadcrumbs;
@@ -193,6 +198,7 @@ namespace ck_multi_frame_report
         const auto& Entry = InPool[InEntryIndex];
 
         auto Node = MakeShared<FCk_MergedHotPathNode>();
+        Node->TimerIndex = Entry.Node.TimerIndex;
         Node->RawName = Entry.Node.RawName;
         Node->DisplayName = Entry.Node.DisplayName;
         Node->Breadcrumbs = Entry.Node.Breadcrumbs;
