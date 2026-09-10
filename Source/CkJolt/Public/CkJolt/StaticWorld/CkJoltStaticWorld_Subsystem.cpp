@@ -457,12 +457,10 @@ auto
 
     if (Fragment.Get_BodiesInScene())
     {
-        _NumStaticBodies -= BodyIds.Num();
-        _BodyChurnSinceOptimize += BodyIds.Num();
+        DoNote_BodiesChanged(-BodyIds.Num());
 
         if (ck::IsValid(_JoltSubsystem))
         {
-            _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
             _JoltSubsystem->Request_NoteStaticSceneChanged();
         }
     }
@@ -648,12 +646,10 @@ auto
 
         BodyInterface->RemoveBodies(BodyIds.GetData(), BodyIds.Num());
 
-        _NumStaticBodies -= BodyIds.Num();
-        _BodyChurnSinceOptimize += BodyIds.Num();
+        DoNote_BodiesChanged(-BodyIds.Num());
 
         if (ck::IsValid(_JoltSubsystem))
         {
-            _JoltSubsystem->Request_OptimizeBroadPhaseBeforeNextUpdate();
             _JoltSubsystem->Request_NoteStaticSceneChanged();
         }
     }
@@ -1143,11 +1139,12 @@ auto
 auto
     UCk_JoltStaticWorld_Subsystem_UE::
     DoNote_BodiesChanged(
-        int32 InCount)
+        int32 InBodyCountDelta)
         -> void
 {
-    _NumStaticBodies += InCount;
-    _BodyChurnSinceOptimize += InCount;
+    _NumStaticBodies += InBodyCountDelta;
+    // Population is signed; broadphase maintenance cost tracks both additions and removals.
+    _BodyChurnSinceOptimize += FMath::Abs(InBodyCountDelta);
 
     if (ck::Is_NOT_Valid(_JoltSubsystem))
     { return; }
