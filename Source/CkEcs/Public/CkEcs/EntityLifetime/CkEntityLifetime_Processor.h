@@ -156,7 +156,7 @@ namespace ck
             HandleType InHandle) -> void;
 
     private:
-        TArray<EntityType> _EntitiesToDestroy;
+        TArray<EntityType::IdType> _EntityIDsToDestroy;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
