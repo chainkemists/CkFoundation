@@ -131,6 +131,10 @@ namespace ck
         // wait and the work answer different questions: one dates the episode, the other prices it.
         FCk_Time _SearchTimeSpent;
 
+        // Zero is a valid provider-work duration, so publication carries availability separately.
+        // This becomes true only after a non-Unbuilt begin attempt has actually run.
+        bool _HasSearchDuration = false;
+
         // Opt-in timeout diagnostics retain the exact already-compiled query beside its pinned field.
         // It is absent in ordinary searches and cleared with the episode: a later registry lookup
         // could describe a different field or policy from the one this search opened on.
