@@ -136,6 +136,10 @@ namespace ck
         // volume that reuses the id from mistaking that owner's snapshot for its own refresh target.
         bool _StreamOwnerRegistered = false;
 
+        // Opaque lifetime fence returned only for a manifest-driven owner. Generated manifest events
+        // must carry it so an old owner lifetime cannot mutate a re-registered volume id.
+        uint64 _ManifestOwnerInstance = 0;
+
         // SETUP answers it - the cook is resolved there and nowhere else. A runtime build that
         // publishes over a cooked field DEMOTES it to StaleCook: the ground standing here stopped
         // being the cook's the moment that field was replaced, and only a fresh Setup reads one again.
@@ -154,6 +158,8 @@ namespace ck
 
         auto Get_IsStreamOwnerRegistered() const -> bool { return _StreamOwnerRegistered; }
         auto Set_StreamOwnerRegistered(bool InValue) -> void { _StreamOwnerRegistered = InValue; }
+        auto Get_ManifestOwnerInstance() const -> uint64 { return _ManifestOwnerInstance; }
+        auto Set_ManifestOwnerInstance(uint64 InValue) -> void { _ManifestOwnerInstance = InValue; }
     };
 
     // ----------------------------------------------------------------------------------------------------------------
