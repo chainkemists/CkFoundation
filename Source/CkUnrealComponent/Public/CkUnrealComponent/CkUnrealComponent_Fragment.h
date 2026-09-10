@@ -69,6 +69,14 @@ namespace ck
     // FTag_Transform_Updated instead loses pump-drained one-shots outright (the tag is cleared by
     // Transform_Cleanup before the next main-pass push slot), and comparing against the component
     // stomps external drift (TransformPropagation.DirtyOwnersOnly).
+    //
+    // It is also the view's MEMBERSHIP ticket, which is why Setup adds it to every scene-component owner
+    // regardless of FTag_UnrealComponent_TransformPushDisabled: that tag is per-COMPONENT, so an owner
+    // whose components are all disabled must still be tracked, or re-enabling one could never deliver
+    // another push. Its value is therefore "the owner transform as of the last push pass" — what every
+    // push-eligible component of this owner was last given — and a component returning from disabled is
+    // put back in step with it by Request_EnableTransformPush's synchronization, never by re-seeding it.
+    // FProcessor_UnrealComponent_PushTransform is the only writer of the value after Setup's seed.
     struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_LastPushedTransform
     {
     public:

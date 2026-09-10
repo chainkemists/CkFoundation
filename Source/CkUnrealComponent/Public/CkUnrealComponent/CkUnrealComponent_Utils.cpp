@@ -234,6 +234,24 @@ auto
     }
 
     const auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(OwningEntity);
+
+    // FProcessor_UnrealComponent_Setup seeds LastPushedTransform on EVERY scene-component owner,
+    // enabled or not, because it is FProcessor_UnrealComponent_PushTransform's view-membership ticket.
+    // Its absence therefore means this owner is not in that view: removing the tag below would enable a
+    // push that can never run again after the one-shot synchronization, and the component would freeze
+    // at this pose for the rest of its life. Refuse, and name it, rather than hand back a Succeeded that
+    // silently degrades into a frozen mesh someone debugs from a screenshot.
+    const auto OwnerIsPushTracked = OwnerTransform.Has<ck::FFragment_UnrealComponent_LastPushedTransform>();
+    CK_ENSURE_IF_NOT(OwnerIsPushTracked,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because its owning entity [{}] carries no "
+             "LastPushedTransform — UnrealComponent Setup never seeded it, so the push processor's view will "
+             "never visit this owner and no future move would reach the component"),
+        InUnrealComponent, OwningEntity)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
     const auto TargetTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
     SceneComponent->SetWorldTransform(TargetTransform);
 
@@ -278,7 +296,14 @@ auto
     { return false; }
 
     const auto OwningEntity = Current.Get_OwningEntity();
-    return ck::IsValid(OwningEntity) && UCk_Utils_Transform_UE::Has(OwningEntity);
+    if (NOT ck::IsValid(OwningEntity) || NOT UCk_Utils_Transform_UE::Has(OwningEntity))
+    { return false; }
+
+    // Mirrors Request_EnableTransformPush's LastPushedTransform preflight. This predicate is the
+    // documented "can it take transform ownership NOW" answer, so a check the request enforces and
+    // this one omits would be a lie that callers gate on.
+    return UCk_Utils_Transform_UE::CastChecked(OwningEntity)
+        .Has<ck::FFragment_UnrealComponent_LastPushedTransform>();
 }
 
 auto

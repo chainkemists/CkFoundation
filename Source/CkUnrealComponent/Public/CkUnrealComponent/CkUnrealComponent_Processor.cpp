@@ -137,21 +137,31 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_UnrealComponent_IsScene>();
 
+            auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+            const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
+
             if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
             {
-                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
-                const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
                 ck_unreal_component_processor::PushTransformIfChanged(
                     CastChecked<USceneComponent>(NewComponent), OwnerWorldTransform);
+            }
 
-                // Seeded with the exact value just pushed so PushTransform's change detection starts
-                // settled. The fragment lives on the OWNER, shared by all its components — seed only
-                // when absent: resetting existing memory here would swallow an owner move that a
-                // sibling component (added earlier, positioned at the old pose) still needs delivered.
-                if (NOT OwnerTransform.Has<FFragment_UnrealComponent_LastPushedTransform>())
-                {
-                    OwnerTransform.Add<FFragment_UnrealComponent_LastPushedTransform>(OwnerWorldTransform);
-                }
+            // UNCONDITIONAL, and deliberately OUTSIDE the disabled-tag branch: this fragment is the
+            // PushTransform view's membership ticket, it lives on the OWNER, and the disabled tag lives
+            // per-COMPONENT. Seeding it only for enabled components left an owner whose every scene
+            // component was disabled at setup permanently out of that view — Request_EnableTransformPush
+            // drops the per-component tag and synchronizes that one component, but with no fragment the
+            // owner is never visited again, so no later owner move can reach it. Seeded for every
+            // scene-component owner, the fragment tracks the owner's transform in BOTH states, and
+            // enabling stays what it is: a tag removal plus the one-shot sync it already performs.
+            //
+            // Seed only when ABSENT — the fragment is shared by all of the owner's components, so
+            // resetting it here would swallow an owner move that a sibling component (added earlier,
+            // positioned at the old pose) still needs delivered. FProcessor_UnrealComponent_PushTransform
+            // is the sole writer of the VALUE from this point on.
+            if (NOT OwnerTransform.Has<FFragment_UnrealComponent_LastPushedTransform>())
+            {
+                OwnerTransform.Add<FFragment_UnrealComponent_LastPushedTransform>(OwnerWorldTransform);
             }
         }
 
