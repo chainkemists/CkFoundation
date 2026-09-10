@@ -376,8 +376,9 @@ ms per query; the crowd suite is Recast-only for lack of a GroundNav field over 
       + the five headless load pins `CookedAssets.{LoadingACookedFieldComposesItFromItsTiles,
       AStaleFingerprintIsStaleCook,AnIncompatibleFormatIsStaleCook,AMissingTileIsStaleCook,
       ATruncatedTileBlobIsStaleCook}`; [NN-D92], PROGRESS.md:2390-2391 — runtime side complete)
-- [ ] Nothing process-relative is persisted. Evidence: the pending clock and any wall-time value
-      remain excluded from persistence and replication, as the current contract requires.
+- [x] Nothing process-relative is persisted. Evidence: Gate107 explicitly ran and passed
+      `CkTests.UnitTests.CkGroundNav.Serialization.NothingProcessRelativeIsPersisted`; the row checks
+      that pending-clock and wall-time fields remain outside serialized value blobs.
 
 ### Tier B — Promotion gate (CkGroundNav becomes the default provider; Recast remains present)
 
@@ -403,11 +404,17 @@ All Tier A gates green, **and**:
       §4.2 and §4.4.
 - [ ] **B6 — Multi-PIE and teardown clean.** No cross-world leaks, no ensures on world death,
       per-world state proven isolated. §5.
-- [ ] **B7 — Rollback proven, not assumed.** Gate85–88 compiled Recast as the default and ran the
-      Nav/Crowd/Queue compatibility families, but the result is not green: the two historical
-      PathNetworkFollower fixtures, the shared `StationaryAgentReGrounds` baseline, and the
-      repeatable `Queue_CrowdAdapterMovesAndResumes` case remain red. Gate89 restored and rebuilt
-      GroundNav as the default.
+- [ ] **B7 — Rollback proven, not assumed.** Gate97 compiled Recast as the default and ran its broad
+      AutoTest set at 939/952. Both previously red PathNetworkFollower fixtures passed after their
+      provider-neutral fixture corrections. Timestamp reconciliation showed Gate101's 600 fast polls
+      represented only 3.76 wall seconds, before Recast's 5 s deferral and Crowd's 10 s watchdog owe
+      a terminal; Gate110 now passes the provider-neutral current-revision Pending contract 1/1 under
+      Recast. Gate102 advances Queue past its old no-move failure but does not settle the front member
+      within 6.08 s; no third timeout increase was accepted. Gate111 restored GroundNav after the
+      unload-tombstone and sublevel manifest-identity fixes, rebuilt, and passed 474/474 GroundNav
+      rows. Gate112 then kept all GroundNav rows green in the 1867/1877 full suite; its ten failures
+      exactly match established non-GroundNav baseline rows. Recast remains selectable for A/B, with
+      the Queue runtime compatibility debt explicit.
 - [x] **B8 — CTO sign-off for promotion**, recorded as [S12-D1] in PROGRESS.md.
 
 ### Tier C — Retirement gate (Recast deleted) — STRUCK by [S12-D1]
