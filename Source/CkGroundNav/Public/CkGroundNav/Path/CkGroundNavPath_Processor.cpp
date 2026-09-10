@@ -477,6 +477,7 @@ namespace ck
         InCurrent._HasBegun = false;
         InCurrent._PendingSince = FCk_Time{};
         InCurrent._SearchTimeSpent = FCk_Time{};
+        InCurrent._HasSearchDuration = false;
     }
 
     // The one line that proves this provider is alive: every published verdict, terminal or timed out.
@@ -523,6 +524,7 @@ namespace ck
             .Set_LengthUu(0.0)
             .Set_ExpansionCount(InExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
+            .Set_HasSearchDuration(InCurrent._HasSearchDuration)
             .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch)
             .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
@@ -607,6 +609,7 @@ namespace ck
             .Set_LengthUu(Plan._LengthUu)
             .Set_ExpansionCount(SearchResult._ExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
+            .Set_HasSearchDuration(InCurrent._HasSearchDuration)
             .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value)
             .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
 
@@ -752,6 +755,8 @@ namespace ck
                 InPathEntity, InCurrent._PendingRequest.Get_RequestRevision());
         }
 
+        const auto BeginBeganAt = FPlatformTime::Seconds();
+
         const auto Status = CanRepair || HasStrictCellRoute
             ? Search.Request_BeginRepair(
                 Field, Query, InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch, HasStrictCellRoute)
@@ -761,6 +766,9 @@ namespace ck
         // because the volume covering it may still publish.
         if (Status == ECk_GroundNav_PathStatus::Unbuilt)
         { return; }
+
+        InCurrent._SearchTimeSpent = InCurrent._SearchTimeSpent + FCk_Time{FPlatformTime::Seconds() - BeginBeganAt};
+        InCurrent._HasSearchDuration = true;
 
         InCurrent._Field = Field;
         InCurrent._Search = MoveTemp(Search);
