@@ -3,6 +3,7 @@
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "CkGroundNav/Cook/CkGroundNav_CookedFieldIndex.h"
+#include "CkGroundNav/Cook/CkGroundNav_CookedSourceManifest.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldSerialize.h"
 #include "CkGroundNav/Field/CkGroundNav_TileBake.h"
 
@@ -35,14 +36,31 @@ namespace ck::groundnav
     }
 
     auto
-        Get_LevelPackageKey(
-            UWorld* InWorld)
+    Get_LevelPackageKey(
+        UWorld* InWorld)
         -> FName
     {
         if (ck::Is_NOT_Valid(InWorld) || ck::Is_NOT_Valid(InWorld->PersistentLevel))
         { return NAME_None; }
 
         return Get_PackageLookupKey(InWorld->PersistentLevel->GetOutermost()->GetName());
+    }
+
+    auto Get_CookedSourceManifestAssetPath(
+        const FName InSourceLevelPackage, const FName InCookKey,
+        const FCk_GroundNav_DataLayerSelector& InDataLayerSelector, const int32 InPartitionId) -> FString
+    {
+        if (InSourceLevelPackage.IsNone() || InCookKey.IsNone() || InPartitionId <= 0 ||
+            NOT InDataLayerSelector.Get_IsCanonical())
+        { return {}; }
+
+        const auto DefaultIndexPath = Get_CookedIndexAssetPath(
+            kCookedDataRootPath, InSourceLevelPackage.ToString(), InCookKey, {}, InDataLayerSelector);
+        const auto DefaultIndexPackage = FPackageName::ObjectPathToPackageName(DefaultIndexPath);
+        const auto Directory = FPackageName::GetLongPackagePath(DefaultIndexPackage);
+        const auto AssetName = FString::Printf(TEXT("GroundNavSourceManifest_%s_%d"),
+            *InCookKey.ToString(), InPartitionId);
+        return FString::Printf(TEXT("%s/%s.%s"), *Directory, *AssetName, *AssetName);
     }
 
     auto
@@ -235,6 +253,162 @@ namespace ck::groundnav
         // the cook's, and is the cooker's to report.
         OutField = MoveTemp(Field);
 
+        return ECk_GroundNav_CookStatus::Cooked;
+    }
+
+    auto
+        Try_LoadCookedSourceManifest(
+            const UCk_GroundNav_CookedSourceManifest_UE& InManifest,
+            const FCk_GroundNav_StreamFieldBundle&       InTemplateBundle,
+            uint64                                       InDefaultFingerprint,
+            const TMap<FGameplayTag, uint64>&            InVariantFingerprints,
+            int32                                        InStreamingVolumeId,
+            int32                                        InPartitionId,
+            const FCk_GroundNav_DataLayerSelector&       InDataLayerSelector,
+            TArray<FCk_GroundNav_StreamTileTransition>&  OutTransitions)
+        -> ECk_GroundNav_CookStatus
+    {
+        const auto& DefaultField = InTemplateBundle._DefaultField;
+
+        if (InStreamingVolumeId <= 0 || InPartitionId <= 0 ||
+            InManifest.Get_StreamingVolumeId() != InStreamingVolumeId ||
+            InManifest.Get_PartitionId() != InPartitionId ||
+            NOT InDataLayerSelector.Get_IsCanonical() ||
+            InManifest.Get_DataLayerNames() != InDataLayerSelector.Get_LayerNames() ||
+            NOT InManifest.Get_IsCompatibleWith(kFieldBlobFormatVersion) ||
+            NOT DefaultField._Params.Get_IsValid() ||
+            DefaultField._Tiles.Num() != DefaultField._Params.Get_TileCount() ||
+            NOT (InManifest.Get_LatticeKey() == Get_CookedLatticeKey(DefaultField._Params)))
+        {
+            return ECk_GroundNav_CookStatus::StaleCook;
+        }
+
+        auto ManifestSelector = FCk_GroundNav_DataLayerSelector{};
+        if (NOT TryMake_DataLayerSelector(InManifest.Get_DataLayerNames(), ManifestSelector) ||
+            ManifestSelector.Get_LayerNames() != InManifest.Get_DataLayerNames())
+        {
+            return ECk_GroundNav_CookStatus::StaleCook;
+        }
+
+        if (InVariantFingerprints.Num() != InTemplateBundle._VariantFields.Num() ||
+            InManifest.Get_Profiles().Num() != InTemplateBundle._VariantFields.Num() + 1 ||
+            InManifest.Get_TileCoords().IsEmpty())
+        {
+            return ECk_GroundNav_CookStatus::StaleCook;
+        }
+
+        auto PreviousCoord = FIntPoint{};
+        auto HasPreviousCoord = false;
+        for (const auto& Coord : InManifest.Get_TileCoords())
+        {
+            const auto IsStrictlyAfterPrevious = !HasPreviousCoord ||
+                Coord.Y > PreviousCoord.Y || (Coord.Y == PreviousCoord.Y && Coord.X > PreviousCoord.X);
+            if (NOT IsStrictlyAfterPrevious || Coord.X < 0 || Coord.Y < 0 ||
+                Coord.X >= DefaultField._Params._Divisions.X || Coord.Y >= DefaultField._Params._Divisions.Y)
+            {
+                return ECk_GroundNav_CookStatus::StaleCook;
+            }
+            PreviousCoord = Coord;
+            HasPreviousCoord = true;
+        }
+
+        auto ProfilesByTag = TMap<FGameplayTag, const FCk_GroundNav_CookedSourceProfile_UE*>{};
+        auto DefaultProfileCount = 0;
+        for (const auto& Profile : InManifest.Get_Profiles())
+        {
+            const auto ProfileTag = Profile.Get_ProfileTag();
+            if (!ProfileTag.IsValid())
+            {
+                ++DefaultProfileCount;
+            }
+            if (ProfilesByTag.Contains(ProfileTag) || Profile.Get_Tiles().Num() != InManifest.Get_TileCoords().Num())
+            {
+                return ECk_GroundNav_CookStatus::StaleCook;
+            }
+            ProfilesByTag.Add(ProfileTag, &Profile);
+        }
+
+        const auto* DefaultProfile = ProfilesByTag.FindRef(FGameplayTag{});
+        if (DefaultProfileCount != 1 || DefaultProfile == nullptr ||
+            DefaultProfile->Get_Fingerprint() != InDefaultFingerprint)
+        {
+            return ECk_GroundNav_CookStatus::StaleCook;
+        }
+
+        for (const auto& Variant : InTemplateBundle._VariantFields)
+        {
+            const auto* ExpectedFingerprint = InVariantFingerprints.Find(Variant.Key);
+            const auto* Profile = ProfilesByTag.FindRef(Variant.Key);
+            if (!Variant.Key.IsValid() || ExpectedFingerprint == nullptr || Profile == nullptr ||
+                Profile->Get_Fingerprint() != *ExpectedFingerprint ||
+                NOT Variant.Value._Params.Get_IsValid() ||
+                Variant.Value._Tiles.Num() != Variant.Value._Params.Get_TileCount() ||
+                NOT (Get_CookedLatticeKey(Variant.Value._Params) == InManifest.Get_LatticeKey()))
+            {
+                return ECk_GroundNav_CookStatus::StaleCook;
+            }
+        }
+
+        auto ValidateTile = [&](const UCk_GroundNav_CookedTile_UE& InTile,
+                                const FCk_GroundNav_CookedSourceProfile_UE& InProfile,
+                                const FCk_GroundNav_Field& InTemplate,
+                                const FIntPoint& InCoord) -> bool
+        {
+            const auto ExpectedBounds = Get_TileBounds(
+                InTemplate._Params.Get_TileBakeParams(
+                    FCk_GroundNav_TileCoord{InCoord.X, InCoord.Y}, FCk_GroundNav_Epoch{}));
+            if (NOT InTile.Get_IsCompatibleWith(kFieldBlobFormatVersion) ||
+                InTile.Get_StreamingVolumeId() != InStreamingVolumeId ||
+                InTile.Get_TileCoord() != InCoord ||
+                NOT (InTile.Get_LatticeKey() == InManifest.Get_LatticeKey()) ||
+                InTile.Get_WorldBounds().IsValid == 0 || NOT (InTile.Get_WorldBounds() == ExpectedBounds) ||
+                InTile.Get_DataLayerNames() != InManifest.Get_DataLayerNames() ||
+                InTile.Get_Fingerprint() != InProfile.Get_Fingerprint() ||
+                InTile.Get_ProfileTag() != InProfile.Get_ProfileTag() ||
+                InTile.Get_ContentHash() == 0 ||
+                InTile.Get_ContentHash() != Get_CookedTileContentHash(InTile.Get_Blob()))
+            {
+                return false;
+            }
+
+            auto Decoded = InTemplate;
+            const auto Status = Read_TileInto(InTile.Get_Blob(), Decoded, ECk_GroundNav_ComposeOnLoad::Deferred);
+            const auto* DecodedTile = Decoded.Get_Tile(FCk_GroundNav_TileCoord{InCoord.X, InCoord.Y});
+            return Status == ECk_GroundNav_LoadStatus::Loaded && DecodedTile != nullptr &&
+                   DecodedTile->_Coord == FCk_GroundNav_TileCoord{InCoord.X, InCoord.Y} && DecodedTile->Get_IsBuilt();
+        };
+
+        auto Candidate = TArray<FCk_GroundNav_StreamTileTransition>{};
+        Candidate.Reserve(InManifest.Get_TileCoords().Num());
+        for (auto Index = 0; Index < InManifest.Get_TileCoords().Num(); ++Index)
+        {
+            const auto Coord = InManifest.Get_TileCoords()[Index];
+            const auto* DefaultTile = DefaultProfile->Get_Tiles()[Index].LoadSynchronous();
+            if (ck::Is_NOT_Valid(DefaultTile) || NOT ValidateTile(*DefaultTile, *DefaultProfile, DefaultField, Coord))
+            {
+                return ECk_GroundNav_CookStatus::StaleCook;
+            }
+
+            auto Transition = FCk_GroundNav_StreamTileTransition{};
+            Transition._TileId = {FCk_GroundNav_VolumeId{InStreamingVolumeId}, {Coord.X, Coord.Y}};
+            Transition._Kind = ECk_GroundNav_StreamTileTransitionKind::Replace;
+            Transition._DefaultBlob = DefaultTile->Get_Blob();
+
+            for (const auto& Variant : InTemplateBundle._VariantFields)
+            {
+                const auto* Profile = ProfilesByTag.FindRef(Variant.Key);
+                const auto* Tile = Profile == nullptr ? nullptr : Profile->Get_Tiles()[Index].LoadSynchronous();
+                if (ck::Is_NOT_Valid(Tile) || NOT ValidateTile(*Tile, *Profile, Variant.Value, Coord))
+                {
+                    return ECk_GroundNav_CookStatus::StaleCook;
+                }
+                Transition._VariantBlobs.Add(Variant.Key, Tile->Get_Blob());
+            }
+
+            Candidate.Emplace(MoveTemp(Transition));
+        }
+
+        OutTransitions = MoveTemp(Candidate);
         return ECk_GroundNav_CookStatus::Cooked;
     }
 }

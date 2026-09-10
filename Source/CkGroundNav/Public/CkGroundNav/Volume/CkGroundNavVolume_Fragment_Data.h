@@ -77,7 +77,10 @@ enum class ECk_GroundNav_StreamingBuildScope : uint8
     WholeVolume,
 
     /** Keep an empty canonical lattice until world-local build invokers select tiles. */
-    InvokerDriven
+    InvokerDriven,
+
+    /** Publish only generated source manifests as World Partition cells become available. */
+    ManifestDriven
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -169,8 +172,9 @@ private:
 
     /**
      * Applies only to a positive streaming id. InvokerDriven registers an all-profile empty lattice
-     * at setup, then admits tiles only through the world aggregation pass. Legacy volumes deliberately
-     * retain their established whole-volume behavior.
+     * plus its private runtime-build source. ManifestDriven registers the same lattice without a
+     * coordinate-reserving source; generated cell manifests provide every source contribution.
+     * Legacy volumes deliberately retain their established whole-volume behavior.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkGroundNav/Cook/CkGroundNav_CookedTile.h"
+#include "CkGroundNav/Field/CkGroundNav_FieldStreaming.h"
 #include "CkGroundNav/Bake/CkGroundNav_DataLayerSelector.h"
 #include "CkGroundNav/Field/CkGroundNav_Field.h"
 #include "CkGroundNav/Field/CkGroundNav_FieldTypes.h"
@@ -23,6 +24,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_GroundNav_CookedFieldIndex_UE;
+class UCk_GroundNav_CookedSourceManifest_UE;
 class UWorld;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -51,6 +53,14 @@ namespace ck::groundnav
     CKGROUNDNAV_API auto
     Get_LevelPackageKey(
         UWorld* InWorld) -> FName;
+
+    /** The one convention path for a generated streamed-source manifest. */
+    CKGROUNDNAV_API auto
+    Get_CookedSourceManifestAssetPath(
+        FName InSourceLevelPackage,
+        FName InCookKey,
+        const FCk_GroundNav_DataLayerSelector& InDataLayerSelector,
+        int32 InPartitionId) -> FString;
 
     /**
      * The index asset for {the selected source level package, InCookKey, InProfileTag}, or null.
@@ -107,6 +117,25 @@ namespace ck::groundnav
         FGameplayTag                             InProfileTag = {},
         int32                                    InStreamingVolumeId = INDEX_NONE,
         const FCk_GroundNav_DataLayerSelector&   InDataLayerSelector = {}) -> ECk_GroundNav_CookStatus;
+
+    /**
+     * Validates one durable source manifest into complete all-profile stream replacements.
+     *
+     * The supplied bundle names the exact profile set and lattice each blob must join. The default
+     * fingerprint is separate because the default profile has no gameplay-tag map key; every valid
+     * variant key must have one expected fingerprint. OutTransitions is assigned only after every
+     * manifest entry, tile asset, blob, bounds, selector, and profile agrees.
+     */
+    CKGROUNDNAV_API auto
+    Try_LoadCookedSourceManifest(
+        const UCk_GroundNav_CookedSourceManifest_UE& InManifest,
+        const FCk_GroundNav_StreamFieldBundle&       InTemplateBundle,
+        uint64                                       InDefaultFingerprint,
+        const TMap<FGameplayTag, uint64>&            InVariantFingerprints,
+        int32                                        InStreamingVolumeId,
+        int32                                        InPartitionId,
+        const FCk_GroundNav_DataLayerSelector&       InDataLayerSelector,
+        TArray<FCk_GroundNav_StreamTileTransition>&  OutTransitions) -> ECk_GroundNav_CookStatus;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
