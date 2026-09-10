@@ -91,11 +91,17 @@ namespace ck
             TimeType InDeltaT)
         -> void
     {
-        _EntitiesToDestroy.Empty();
-        Super::DoTick(InDeltaT);
+        _EntityIDsToDestroy.Empty();
         QUICK_SCOPE_CYCLE_COUNTER(DestroyEntities)
-        _TransientEntity.Get_RegistryView().DestroyEntities(_EntitiesToDestroy);
-        _EntitiesToDestroy.Empty();
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(DestroyEntities_CollectFinalization)
+            Super::DoTick(InDeltaT);
+        }
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(DestroyEntities_EnTTDestroy)
+            _TransientEntity.Get_RegistryView().DestroyEntityIDs(_EntityIDsToDestroy);
+        }
+        _EntityIDsToDestroy.Empty();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -107,12 +113,14 @@ namespace ck
             HandleType InHandle)
         -> void
     {
+        QUICK_SCOPE_CYCLE_COUNTER(DestroyEntity_Finalization)
         ecs::VeryVerbose(TEXT("[DESTRUCTION] Destroying Entity [{}]"), InHandle);
 
         // FTag_Replicated alone isn't enough: a restored husk can carry the tag WITHOUT
         // FFragment_ReplicatedObjects_Params, and would then trip the Get<...> ensure below.
         if (InHandle.Has<FTag_Replicated>() && UCk_Utils_ReplicatedObjects_UE::Has(InHandle))
         {
+            QUICK_SCOPE_CYCLE_COUNTER(DestroyEntity_ReplicatedObjectCleanup)
             ck::algo::ForEachIsValid(UCk_Utils_ReplicatedObjects_UE::Get_ReplicatedObjects(InHandle).Get_ReplicatedObjects(),
                 [&](const TStrongObjectPtr<UCk_ReplicatedObject_UE>& InRO)
                 {
@@ -132,7 +140,10 @@ namespace ck
                 });
         }
 
-        _EntitiesToDestroy.Emplace(InHandle.Get_Entity());
+        {
+            QUICK_SCOPE_CYCLE_COUNTER(DestroyEntity_CollectID)
+            _EntityIDsToDestroy.Emplace(InHandle.Get_Entity().Get_ID());
+        }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
