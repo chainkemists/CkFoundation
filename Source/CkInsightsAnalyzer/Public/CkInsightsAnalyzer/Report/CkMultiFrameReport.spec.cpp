@@ -60,10 +60,12 @@ namespace ck_multi_frame_report_tests
         double InInclusiveMs,
         double InExclusiveMs,
         uint32 InCount,
-        const TArray<FString>& InBreadcrumbs = {})
+        const TArray<FString>& InBreadcrumbs = {},
+        uint32 InTimerIndex = 0)
         -> TSharedPtr<FCk_HotPathNode>
     {
         auto Node = MakeShared<FCk_HotPathNode>();
+        Node->TimerIndex = InTimerIndex;
         Node->RawName = InRawName;
         Node->DisplayName = InRawName;
         Node->Breadcrumbs = InBreadcrumbs;
@@ -383,9 +385,7 @@ bool FCkTest_MultiFrameReport_MergedHotPathPresence::RunTest(const FString&)
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// The same timer legitimately appears under different collapsed wrapper chains. Merging by raw name
-// alone would fuse those rows and attribute cost to a call path that never ran, so identity is the
-// (RawName, Breadcrumbs) pair.
+// Same-name timer IDs and the same timer under differing wrapper chains are separate source paths.
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
     FCkTest_MultiFrameReport_MergedHotPathIdentity,
     "Ck.CkInsightsAnalyzer.MultiFrameReport.MergedHotPathIdentity",
@@ -396,12 +396,12 @@ bool FCkTest_MultiFrameReport_MergedHotPathIdentity::RunTest(const FString&)
     using namespace ck_multi_frame_report_tests;
 
     const auto FirstTree = TArray<TSharedPtr<FCk_HotPathNode>>{
-        Make_HotPathNode(TEXT("X"), 5.0, 5.0, 1, {TEXT("WrapperA")}),
-        Make_HotPathNode(TEXT("Y"), 1.0, 1.0, 1, {TEXT("SameWrapper")})};
+        Make_HotPathNode(TEXT("X"), 5.0, 5.0, 1, {TEXT("WrapperA")}, 11),
+        Make_HotPathNode(TEXT("Y"), 1.0, 1.0, 1, {TEXT("SameWrapper")}, 12)};
 
     const auto SecondTree = TArray<TSharedPtr<FCk_HotPathNode>>{
-        Make_HotPathNode(TEXT("X"), 7.0, 7.0, 1, {TEXT("WrapperB")}),
-        Make_HotPathNode(TEXT("Y"), 3.0, 3.0, 1, {TEXT("SameWrapper")})};
+        Make_HotPathNode(TEXT("X"), 7.0, 7.0, 1, {TEXT("WrapperB")}, 11),
+        Make_HotPathNode(TEXT("Y"), 3.0, 3.0, 1, {TEXT("SameWrapper")}, 12)};
 
     const auto Merged = FCk_MultiFrameReport::DoMerge_HotPathTrees({FirstTree, SecondTree});
 
@@ -443,6 +443,7 @@ bool FCkTest_MultiFrameReport_MergedHotPathIdentity::RunTest(const FString&)
     TestEqual(TEXT("a merged row is present in both frames"),
         static_cast<int32>((*Shared)->FramesPresent), 2);
     TestEqual(TEXT("a merged row averages both frames"), (*Shared)->AvgInclusiveMs, 2.0);
+    TestEqual(TEXT("a merged row retains its source timer identity"), (*Shared)->TimerIndex, uint32{12});
 
     return true;
 }
@@ -505,6 +506,37 @@ bool FCkTest_MultiFrameReport_MergedHotPathDenominator::RunTest(const FString&)
     // four-frame series it would interpolate 10 and 30 at 0.85 instead, giving 27.
     TestEqual(TEXT("p95 is over present samples, not the padded series"),
         SpikeNode->P95InclusiveMs, 29.0);
+
+    return true;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+    FCkTest_MultiFrameReport_MergedHotPathSeparatesSameNameTimerIds,
+    "Ck.CkInsightsAnalyzer.MultiFrameReport.MergedHotPathSeparatesSameNameTimerIds",
+    EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FCkTest_MultiFrameReport_MergedHotPathSeparatesSameNameTimerIds::RunTest(const FString&)
+{
+    using namespace ck_multi_frame_report_tests;
+
+    const auto FirstTree = TArray<TSharedPtr<FCk_HotPathNode>>{
+        Make_HotPathNode(TEXT("Same Name"), 5.0, 5.0, 1, {}, 101)};
+    const auto SecondTree = TArray<TSharedPtr<FCk_HotPathNode>>{
+        Make_HotPathNode(TEXT("Same Name"), 7.0, 7.0, 1, {}, 202)};
+
+    const auto Merged = FCk_MultiFrameReport::DoMerge_HotPathTrees({FirstTree, SecondTree});
+    TestEqual(TEXT("same-name timer IDs stay separate rows"), Merged.Num(), 2);
+    if (Merged.Num() != 2)
+    { return false; }
+
+    const auto* First = Merged.FindByPredicate([](const TSharedPtr<FCk_MergedHotPathNode>& InNode)
+    { return InNode->TimerIndex == 101; });
+    const auto* Second = Merged.FindByPredicate([](const TSharedPtr<FCk_MergedHotPathNode>& InNode)
+    { return InNode->TimerIndex == 202; });
+    TestTrue(TEXT("first source timer identity is preserved"), First != nullptr);
+    TestTrue(TEXT("second source timer identity is preserved"), Second != nullptr);
 
     return true;
 }
@@ -608,6 +640,8 @@ bool FCkTest_MultiFrameReport_AggregateIdentityAndSamples::RunTest(const FString
     }
     const auto Remainder = Merged[0]->Children[0];
     TestTrue(TEXT("remainder retains aggregate flag"), Remainder->bIsAggregate);
+    TestEqual(TEXT("remainder has no source timer identity"), Remainder->TimerIndex,
+        static_cast<uint32>(INDEX_NONE));
     TestEqual(TEXT("all-frame mean"), Remainder->AvgInclusiveMs, 2.0);
     TestEqual(TEXT("presence across count changes"), Remainder->FramesPresent, uint64{2});
     TestEqual(TEXT("hit average"), Remainder->HitAvgInclusiveMs, 3.0);
@@ -760,6 +794,7 @@ bool FCkTest_MultiFrameReport_EventPathHotTree::RunTest(const FString&)
     // nested pair and sums only the disjoint second ParentA occurrence.
     TestTrue(TEXT("ParentA Target uses outer union plus its disjoint sibling only"),
         FMath::IsNearlyEqual(ParentATarget->InclusiveMs, 29.112, 0.001));
+    TestEqual(TEXT("ParentA Target preserves its source timer identity"), ParentATarget->TimerIndex, uint32{3});
     TestEqual(TEXT("ParentA Target retains outer, recursive, and disjoint call count"),
         ParentATarget->Count, uint32{3});
     TestTrue(TEXT("suppressed recursive Target promotes its named grandchild"),
@@ -768,6 +803,7 @@ bool FCkTest_MultiFrameReport_EventPathHotTree::RunTest(const FString&)
     // The same timer under ParentB is a different occurrence path, not a 29.112/40ms global slice.
     TestTrue(TEXT("ParentB Target retains its local parent-path cost"),
         FMath::IsNearlyEqual(ParentBTarget->InclusiveMs, 10.0, 0.001));
+    TestEqual(TEXT("ParentB Target preserves its source timer identity"), ParentBTarget->TimerIndex, uint32{3});
 
     TestTrue(TEXT("ParentA reconciles self and displayed child to its local inclusive time"),
         FMath::IsNearlyEqual((*ParentA)->ExclusiveMs + ParentATarget->InclusiveMs, (*ParentA)->InclusiveMs, 0.001));

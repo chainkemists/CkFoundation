@@ -178,6 +178,9 @@ struct FCk_WorkerThreadSummary
  */
 struct CKINSIGHTSANALYZER_API FCk_HotPathNode
 {
+    /** Source timer identity. Aggregates use INDEX_NONE and never represent one timer. */
+    uint32 TimerIndex = static_cast<uint32>(INDEX_NONE);
+
     /** Raw timer name (post wrapper-collapse). */
     FString RawName;
 
@@ -207,9 +210,10 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
  * One node of a hot-path tree merged across several analysed frames
  * (FCk_MultiFrameReport::DoMerge_HotPathTrees).
  *
- * Identity is (RawName, Breadcrumbs, bIsAggregate) WITHIN a parent: the same timer legitimately
- * appears under different collapsed wrapper chains, and merging those into one row attributes cost
- * to a call path that never ran. Aggregate rows use a separate identity from real timers.
+ * Real-node identity is (TimerIndex, RawName, Breadcrumbs) WITHIN a parent: distinct timer IDs can
+ * share a name, and the same timer legitimately appears under different collapsed wrapper chains.
+ * Merging either case would attribute cost to a call path that never ran. Aggregate rows use a
+ * separate identity and have TimerIndex == INDEX_NONE.
  *
  * Statistics contract:
  * - AvgInclusiveMs / AvgExclusiveMs / AvgCount are means over ALL analysed frames — a frame the node
@@ -229,6 +233,9 @@ struct CKINSIGHTSANALYZER_API FCk_HotPathNode
  */
 struct CKINSIGHTSANALYZER_API FCk_MergedHotPathNode
 {
+    /** Source timer identity. Aggregates use INDEX_NONE and never represent one timer. */
+    uint32 TimerIndex = static_cast<uint32>(INDEX_NONE);
+
     FString RawName;
     FString DisplayName;
     TArray<FString> Breadcrumbs;
@@ -241,7 +248,7 @@ struct CKINSIGHTSANALYZER_API FCk_MergedHotPathNode
     double P95InclusiveMs = 0.0;
     double MaxInclusiveMs = 0.0;
 
-    /** True for the synthetic "(+N below threshold)" row — merged by the same identity as any other. */
+    /** True for the synthetic "(+N below threshold)" row — merged by aggregate identity, never TimerIndex. */
     bool bIsAggregate = false;
 
     TArray<float> PerFrameInclusiveMs;
