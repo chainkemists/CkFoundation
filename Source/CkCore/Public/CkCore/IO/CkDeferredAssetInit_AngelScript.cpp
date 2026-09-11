@@ -6,6 +6,7 @@
 #include "CkCore/IO/CkIO_Utils.h"
 
 #include <Misc/CoreDelegates.h>
+#include <Misc/ScopeExit.h>
 #include <HAL/IConsoleManager.h>
 #include <UObject/FastReferenceCollector.h>
 #include <UObject/Package.h>
@@ -761,6 +762,42 @@ auto
 #if !WITH_EDITOR
     ck_deferred_asset_init_angelscript::RootAngelscriptDisregardViolations();
 #endif
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_DeferredAssetInit_UE::
+    Run_SurgicalLiteralHealWithNoAttribution_ForTests()
+    -> int32
+{
+#if WITH_ANGELSCRIPT_CK
+    auto AttributedLiterals = MoveTemp(ck_deferred_asset_init_angelscript::GDeferredLiteralNames);
+    ck_deferred_asset_init_angelscript::GDeferredLiteralNames.Reset();
+    ON_SCOPE_EXIT
+    {
+        ck_deferred_asset_init_angelscript::GDeferredLiteralNames = MoveTemp(AttributedLiterals);
+    };
+
+    constexpr auto FullHeal = false;
+    return ck_deferred_asset_init_angelscript::ReRunLiteralAssetInits(FullHeal).Declared;
+#else
+    return 0;
+#endif
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_DeferredAssetInit_UE::
+    Get_PreClearCapturedLiteralCount_ForTests()
+    -> int32
+{
+#if WITH_ANGELSCRIPT_CK
+    return ck_deferred_asset_init_angelscript::GPreClearCapturedLiterals.Num();
+#else
+    return 0;
 #endif
 }
 

@@ -39,6 +39,14 @@ public:
     // FCoreUObjectDelegates::GetPreGarbageCollectDelegate — re-roots the disregard-for-GC violation targets
     // right before each collection (non-editor only; catches lazily-resolved refs). See the .cpp for the why.
     static void OnPreGarbageCollect();
+
+    // Phase 2's surgical scope with NO literal attributed: the state of a SOURCE boot on which only a CDO
+    // default deferred a load. Returns how many literal inits it attempted, which must be 0 while the AS module
+    // registry is alive. Exposed so the source-boot vs cache-boot split is tested against the real sweep.
+    static auto Run_SurgicalLiteralHealWithNoAttribution_ForTests() -> int32;
+
+    // How many literal inits the pre-clear capture holds, i.e. what a cache-boot fallback would re-run.
+    static auto Get_PreClearCapturedLiteralCount_ForTests() -> int32;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
