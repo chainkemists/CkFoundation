@@ -264,6 +264,7 @@ auto
     {
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Querier);
         const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
+        auto SnappedCandidates = TArray<FCk_Eqs_Candidate>{};
 
         if (ProviderHealth != ECk_NavSurface_ProviderHealth::NoData
             && ProviderHealth != ECk_NavSurface_ProviderHealth::Error)
@@ -271,7 +272,6 @@ auto
             const auto HalfExt = FMath::Max(GenParams.Get_NavProjectionSearchHalfExtentUu(), 1.0f);
             const auto ProjectionExtent = FVector{HalfExt, HalfExt, HalfExt};
 
-            auto SnappedCandidates = TArray<FCk_Eqs_Candidate>{};
             SnappedCandidates.Reserve(OutCandidates.Num());
 
             for (auto& Candidate : OutCandidates)
@@ -286,9 +286,11 @@ auto
                     SnappedCandidates.Add(Candidate);
                 }
             }
-
-            OutCandidates = MoveTemp(SnappedCandidates);
         }
+
+        // Projection is a required admission step. An unavailable provider cannot
+        // turn raw generator locations into navigable candidates.
+        OutCandidates = MoveTemp(SnappedCandidates);
     }
 
     INC_DWORD_STAT_BY(STAT_Eqs_CandidatesGenerated, OutCandidates.Num());
