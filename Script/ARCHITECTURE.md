@@ -528,6 +528,9 @@ Timer.BindTo_OnUpdate(TimerDelegate, ECk_Signal_BindingPolicy::FireIfPayloadInFl
 // 13. ASSET DEFINITIONS ('asset ... of ...') — canonical home of this topic
 //============================================================================
 //
+// (LOADING assets at runtime is section 23 — never block on a player-facing
+//  path. This section is about DEFINING them.)
+//
 // `asset <Name> of <UDataAssetSubclass>` creates a data-asset instance from
 // script, registered with the engine as if authored in the editor — no
 // .uasset to manage (object path: /Script/AngelscriptAssets.<Name>).
@@ -774,7 +777,74 @@ property void  SetHealth(float Value) { _Health = Value; }
 //    (generator Claude.md:28-32).
 
 //============================================================================
-// 23. PROVENANCE AND MAINTENANCE
+// 23. ASSET LOADING — DO NOT BLOCK
+//============================================================================
+//
+// THE RULE: never synchronously load an asset on a path the player waits on
+// (Construct / BeginPlay / feature Setup). Use the ResourceLoader and finish
+// the work in a callback.
+//
+// WHY THIS SECTION EXISTS (measured on BusterBlock, 2026-09-08):
+// - Hitting Play issued 699 synchronous package loads in a SINGLE 6.0s frame
+//   — a hard freeze, not slow ticking.
+// - A -game boot of the same map issued 1,415 across 1,184 packages, and 94%
+//   of them were first seen AFTER LoadMap completed — i.e. during entity
+//   construction and BeginPlay, which is this section's subject.
+// - The framework itself had ~44 synchronous load sites across 13 runtime
+//   modules, and this guide had ZERO async guidance. Both facts are why the
+//   game had ~360 of its own.
+//
+// THE ANTI-PATTERN — do not copy this, it is the thing being replaced:
+//
+//   void DoConstruct(FCk_Handle InHandle)
+//   {
+//       auto Mesh = System::LoadAsset_Blocking(assets::SomeMesh_BB_SM());  // BLOCKS
+//   }
+//
+// LoadAsset_Blocking is not a "fallback that rarely fires". The generated
+// assets::* accessors return a FRESHLY CONSTRUCTED TSoftObjectPtr every call,
+// so there is never a resolved reference for it to short-circuit on — it
+// blocks on a cold asset every single time.
+//
+// THE PATTERN — batch, then continue in the callback:
+//
+//   private void DoRequestAssets()
+//   {
+//       auto Refs = utils_resource_loader::Transform_SoftObjectReferences_ToSoftResourceLoaderObjectReferences(
+//           _MySoftAssets);
+//
+//       utils_resource_loader::Request_LoadObjectBatch(
+//           _LifetimeOwner,
+//           FCk_Request_ResourceLoader_LoadObjectBatch(Refs),
+//           FCk_Delegate_ResourceLoader_OnObjectBatchLoaded(this, n"OnAssetsReady"));
+//   }
+//
+//   UFUNCTION()
+//   private void OnAssetsReady(...)   // do the work that needed the assets HERE
+//   {
+//   }
+//
+// Working reference in a shipping project: BusterBlock
+// Script/GameFlow/BB_GameFlow_Subsystem.as (~line 232) — builds a batch from
+// soft class + soft object refs and continues in OnPreloadBatchLoaded.
+//
+// HOLDING THE RESULT (GC trap): ECS fragments live outside the UObject graph,
+// so nothing traces a reference stored there. Keep the soft ref as the
+// authored field and a `UPROPERTY(Transient)` hard ref as the resolved cache
+// — the UPROPERTY is what actually roots it. See BusterBlock
+// Script/ECS/FlyerStand/BB_FlyerStand_Assets.as for the shape.
+//
+// WHEN SYNCHRONOUS IS STILL CORRECT: a creation site that cannot express
+// "not ready yet" (collision that must exist the frame a level is visible).
+// Then it is resident-or-fail — ensure loudly on the unresolved path rather
+// than silently blocking. Say so in a comment, with the reason.
+//
+// MEASURING IT: BusterBlock ships Bb.SyncLoads.Report / Bb.SyncLoads.Reset,
+// which name every package loaded synchronously in a window and auto-report
+// at PIE start. Promote to CkFoundation when a second project needs it.
+
+//============================================================================
+// 24. PROVENANCE AND MAINTENANCE
 //============================================================================
 // Facts above were verified against code on 2026-07-02 (citations inline).
 // Re-verify the volatile ones (run from the superproject root):
