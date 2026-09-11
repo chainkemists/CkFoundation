@@ -1,0 +1,619 @@
+{
+  "schema": "navigation.gate124.final-checkpoint.v1",
+  "capturedUtc": "2026-09-11T00:20:18.679060+00:00",
+  "status": "isolated-editor-ab-verified-broader-compatibility-open",
+  "repositories": [
+    {
+      "path": "D:\\Repos\\CkPlugins_3",
+      "head": "a518a99d5fb6c8b84c576fa36e11161c27a82880",
+      "branch": "feature/ck-navigation",
+      "localDev": "a4c40cfed551349d3240fe83d08378fea2676536",
+      "localDevUnchanged": true,
+      "status": [
+        "M Config/DefaultGameplayTags.ini",
+        " M Plugins/CkFoundation",
+        " M Plugins/CkTests",
+        " M Script/Generated/CkPlugins_EntitySpawnParams.as",
+        "?? CONTINUATION_PROMPT_CkNavigationReplacementCampaign.md",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.ckexport",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.uasset",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.ckexport",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.uasset",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.ckexport",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.uasset",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.ckexport",
+        "?? Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.uasset"
+      ],
+      "indexGitlinks": [
+        "160000 5532971dbbb821bf8e5420e350a61afb79d0eb3a 0\tCkAuto",
+        "160000 65b8ad6b56dc9238f63ac6136259a76d08cf9c34 0\tPlugins/AutoSizeComments",
+        "160000 4cfebc6036ac6e310343700c025defe3fd4f94a6 0\tPlugins/BlueprintAssist",
+        "160000 7ca8b5890722629faeb4c8fe573110fcd879294d 0\tPlugins/CkApplication",
+        "160000 e9a833ddc491f145799faf2276a51d5805a533bb 0\tPlugins/CkFoundation",
+        "160000 f2527bafcecf0e91473af78d2d442dc66b69218c 0\tPlugins/CkGameplayDebugger",
+        "160000 f3e7501a27d9ac40fe49fa8594e7e8ae376d792f 0\tPlugins/CkTests",
+        "160000 103ccc54287997d126c62770f1ba0307809206f5 0\tPlugins/GitLink",
+        "160000 c1ab0ed2c6d0508a32aba57f9d92716d074a727a 0\tPlugins/GitSourceControl",
+        "160000 d24f70f8a087faa4aed86a39da5664e55172ed35 0\tPlugins/NodeGraphAssistant",
+        "160000 58c394d46b0a56ccf573ee4c5f9b1eccb4c0317a 0\tPlugins/ZenMode"
+      ]
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\Plugins\\CkFoundation",
+      "head": "e9a833ddc491f145799faf2276a51d5805a533bb",
+      "branch": "feature/ck-navigation",
+      "localDev": "a25ec9539241ac135f2c081d42717a4fe7cc2507",
+      "localDevUnchanged": true,
+      "status": [
+        "M Source/CkGroundNav/Public/CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Invalidate_Processor.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.h",
+        " M Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.h",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.cpp",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.cpp",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h",
+        " M Source/CkNavigation/Public/CkNavigation/Settings/CkNav_ProjectSettings.h",
+        " M docs/campaigns/navigation-next/GATE124_COMPATIBILITY_AND_REBASE_PLAN.md",
+        " M docs/campaigns/navigation-next/GATE124_COMPATIBILITY_SOURCE_AUDIT.md",
+        " M docs/campaigns/navigation-next/PROGRESS.md",
+        "?? docs/campaigns/navigation-next/CONTINUATION_PROMPT_BusterBlockCompatibilityAndABReadiness.md",
+        "?? docs/campaigns/navigation-next/CONTINUATION_PROMPT_GroundNavShowcaseBenchmarkAndAcceptance.md",
+        "?? docs/campaigns/navigation-next/GATE124_BUSTERBLOCK_AB_RUNBOOK.md",
+        "?? docs/campaigns/navigation-next/GATE124_FINAL_CHECKPOINT.json",
+        "?? docs/campaigns/navigation-next/GATE124_INTEGRATION_EVIDENCE.json",
+        "?? docs/campaigns/navigation-next/GATE124_VALIDATION_EVIDENCE.json"
+      ],
+      "indexGitlinks": []
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\Plugins\\CkTests",
+      "head": "f3e7501a27d9ac40fe49fa8594e7e8ae376d792f",
+      "branch": "feature/ck-navigation",
+      "localDev": "bde15e9f23f0ffebaa2876fa45f60e3f340ecc21",
+      "localDevUnchanged": true,
+      "status": [
+        "M Source/CkTests/Private/UnitTests/CkCrowd/Test_Crowd_DebugDrawOuterGate.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_Facade_Equivalence.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_FilterCompile.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PlateSplitAtMarkup.cpp",
+        "?? Script/CkGroundNav/CONTINUATION_PROMPT_GroundNavTuningRange.md"
+      ],
+      "indexGitlinks": []
+    },
+    {
+      "path": "D:\\Repos\\CkPlugins_3\\CkAuto",
+      "head": "5532971dbbb821bf8e5420e350a61afb79d0eb3a",
+      "branch": "",
+      "localDev": "676b70c457500d6f9f139042743c6eea3aadd068",
+      "localDevUnchanged": true,
+      "status": [],
+      "indexGitlinks": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock",
+      "head": "a16b2bce594dc125787b8b702ce7bd1543076a23",
+      "branch": "feature/navigation-ab-readiness",
+      "localDev": "c0adc330e5d32bf392e9677f7cdbf104c74eb27b",
+      "localDevUnchanged": true,
+      "status": [
+        "M Config/DefaultCkFoundation.ini",
+        " M GauntletTests.json",
+        " M Plugins/CkFoundation",
+        " M Plugins/CkTests",
+        " M Script/ECS/AccessZone/BB_AccessZone_EntityScript.as",
+        " M Script/ECS/Entryway/BB_Entryway_Processor_ShoppingBoundary.as",
+        " M Source/BusterBlock/AI/Navigation/BB_NavQueryFilters.cpp",
+        " M Source/BusterBlock/AI/Navigation/BB_NavQueryFilters.h",
+        " M Source/BusterBlock/BusterBlock.Build.cs",
+        "?? Content/Tests/Navigation/BusterBlockNavigationAB.umap",
+        "?? Plugins/BusterBlockTests/Script/Gauntlet/BB_GauntletAsTest_NavigationAB.as",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavABRunSubsystem.cpp",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavABRunSubsystem.h",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavABScenario.cpp",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavABScenario.h",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavMarkupCompatibility.cpp",
+        "?? Source/BusterBlock/AI/Navigation/BB_NavMarkupCompatibility.h",
+        "?? Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavABFixture.cpp",
+        "?? Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavABRunOptions.cpp",
+        "?? Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavFilterCompatibility.cpp",
+        "?? Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavMarkupCompatibility.cpp",
+        "?? tools/navigation/Invoke-NavigationAB.ps1"
+      ],
+      "indexGitlinks": [
+        "160000 676b70c457500d6f9f139042743c6eea3aadd068 0\tCkAuto",
+        "160000 29b4f575ce5f2f480ca3a2c6724d70bd857ca035 0\tPlugins/AdaptiveGizmo",
+        "160000 afb56d0bd95a9666b2e65ba6f1c79b5570a25b7e 0\tPlugins/AdvancedCommenting",
+        "160000 b896b313429e0acd375225fe9da71e41ec2e3411 0\tPlugins/AnimatedBookMenu",
+        "160000 65b8ad6b56dc9238f63ac6136259a76d08cf9c34 0\tPlugins/AutoSizeComments",
+        "160000 4cfebc6036ac6e310343700c025defe3fd4f94a6 0\tPlugins/BlueprintAssist",
+        "160000 3c3618702ea0704414d187619f1079d841108ffb 0\tPlugins/BlueprintGraphScreenshot",
+        "160000 daaa2f3eb6dd80d9875eae3c0930a3e71c95aae8 0\tPlugins/BlueprintNodeTemp",
+        "160000 24994476a0c45e2ab66b8ee5e237eb839c384fd1 0\tPlugins/CableTie",
+        "160000 b46cc762bc6d5a0452ad2470eba760b85955848d 0\tPlugins/CkFoundation",
+        "160000 570c9115093a51490080c9619da35b38998f5f91 0\tPlugins/CkGameplayDebugger",
+        "160000 c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2 0\tPlugins/CkTests",
+        "160000 27ae3220a7305334ccbb25dfe2d5a0464959ea8b 0\tPlugins/EIK",
+        "160000 f3edfa90affa66a7d72df2ada80f066f8f799ba4 0\tPlugins/EasyAssetCreator",
+        "160000 8e0e7f3f86420579419bfd6411430745dcf1a4f4 0\tPlugins/EditorScriptingTools",
+        "160000 3553c191bbf13412df9e2a369db1753ce2717b52 0\tPlugins/EmmsUI",
+        "160000 a0f35a060ad12337dc0b099b97d36c6c923bedd6 0\tPlugins/GitLink",
+        "160000 c1ab0ed2c6d0508a32aba57f9d92716d074a727a 0\tPlugins/GitSourceControl",
+        "160000 1267e7960b9a1cd64faa698729227164b351b1cc 0\tPlugins/LogViewerPro",
+        "160000 d24f70f8a087faa4aed86a39da5664e55172ed35 0\tPlugins/NodeGraphAssistant",
+        "160000 234030e22a37b06ae913520c3e90ea0436b3ab74 0\tPlugins/PhysicalLayoutTool",
+        "160000 69ab999a38479279d5203bb7b98fd49dd8a561c9 0\tPlugins/Prefabricator",
+        "160000 3ab214d454e9b975ab1098e8c7b56696e5d0614b 0\tPlugins/Prismatiscape-Interaction-Plugin",
+        "160000 c5ed46e3be4b2bd3d0ceb3902994d482e5d688da 0\tPlugins/ProInstanceTools",
+        "160000 48b857648224104f7174e831aef91abef7efc140 0\tPlugins/Projectile-Physics-Plugin",
+        "160000 82d2ea68da23ba34f605cd151186ee4600cdd574 0\tPlugins/SIK",
+        "160000 0be40f7ea72886625441e9b87817c2b6f3234bf7 0\tPlugins/ScreenSpaceFogScattering",
+        "160000 83f943984acb8d94cd87c42c74c37008d299ce35 0\tPlugins/VerticalTabs",
+        "160000 f484fa6a523ec807f5da6db47ed23981f36955ad 0\tPlugins/WorldSpaceWidgets",
+        "160000 58c394d46b0a56ccf573ee4c5f9b1eccb4c0317a 0\tPlugins/ZenMode",
+        "160000 a9c5c333eef3e919752d67f6d510f864584e6557 0\tPlugins/fresh_cooked_tweens"
+      ]
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\Plugins\\CkFoundation",
+      "head": "e9a833ddc491f145799faf2276a51d5805a533bb",
+      "branch": "feature/navigation-ab-readiness",
+      "localDev": "fb2204beb9e160361323e607c01648a321e26c41",
+      "localDevUnchanged": true,
+      "status": [
+        "M Source/CkGroundNav/Public/CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Invalidate_Processor.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.h",
+        " M Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.cpp",
+        " M Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.h",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.cpp",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.cpp",
+        " M Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h"
+      ],
+      "indexGitlinks": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\Plugins\\CkTests",
+      "head": "f3e7501a27d9ac40fe49fa8594e7e8ae376d792f",
+      "branch": "feature/navigation-ab-readiness",
+      "localDev": "e35fb5214f91b11b4069ad3b75b83a8e55a584d7",
+      "localDevUnchanged": true,
+      "status": [
+        "M Source/CkTests/Private/UnitTests/CkCrowd/Test_Crowd_DebugDrawOuterGate.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_Facade_Equivalence.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_FilterCompile.cpp",
+        " M Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PlateSplitAtMarkup.cpp"
+      ],
+      "indexGitlinks": []
+    },
+    {
+      "path": "D:\\Repos\\BusterBlock\\CkAuto",
+      "head": "676b70c457500d6f9f139042743c6eea3aadd068",
+      "branch": "",
+      "localDev": "66429b4b8315d17556856d9a2ca9dbfb01212234",
+      "localDevUnchanged": true,
+      "status": [],
+      "indexGitlinks": []
+    }
+  ],
+  "protectedFiles": [
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "CONTINUATION_PROMPT_CkNavigationReplacementCampaign.md",
+      "sha256": "902339898335636eac7fb49382b53b840a6bebcb4643d5f1d11fb0e606d12708",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Config/DefaultGameplayTags.ini",
+      "sha256": "58f2d444b94d264451a60827ca59e1d2e7dfd46e9d0ff0b5df7ecb5bc397aac8",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.ckexport",
+      "sha256": "3245792258eef88df904f7bad62dff5d6f6eea28671f6b2e5b9d7509a7a24c77",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_-1_0.uasset",
+      "sha256": "ffb9e6d27b4a832df3066c51e7da7edbe8a1807c702fcb71e383edd832fd1b40",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.ckexport",
+      "sha256": "36ef21d513aea5f238c743fc5e6f2646494267455f1bfe38b51061ee42b3ecfa",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_-1.uasset",
+      "sha256": "eaf5c2d160fa29e3dff6f1af26e437a38af2a5a0e6989d0e89453bc2ca22023a",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.ckexport",
+      "sha256": "1bf762b42d057c847323e19dee02f4eb914c0c65473f8cd710397ee2d4646870",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltCell_0_0.uasset",
+      "sha256": "577381e90e093ca282063884f48aad89b68af32df6bd978afb4e1b2eb96caa98",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.ckexport",
+      "sha256": "42c80782e172a47c568e7cd03ca01672258df781ac021c103adf9491e0cd4562",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Content/CkJoltData/CkTests/GroundNavAcceptance/Maps/GroundNavStreamingAcceptance/JoltIndex.uasset",
+      "sha256": "334286206acf3a84782094a199c51463ff3bba598917a2ffde5ec538a4674f60",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "path": "Script/Generated/CkPlugins_EntitySpawnParams.as",
+      "sha256": "ee096c5a51786cf852e29b096bda7d0b05ba926b7890238455f48a26591f01c5",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3\\Plugins\\CkFoundation",
+      "path": "Source/CkNavigation/Public/CkNavigation/Settings/CkNav_ProjectSettings.h",
+      "sha256": "23614676ea7fc14488cdafb26ff60d43139b464f5d9e585921eb9916e5037b7f",
+      "matchesEntry": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3\\Plugins\\CkTests",
+      "path": "Script/CkGroundNav/CONTINUATION_PROMPT_GroundNavTuningRange.md",
+      "sha256": "c66e2a33e0ad7f71f00f9376d052e9f1ac60572b6fb1820bd2788cc4b94f683a",
+      "matchesEntry": true
+    }
+  ],
+  "mirroredSource": [
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.cpp",
+      "sha256": "0c9f50931534dd2d9d7f38ef4a57335814a0953b9e7e8d498dbeb653cc41d6fd",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Invalidate_Processor.cpp",
+      "sha256": "513145e04a727056bd2b6094cf6d2076842e3fde4f97e80882572c943b867f00",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+      "sha256": "436df02d4e76509eecfc14e8ba9929c5fbca4aa1e4a3aa9aac1e2cdb63082dc9",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.h",
+      "sha256": "5bfcd713c76b63da140e8cb7ff8f665cb3b97a99bbed956b3b7d8040f630c41a",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.cpp",
+      "sha256": "c1837ce2e5566853010adc8bdd8ce56ac8324de02be04bbaf545e394a3c28206",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.h",
+      "sha256": "6374a031551aad76fc9cb0269c9e2cbe3a12233d758069f3df5c981650f79ff4",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.cpp",
+      "sha256": "2f88ef95e2bfe10b67b431e68c53b14e973bab1b3a3976289812454c122de8f3",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h",
+      "sha256": "6523e4598b71fc08b2dfa2a07f9c500b5199bc0756145201158f058a4e82d2b6",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.cpp",
+      "sha256": "92dc1bb3cc6ed5cf6c3a265cf3006343e3fbfcd092746f8d178261e5c304f3d1",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkFoundation",
+      "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h",
+      "sha256": "99aaaf02021a083d3d8dacea3f618d6ef18ea70e23c6e890130982461a7fef42",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkTests",
+      "path": "Source/CkTests/Private/UnitTests/CkCrowd/Test_Crowd_DebugDrawOuterGate.cpp",
+      "sha256": "fda80d86a532dc041485cd6917ee0f592be99b6d2389dc0fce4d154652da4f06",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkTests",
+      "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_Facade_Equivalence.cpp",
+      "sha256": "c724ca3b6e77a4c7b9fde28ce37095f287696a5918df51cf30f56b2fbd259ed3",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkTests",
+      "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_FilterCompile.cpp",
+      "sha256": "c9f8211a1b1d52e7271fe2561e68ceb698a13b90f2c92b94b542ece2780e7cef",
+      "exactMatch": true
+    },
+    {
+      "plugin": "Plugins/CkTests",
+      "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PlateSplitAtMarkup.cpp",
+      "sha256": "e112f2db37cdf3b147f6fea9915f925afc76c738f9d8411fe031885a0daef596",
+      "exactMatch": true
+    }
+  ],
+  "ancestry": [
+    {
+      "repo": "D:\\Repos\\CkPlugins_3\\Plugins\\CkFoundation",
+      "entryConsumerPin": "b46cc762bc6d5a0452ad2470eba760b85955848d",
+      "entryPinInCandidate": true,
+      "cachedFetchedDev": "54e9e6943cd075025673a600d7279a3e412b2fa4",
+      "candidateContainsFetchedDev": true
+    },
+    {
+      "repo": "D:\\Repos\\BusterBlock\\Plugins\\CkFoundation",
+      "entryConsumerPin": "b46cc762bc6d5a0452ad2470eba760b85955848d",
+      "entryPinInCandidate": true,
+      "cachedFetchedDev": "54e9e6943cd075025673a600d7279a3e412b2fa4",
+      "candidateContainsFetchedDev": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3\\Plugins\\CkTests",
+      "entryConsumerPin": "c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2",
+      "entryPinInCandidate": true,
+      "cachedFetchedDev": "68533b5e6416f901deffbecf7cec880084dc407f",
+      "candidateContainsFetchedDev": true
+    },
+    {
+      "repo": "D:\\Repos\\BusterBlock\\Plugins\\CkTests",
+      "entryConsumerPin": "c3b7c8ffe3ec2628f27ccecc1b1ea04909070ab2",
+      "entryPinInCandidate": true,
+      "cachedFetchedDev": "68533b5e6416f901deffbecf7cec880084dc407f",
+      "candidateContainsFetchedDev": true
+    },
+    {
+      "repo": "D:\\Repos\\CkPlugins_3",
+      "cachedFetchedDev": "477122a36b89ccaa185365f0cfeeaf4a3b5a7fe0",
+      "candidateContainsFetchedDev": true
+    },
+    {
+      "repo": "D:\\Repos\\BusterBlock",
+      "cachedFetchedDev": "a16b2bce594dc125787b8b702ce7bd1543076a23",
+      "candidateContainsFetchedDev": true
+    }
+  ],
+  "noDevAdvanced": true,
+  "finalTrialIdentity": {
+    "repositories": {
+      ".": {
+        "head": "a16b2bce594dc125787b8b702ce7bd1543076a23",
+        "dirtyFiles": [
+          {
+            "path": "Config/DefaultCkFoundation.ini",
+            "sha256": "fe61f14fbc70d38a57ce09d69f5fe9f0b6f56752f2a0d6d226ebaddff89e1aa6"
+          },
+          {
+            "path": "Content/Tests/Navigation/BusterBlockNavigationAB.umap",
+            "sha256": "f689327bfc0d1e8af717917fec174f51c7fcc41432c79e144c3e53e1b72a78b6"
+          },
+          {
+            "path": "GauntletTests.json",
+            "sha256": "05437bdebe6d1f1670e9d10d54fcc732a51a1ff169fcb762d798708c72d0a7e7"
+          },
+          {
+            "path": "Plugins/BusterBlockTests/Script/Gauntlet/BB_GauntletAsTest_NavigationAB.as",
+            "sha256": "69ef203b49edcc06a8773f57827807c284af01892dc39da479c3348c9bc4b52a"
+          },
+          {
+            "path": "Script/ECS/AccessZone/BB_AccessZone_EntityScript.as",
+            "sha256": "49d74917fe3ec535e524a8eca92b85b1d5a9ccb0546ee2198c1747b80e991482"
+          },
+          {
+            "path": "Script/ECS/Entryway/BB_Entryway_Processor_ShoppingBoundary.as",
+            "sha256": "a77e483fbe55d4de8095b5ee05a75c6a5bbcf5363db2aa79e505903e6dc48378"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavABRunSubsystem.cpp",
+            "sha256": "df2956d3564cf47aaee59eb99245e4f37e6be8540a7e1efecc1cb0a83915ac4f"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavABRunSubsystem.h",
+            "sha256": "b99ccebaf494bb99395dd207807f713c17d2492c1383665bd4b0a9c0977be5a6"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavABScenario.cpp",
+            "sha256": "387198d0e373acd5902324545123bfc3397f12c0f4ff6f9986ca9f127845c024"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavABScenario.h",
+            "sha256": "9bc560701a1019a7b112e09e87f271be22e1002e72e07ddbe6b7f8ef51e27f85"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavMarkupCompatibility.cpp",
+            "sha256": "7249d580c5dee55e9dd178f61f0fe614ba10993bb7535b902697413f7b8d51fe"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavMarkupCompatibility.h",
+            "sha256": "e59f4d67966d088a84de54fd813c5da72ce565d2453d16d29b6069ce0feea842"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavQueryFilters.cpp",
+            "sha256": "b408341eedb46da161d5001b1dbba7dedb331cb7acf9fa740d2938307c3b14b8"
+          },
+          {
+            "path": "Source/BusterBlock/AI/Navigation/BB_NavQueryFilters.h",
+            "sha256": "1655b6dbbd718ef813ca78bd1e6a8026f9c501a1da6d9ffa8d4cf4bdad6dbcf6"
+          },
+          {
+            "path": "Source/BusterBlock/BusterBlock.Build.cs",
+            "sha256": "e0784598252174dc1d5ec1c034f2bf7a18942d8381dfc3eaa31eb746181c9ca0"
+          },
+          {
+            "path": "Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavABFixture.cpp",
+            "sha256": "f9c40cfcdcbe8e1dfb331007f92be8a0b3c41042417bf2030ded9c3e548d1ee5"
+          },
+          {
+            "path": "Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavABRunOptions.cpp",
+            "sha256": "d301618c905fac505df7273d6b5a68cebda390d32488e11fc446600bae61948c"
+          },
+          {
+            "path": "Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavFilterCompatibility.cpp",
+            "sha256": "9dcb25a4eabb2517ed7a4c9b1f81433933836613a4cb52f86e09744656aad3b4"
+          },
+          {
+            "path": "Source/BusterBlock/Tests/UnitTests/Navigation/Test_NavMarkupCompatibility.cpp",
+            "sha256": "8d7b3343d4d9d372780dc89f79c77f8661b314088cf4a07d6606fd6704c48725"
+          },
+          {
+            "path": "tools/navigation/Invoke-NavigationAB.ps1",
+            "sha256": "a4be995e9bda9e2d4a05e9c53002217655500850ae7432b28c6647652178ee0d"
+          }
+        ]
+      },
+      "Plugins/CkFoundation": {
+        "head": "e9a833ddc491f145799faf2276a51d5805a533bb",
+        "dirtyFiles": [
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Facade/CkGroundNav_NavSurfaceAdapter.cpp",
+            "sha256": "0c9f50931534dd2d9d7f38ef4a57335814a0953b9e7e8d498dbeb653cc41d6fd"
+          },
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Invalidate_Processor.cpp",
+            "sha256": "513145e04a727056bd2b6094cf6d2076842e3fde4f97e80882572c943b867f00"
+          },
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.cpp",
+            "sha256": "436df02d4e76509eecfc14e8ba9929c5fbca4aa1e4a3aa9aac1e2cdb63082dc9"
+          },
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Path/CkGroundNavPath_Processor.h",
+            "sha256": "5bfcd713c76b63da140e8cb7ff8f665cb3b97a99bbed956b3b7d8040f630c41a"
+          },
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.cpp",
+            "sha256": "c1837ce2e5566853010adc8bdd8ce56ac8324de02be04bbaf545e394a3c28206"
+          },
+          {
+            "path": "Source/CkGroundNav/Public/CkGroundNav/Search/CkGroundNav_FilterCompile.h",
+            "sha256": "6374a031551aad76fc9cb0269c9e2cbe3a12233d758069f3df5c981650f79ff4"
+          },
+          {
+            "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.cpp",
+            "sha256": "2f88ef95e2bfe10b67b431e68c53b14e973bab1b3a3976289812454c122de8f3"
+          },
+          {
+            "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h",
+            "sha256": "6523e4598b71fc08b2dfa2a07f9c500b5199bc0756145201158f058a4e82d2b6"
+          },
+          {
+            "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.cpp",
+            "sha256": "92dc1bb3cc6ed5cf6c3a265cf3006343e3fbfcd092746f8d178261e5c304f3d1"
+          },
+          {
+            "path": "Source/CkNavigation/Public/CkNavigation/NavSurface/Recast/CkNavSurface_RecastAdapter.h",
+            "sha256": "99aaaf02021a083d3d8dacea3f618d6ef18ea70e23c6e890130982461a7fef42"
+          }
+        ]
+      },
+      "Plugins/CkTests": {
+        "head": "f3e7501a27d9ac40fe49fa8594e7e8ae376d792f",
+        "dirtyFiles": [
+          {
+            "path": "Source/CkTests/Private/UnitTests/CkCrowd/Test_Crowd_DebugDrawOuterGate.cpp",
+            "sha256": "fda80d86a532dc041485cd6917ee0f592be99b6d2389dc0fce4d154652da4f06"
+          },
+          {
+            "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_Facade_Equivalence.cpp",
+            "sha256": "c724ca3b6e77a4c7b9fde28ce37095f287696a5918df51cf30f56b2fbd259ed3"
+          },
+          {
+            "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_FilterCompile.cpp",
+            "sha256": "c9f8211a1b1d52e7271fe2561e68ceb698a13b90f2c92b94b542ece2780e7cef"
+          },
+          {
+            "path": "Source/CkTests/Private/UnitTests/CkGroundNav/Test_GroundNav_PlateSplitAtMarkup.cpp",
+            "sha256": "e112f2db37cdf3b147f6fea9915f925afc76c738f9d8411fe031885a0daef596"
+          }
+        ]
+      },
+      "CkAuto": {
+        "head": "676b70c457500d6f9f139042743c6eea3aadd068",
+        "dirtyFiles": []
+      }
+    },
+    "artifacts": [
+      {
+        "path": "Binaries/Win64/BusterBlockEditor.target",
+        "sha256": "3a97399f352dec7223de32f93d24000a8a6dd2ee06d4054c6902f7e738d848ed"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor.modules",
+        "sha256": "b3432a762845224b5a61c9b5acc00d4c54f1cdae845301223cb3b0659e93d724"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor.exe",
+        "sha256": "ad9b1f38af5eba6fa763d30476af785e465e7e5ed89736124303d58d9d79ce4f"
+      },
+      {
+        "path": "CkAuto/UnrealToolbox.exe",
+        "sha256": "8e652f9c4cf3438e2148237787e79def19db5f0f55b76f52c105a9251e8cb12e"
+      },
+      {
+        "path": "Content/Tests/Navigation/BusterBlockNavigationAB.umap",
+        "sha256": "f689327bfc0d1e8af717917fec174f51c7fcc41432c79e144c3e53e1b72a78b6"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-BusterBlock.dll",
+        "sha256": "7c9a1b00933f62e7c788c66afb9a53bfea6a00a93b3b1663104312517c0d6723"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-CkNavigation.dll",
+        "sha256": "7ae2273964a99ebfa5f16ce606e5836ff19171c711d870fd1e72af5d8bbb8f26"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-CkGroundNav.dll",
+        "sha256": "7afd254c99d9d2f4a7b8951a8d4a809725fd5d859f6cd7111cef23cac362410b"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-CkCrowd.dll",
+        "sha256": "0d5a748a8b055bcad9c912002eff587a15207c3e2c9c7a17b9b2c2ee0f13cfb8"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-CkJolt.dll",
+        "sha256": "6ba237165350e813058b0967ff2dc9de07870e3c10773bafc284191afd6df776"
+      },
+      {
+        "path": "Binaries/Win64/BusterBlockEditor-CkTests.dll",
+        "sha256": "3c7b33340c64b76634e518b3f4667d1a04d285f780c4e5afc37b8591f2407541"
+      }
+    ]
+  },
+  "finalThreeRunsSameSourceAndArtifacts": true,
+  "noLocalCookOrPackage": true,
+  "newImplementationCommitted": false,
+  "note": "Existing integration evidence is a historical pre-build checkpoint. This records final source and artifacts; host binaries were not rebuilt after mirroring."
+}
