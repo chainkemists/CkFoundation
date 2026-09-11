@@ -52,7 +52,7 @@ namespace ck_nav_surface_filter_definition
         {
             const auto* Other = InB.Find(Entry.Key);
 
-            if (Other == nullptr || NOT FMath::IsNearlyEqual(Entry.Value, *Other))
+            if (Other == nullptr || Entry.Value != *Other)
             { return false; }
         }
 
@@ -66,6 +66,43 @@ namespace ck_nav_surface_filter_definition
         return InA.Get_RequiredAreaTags() == InB.Get_RequiredAreaTags() &&
                InA.Get_ExcludedAreaTags() == InB.Get_ExcludedAreaTags() &&
                Get_IsSameCostTable(InA.Get_AreaCostMultipliers(), InB.Get_AreaCostMultipliers());
+    }
+
+    auto Get_AreAllTagsValid(
+        const FGameplayTagContainer& InTags) -> bool
+    {
+        for (const auto& Tag : InTags)
+        {
+            if (NOT Tag.IsValid())
+            { return false; }
+        }
+
+        return true;
+    }
+
+    auto Get_IsDefinitionValid(
+        const FCk_NavFilter_Definition& InDefinition) -> bool
+    {
+        const auto AreaTagsAreValid =
+            Get_AreAllTagsValid(InDefinition.Get_RequiredAreaTags()) &&
+            Get_AreAllTagsValid(InDefinition.Get_ExcludedAreaTags());
+
+        const auto RequiredAndExcludedDoNotConflict = NOT InDefinition.Get_RequiredAreaTags()
+            .HasAnyExact(InDefinition.Get_ExcludedAreaTags());
+
+        auto CostTagsAndValuesAreValid = true;
+        for (const auto& CostEntry : InDefinition.Get_AreaCostMultipliers())
+        {
+            const auto CostIsValid = CostEntry.Key.IsValid() && FMath::IsFinite(CostEntry.Value) &&
+                CostEntry.Value > 0.0f;
+            if (NOT CostIsValid)
+            {
+                CostTagsAndValuesAreValid = false;
+                break;
+            }
+        }
+
+        return AreaTagsAreValid && RequiredAndExcludedDoNotConflict && CostTagsAndValuesAreValid;
     }
 }
 
@@ -83,34 +120,68 @@ namespace ck::nav_surface
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        TryRegister_FilterDefinitions(
+            const TMap<FGameplayTag, FCk_NavFilter_Definition>& InDefinitions)
+        -> bool
+    {
+        auto BatchIsValid = true;
+
+        for (const auto& Entry : InDefinitions)
+        {
+            const auto DefinitionIsValid = Entry.Key.IsValid() &&
+                ck_nav_surface_filter_definition::Get_IsDefinitionValid(Entry.Value);
+            if (NOT DefinitionIsValid)
+            {
+                BatchIsValid = false;
+                break;
+            }
+        }
+
+        auto& Definitions = ck_nav_surface_filter_definition::Get_Definitions();
+
+        if (BatchIsValid)
+        {
+            for (const auto& Entry : InDefinitions)
+            {
+                const auto* Existing = Definitions.Find(Entry.Key);
+                const auto DefinitionAgrees = Existing == nullptr ||
+                    ck_nav_surface_filter_definition::Get_IsSameDefinition(*Existing, Entry.Value);
+                if (NOT DefinitionAgrees)
+                {
+                    BatchIsValid = false;
+                    break;
+                }
+            }
+        }
+
+        CK_ENSURE_IF_NOT(BatchIsValid,
+            TEXT("Rejected nav filter definition batch: every tag and definition must be valid, costs finite and "
+                 "positive, required/excluded tags non-conflicting, and existing meanings unchanged"))
+        {}
+
+        if (NOT BatchIsValid)
+        { return false; }
+
+        for (const auto& Entry : InDefinitions)
+        {
+            if (NOT Definitions.Contains(Entry.Key))
+            { Definitions.Add(Entry.Key, Entry.Value); }
+        }
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Register_FilterDefinition(
             const FGameplayTag&             InFilterTag,
             const FCk_NavFilter_Definition& InDefinition)
         -> void
     {
-        const auto RegistrationIsValid = InFilterTag.IsValid();
-        CK_ENSURE_IF_NOT(RegistrationIsValid,
-            TEXT("Rejected nav filter definition registration: invalid tag"))
-        { return; }
-
-        auto& Definitions = ck_nav_surface_filter_definition::Get_Definitions();
-
-        const auto* Existing = Definitions.Find(InFilterTag);
-
-        if (Existing == nullptr)
-        {
-            Definitions.Add(InFilterTag, InDefinition);
-            return;
-        }
-
-        const auto DefinitionAgrees =
-            ck_nav_surface_filter_definition::Get_IsSameDefinition(*Existing, InDefinition);
-
-        CK_ENSURE_IF_NOT(DefinitionAgrees,
-            TEXT("Nav filter tag [{}] is already registered with a different definition and was "
-                 "re-registered. The FIRST definition stands."),
-            InFilterTag)
-        { return; }
+        auto Definitions = TMap<FGameplayTag, FCk_NavFilter_Definition>{};
+        Definitions.Add(InFilterTag, InDefinition);
+        TryRegister_FilterDefinitions(Definitions);
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -132,8 +203,20 @@ namespace ck::nav_surface
 
                 const auto DefinitionIsValid = ck::IsValid(Definition);
                 CK_ENSURE_IF_NOT(DefinitionIsValid,
-                    TEXT("Nav QueryFilter tag [{}] maps to a filter definition that failed to load — using default filter"),
+                    TEXT("Nav QueryFilter tag [{}] maps to a filter definition that failed to load"),
                     InFilterTag)
+                {}
+
+                if (NOT DefinitionIsValid)
+                { return {}; }
+
+                const auto LoadedDefinitionIsValid =
+                    ck_nav_surface_filter_definition::Get_IsDefinitionValid(Definition->Get_Definition());
+                CK_ENSURE_IF_NOT(LoadedDefinitionIsValid,
+                    TEXT("Nav QueryFilter tag [{}] maps to an invalid filter definition"), InFilterTag)
+                {}
+
+                if (NOT LoadedDefinitionIsValid)
                 { return {}; }
 
                 return Definition->Get_Definition();
@@ -145,7 +228,7 @@ namespace ck::nav_surface
         { return *Native; }
 
         CK_TRIGGER_ENSURE(
-            TEXT("Nav QueryFilter tag [{}] has no mapping in Ck Navigation project settings — using default filter"),
+            TEXT("Nav QueryFilter tag [{}] has no mapping in Ck Navigation project settings or native registry"),
             InFilterTag);
         return {};
     }
