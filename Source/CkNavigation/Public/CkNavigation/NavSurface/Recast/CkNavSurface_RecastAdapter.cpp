@@ -134,6 +134,9 @@ namespace ck_nav_surface_recast_adapter
         const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
         CK_ENSURE_IF_NOT(AreaClassIsValid,
             TEXT("Nav query filter area tag [{}] resolves to no registered nav area class"), InAreaTag)
+        {}
+
+        if (NOT AreaClassIsValid)
         { return false; }
 
         if (InOutSeenAreaClasses.Contains(AreaClass.Get()))
@@ -145,6 +148,9 @@ namespace ck_nav_surface_recast_adapter
         CK_ENSURE_IF_NOT(AreaIsRegistered,
             TEXT("Nav query filter area [{}] is not registered on NavData [{}]"),
             GetNameSafe(AreaClass.Get()), InNavData.GetName())
+        {}
+
+        if (NOT AreaIsRegistered)
         { return false; }
 
         InOutFilter->SetExcludedArea(static_cast<uint8>(AreaId));
@@ -167,6 +173,31 @@ namespace ck_nav_surface_recast_adapter
         // the engine filter has no allow-list primitive.
         if (NOT InDefinition.Get_RequiredAreaTags().IsEmpty())
         {
+            // The exclusion translation below only visits registered tags. Check every authored
+            // required tag first so a valid but unknown tag cannot weaken to an all-excluded filter.
+            for (const auto& RequiredTag : InDefinition.Get_RequiredAreaTags())
+            {
+                const auto RequiredAreaClass = ck::nav_surface_recast::Get_AreaClass(RequiredTag);
+                const auto RequiredAreaClassIsValid = ck::IsValid(RequiredAreaClass.Get());
+                CK_ENSURE_IF_NOT(RequiredAreaClassIsValid,
+                    TEXT("Nav query filter required area tag [{}] resolves to no registered nav area class"),
+                    RequiredTag)
+                {}
+
+                if (NOT RequiredAreaClassIsValid)
+                { return false; }
+
+                const auto RequiredAreaId = InNavData.GetAreaID(RequiredAreaClass);
+                const auto RequiredAreaIsRegistered = RequiredAreaId != INDEX_NONE;
+                CK_ENSURE_IF_NOT(RequiredAreaIsRegistered,
+                    TEXT("Nav query filter required area [{}] is not registered on NavData [{}]"),
+                    GetNameSafe(RequiredAreaClass.Get()), InNavData.GetName())
+                {}
+
+                if (NOT RequiredAreaIsRegistered)
+                { return false; }
+            }
+
             for (const auto& RegisteredTag : ck::nav_surface_recast::Get_RegisteredAreaTags())
             {
                 if (InDefinition.Get_RequiredAreaTags().HasTagExact(RegisteredTag))
@@ -184,6 +215,9 @@ namespace ck_nav_surface_recast_adapter
             const auto AreaClassIsValid = ck::IsValid(AreaClass.Get());
             CK_ENSURE_IF_NOT(AreaClassIsValid,
                 TEXT("Nav query filter cost tag [{}] resolves to no registered nav area class"), CostEntry.Key)
+            {}
+
+            if (NOT AreaClassIsValid)
             { return false; }
 
             const auto AreaId = InNavData.GetAreaID(AreaClass);
@@ -191,10 +225,22 @@ namespace ck_nav_surface_recast_adapter
             CK_ENSURE_IF_NOT(AreaIsRegistered,
                 TEXT("Nav query filter cost area [{}] is not registered on NavData [{}]"),
                 GetNameSafe(AreaClass.Get()), InNavData.GetName())
+            {}
+
+            if (NOT AreaIsRegistered)
             { return false; }
 
             const auto* AreaDefaults = AreaClass.GetDefaultObject();
-            const auto AuthoredCost = ck::IsValid(AreaDefaults) ? AreaDefaults->DefaultCost : 1.0f;
+            const auto AreaDefaultsAreValid = ck::IsValid(AreaDefaults);
+            CK_ENSURE_IF_NOT(AreaDefaultsAreValid,
+                TEXT("Nav query filter cost area [{}] has no valid class default object"),
+                GetNameSafe(AreaClass.Get()))
+            {}
+
+            if (NOT AreaDefaultsAreValid)
+            { return false; }
+
+            const auto AuthoredCost = AreaDefaults->DefaultCost;
             InOutFilter->SetAreaCost(static_cast<uint8>(AreaId), AuthoredCost * CostEntry.Value);
         }
 
@@ -270,9 +316,21 @@ namespace ck::nav_surface_recast
         CK_ENSURE_IF_NOT(BaseFilterIsValid,
             TEXT("Nav query filter resolution failed: NavData [{}] has no default filter"),
             InNavData.GetName())
+        {}
+
+        if (NOT BaseFilterIsValid)
         { return {}; }
 
         const auto Definition = ck::nav_surface::TryGet_FilterDefinition(InFilterTag);
+
+        const auto NamedFilterResolved = NOT InFilterTag.IsValid() || Definition.IsSet();
+        CK_ENSURE_IF_NOT(NamedFilterResolved,
+            TEXT("Recast rejected named query filter [{}] because no valid definition resolved"), InFilterTag)
+        {}
+
+        if (NOT NamedFilterResolved)
+        { return {}; }
+
         if (NOT Definition.IsSet() && InOverlay.Get_ExcludedAreaTags().IsEmpty())
         { return BaseFilter; }
 
@@ -281,6 +339,9 @@ namespace ck::nav_surface_recast
         CK_ENSURE_IF_NOT(CompiledFilterIsValid,
             TEXT("Nav query filter resolution failed: could not copy the default filter of NavData [{}]"),
             InNavData.GetName())
+        {}
+
+        if (NOT CompiledFilterIsValid)
         { return {}; }
 
         auto SeenAreaClasses = TSet<UClass*>{};
