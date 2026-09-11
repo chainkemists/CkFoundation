@@ -13,6 +13,13 @@ distinct from those focused runtime results.
 
 ## Recast baseline
 
+**Measured follow-up:** Gate124c/e and the final isolated trials measured the
+effective supported-agent Recast profile as radius **35**, height **144**, with
+default-resolution cell height **1** (resolution heights 10/1/10). The nominal
+ini values below were source declarations, not a measured live profile. The
+configuration file remains unchanged. See `GATE124_VALIDATION_EVIDENCE.json` and
+`GATE124_FINAL_CHECKPOINT.json` for the later implementation and runtime state.
+
 The game explicitly configures `RecastNavMesh` with cell height `10`, agent
 radius `45`, agent height `144`, and dynamic runtime generation in
 `Config/DefaultEngine.ini:413-467`. Production NPC CrowdAgents use a different
