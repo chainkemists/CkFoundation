@@ -1,6 +1,6 @@
 # Gate124 - BusterBlock compatibility entry and preservation plan
 
-Date: 2026-09-10. Status: source/ancestry audit complete; baseline 22/27, exit 1; **preservation approved by the user; execution underway**. No compatibility implementation, candidate installation, rebase, commit or publication has occurred.
+Date: 2026-09-10. Status: entry audit and baseline complete (22/27, exit 1); **approved preservation, local candidate commits, rebases and existing-game candidate selection complete**. New compatibility implementation remains uncommitted. The final Recast/GroundNav/Recast isolated trials pass; broader NpcAI compatibility remains open at 19/27. No publication/dev advancement occurred. See PROGRESS, GATE124_VALIDATION_EVIDENCE.json and GATE124_FINAL_CHECKPOINT.json for current evidence. GATE124_INTEGRATION_EVIDENCE.json is the historical pre-build checkpoint; tables and approval instructions below preserve the original entry contract and must not trigger repeated operations.
 
 Authority: `CONTINUATION_PROMPT_BusterBlockCompatibilityAndABReadiness.md`. This checkpoint follows its changed ordering. The seven approved gyms stay closed. All deferred acceptance obligations remain in that handoff and VALIDATION.
 
