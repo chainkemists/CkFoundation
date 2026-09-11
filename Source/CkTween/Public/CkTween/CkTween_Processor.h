@@ -174,18 +174,8 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform;
-        // Must run before BOTH request drains so the enqueued requests apply the same frame. A
-        // frame late, the FTag_Transform_Updated has already been cleared, scene-node descendants
-        // never observe the parent update, and the tween appears to move only the root.
-        //
-        // SceneNode_HandleRequests is the drain for the SceneNodeOffset_* targets, and it declares
-        // no ordering of its own - so without this edge the tie is broken lexically and the drain
-        // runs BEFORE this processor enqueues. The offset write then lands in the tail pump, where
-        // it sets FTag_Transform_Updated too late for every main-pass-only consumer of that tag:
-        // the SceneNode child fan-out (a child never follows its parent mid-tween) and
-        // FProcessor_UnrealComponent_PushTransform (the tweened node's own mesh never moves, so
-        // animated furniture appears frozen and then snaps to its end pose on the completion snap,
-        // which is applied from an earlier group and does drain in the main pass).
+        // Before both request drains so the enqueued Set*/UpdateOffset requests apply this frame. A frame
+        // late, FTag_Transform_Updated is already cleared and neither scene-node children nor the mesh follow.
         using RunBefore = TDepList<FProcessor_Transform_HandleRequests, FProcessor_SceneNode_HandleRequests>;
         using TProcessor::TProcessor;
 
