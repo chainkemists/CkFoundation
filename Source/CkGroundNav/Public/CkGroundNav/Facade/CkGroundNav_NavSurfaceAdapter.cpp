@@ -272,11 +272,17 @@ namespace ck::groundnav::nav_surface_adapter_private
         // The filter, compiled once per (field snapshot, tag, overlay): its excluded areas become
         // ground this ray may not walk onto, and its per-area multipliers become the price of the
         // plates carrying them.
-        const auto& FilterTables = Get_CompiledFilterTables(
+        const auto* FilterTables = TryGet_CompiledFilterTables(
             Field, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
 
-        Query._PlateCostMultipliers = FilterTables._Multipliers;
-        Query._DeniedPlates = FilterTables._Denied;
+        if (FilterTables == nullptr)
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+            return Result;
+        }
+
+        Query._PlateCostMultipliers = FilterTables->_Multipliers;
+        Query._DeniedPlates = FilterTables->_Denied;
 
         const auto RaycastResult = Get_SurfaceRaycast(*Field, Query);
 
@@ -348,11 +354,17 @@ namespace ck::groundnav::nav_surface_adapter_private
         if (InQuery.Get_AgentRadiusUu() > 0.0f)
         { Query._Agent._RadiusUu = InQuery.Get_AgentRadiusUu(); }
 
-        const auto& FilterTables = Get_CompiledFilterTables(
+        const auto* FilterTables = TryGet_CompiledFilterTables(
             Field, InQuery.Get_QueryFilter(), InQuery.Get_QueryFilterOverlay());
 
-        Query._Cost._PlateCostMultipliers = FilterTables._Multipliers;
-        Query._Cost._DeniedPlates = FilterTables._Denied;
+        if (FilterTables == nullptr)
+        {
+            Result.Set_Status(ECk_NavSurface_QueryStatus::Blocked);
+            return Result;
+        }
+
+        Query._Cost._PlateCostMultipliers = FilterTables->_Multipliers;
+        Query._Cost._DeniedPlates = FilterTables->_Denied;
 
         auto Search = FCk_GroundNav_PathSearch{};
 
@@ -410,7 +422,7 @@ namespace ck::groundnav::nav_surface_adapter_private
                     TEXT("A GroundNav path query from [{}] to [{}] answered [{}] (search verdict [{}], "
                          "[{}] expansions, [{}] denied plates, start/goal flat plate [{}]/[{}])"),
                     InQuery.Get_Start(), InQuery.Get_End(), Result.Get_Status(), TerminalStatus,
-                    SearchResult._ExpansionCount, FilterTables._Denied.Num(), StartFlatPlate, GoalFlatPlate);
+                    SearchResult._ExpansionCount, FilterTables->_Denied.Num(), StartFlatPlate, GoalFlatPlate);
             }
             else
             {
@@ -418,7 +430,7 @@ namespace ck::groundnav::nav_surface_adapter_private
                     TEXT("A GroundNav path query from [{}] to [{}] answered [{}] (search verdict [{}], "
                          "[{}] expansions, [{}] denied plates)"),
                     InQuery.Get_Start(), InQuery.Get_End(), Result.Get_Status(), TerminalStatus,
-                    SearchResult._ExpansionCount, FilterTables._Denied.Num());
+                    SearchResult._ExpansionCount, FilterTables->_Denied.Num());
             }
 
             return Result;

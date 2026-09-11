@@ -37,7 +37,8 @@ namespace ck
         DoTry_Begin(
             FCk_Handle_GroundNavPath InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent) -> void;
+            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath_Result& InResult) -> void;
 
         // Routes a terminal search onto the success or the failure publish.
         static auto

@@ -37,7 +37,9 @@ namespace ck::groundnav
     };
 
     /**
-     * The compiled tables for this (field snapshot, filter tag, overlay), built at most once each.
+     * Tries to compile tables for this (field snapshot, filter tag, overlay), built at most once
+     * each when the filter is intentionally empty. A named tag with no valid definition returns
+     * nullptr so a caller cannot silently run it as the default filter.
      *
      * The field is taken as the shared handle the caller already holds rather than as a reference: the
      * cache OUTLIVES individual fields, and a raw address plus an epoch cannot tell a live field from a
@@ -45,17 +47,18 @@ namespace ck::groundnav
      * silently. A weak handle can: an entry whose weak pointer no longer pins is dead by construction,
      * because a new field at the same address carries a new reference controller.
      *
-     * An invalid handle, a filter naming nothing and an overlay excluding nothing all answer the same
-     * empty tables, which is the unfiltered field.
+     * Only an intentionally empty filter/overlay answers empty tables. An invalid field, a named filter
+     * that cannot resolve, or an unknown neutral area policy returns nullptr rather than sharing those
+     * permissive tables.
      *
      * GAME-THREAD STATE. The only capability contracted to run off the game thread is
      * _BoundarySegments (CkNavSurface_ProviderTable.h:32-36), and a boundary query carries no filter.
      */
     CKGROUNDNAV_API auto
-    Get_CompiledFilterTables(
+    TryGet_CompiledFilterTables(
         const FCk_GroundNav_FieldPtr&     InField,
         const FGameplayTag&               InFilterTag,
-        const FCk_Nav_QueryFilterOverlay& InOverlay) -> const FCk_GroundNav_CompiledFilterTables&;
+        const FCk_Nav_QueryFilterOverlay& InOverlay) -> const FCk_GroundNav_CompiledFilterTables*;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

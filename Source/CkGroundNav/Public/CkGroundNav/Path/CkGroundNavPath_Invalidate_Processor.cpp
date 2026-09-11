@@ -199,12 +199,21 @@ namespace ck
             const groundnav::FCk_GroundNav_FieldPtr& InField) const
         -> void
     {
-        const auto& Tables = groundnav::Get_CompiledFilterTables(
+        const auto* Tables = groundnav::TryGet_CompiledFilterTables(
             InField, InCurrent.Get_LastCorridorQueryFilter(), InCurrent.Get_LastCorridorQueryFilterOverlay());
+
+        if (Tables == nullptr)
+        {
+            InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
+            groundnav::Verbose(
+                TEXT("GroundNav Path [{}] flagged for repath: its named filter no longer resolves"),
+                InPathEntity);
+            return;
+        }
 
         for (const auto FlatPlate : InCurrent.Get_LastCorridorFlatPlates())
         {
-            if (NOT Tables._Denied.Contains(FlatPlate))
+            if (NOT Tables->_Denied.Contains(FlatPlate))
             { continue; }
 
             InPathEntity.AddOrGet<FTag_GroundNavPath_RepathRequired>();
