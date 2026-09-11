@@ -18,6 +18,14 @@
 namespace ck::nav_surface
 {
     /**
+     * Atomically publishes a batch of native definitions. Every tag, definition and conflict is
+     * checked before the registry is changed, so a rejected batch cannot leave a runnable subset.
+     */
+    CKNAVIGATION_API auto
+    TryRegister_FilterDefinitions(
+        const TMap<FGameplayTag, FCk_NavFilter_Definition>& InDefinitions) -> bool;
+
+    /**
      * Publishes what a query filter tag means. The module that owns the filter contributes it.
      *
      * Registering a tag a second time with a DIFFERENT definition is an ensure and the first
@@ -32,9 +40,8 @@ namespace ck::nav_surface
 
     /**
      * The definition a filter tag resolves to: the project settings' own mapping first, then the
-     * native table, and unset for a tag neither names - which ensures, because a query asking for a
-     * filter nothing defined is answered by the provider's default and that is never what it asked
-     * for. An invalid tag is the caller asking for no filter at all and passes silently.
+     * native table, and unset for a tag neither names. A named filter with no definition is a
+     * failure for its provider to represent; only an invalid tag asks for the provider default.
      */
     CKNAVIGATION_API auto
     TryGet_FilterDefinition(

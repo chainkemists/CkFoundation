@@ -6,6 +6,7 @@
 #include "CkGroundNav/Query/CkGroundNav_Query_Reachability.h"
 
 #include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+#include "CkNavigation/NavSurface/CkNavSurface_AreaPolicy.h"
 #include "CkNavigation/NavSurface/CkNavFilterDefinition_Registry.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -30,6 +31,8 @@ namespace ck::groundnav::filter_compile_private
         int64 _EpochValue = 0;
 
         FGameplayTag _FilterTag;
+
+        FString _DefinitionIdentity;
 
         TArray<FGameplayTag> _OverlayExcludedTags;
     };
@@ -56,12 +59,14 @@ namespace ck::groundnav::filter_compile_private
     auto Make_CompiledFilterCacheKey(
         const FCk_GroundNav_FieldPtr&     InField,
         const FGameplayTag&               InFilterTag,
+        const FString&                    InDefinitionIdentity,
         const FCk_Nav_QueryFilterOverlay& InOverlay) -> FCompiledFilterCacheKey
     {
         auto Key = FCompiledFilterCacheKey{};
         Key._Field = InField;
         Key._EpochValue = InField->_Epoch._Value;
         Key._FilterTag = InFilterTag;
+        Key._DefinitionIdentity = InDefinitionIdentity;
         Key._OverlayExcludedTags = InOverlay.Get_ExcludedAreaTags();
 
         Key._OverlayExcludedTags.Sort([](const FGameplayTag& InLeft, const FGameplayTag& InRight)
@@ -84,7 +89,50 @@ namespace ck::groundnav::filter_compile_private
         return LeftField.IsValid() && LeftField == RightField &&
                InLeft._EpochValue == InRight._EpochValue &&
                InLeft._FilterTag == InRight._FilterTag &&
+               InLeft._DefinitionIdentity == InRight._DefinitionIdentity &&
                InLeft._OverlayExcludedTags == InRight._OverlayExcludedTags;
+    }
+
+    auto Get_DefinitionIdentity(
+        const FCk_NavFilter_Definition& InDefinition) -> FString
+    {
+        auto Parts = TArray<FString>{};
+
+        auto RequiredTags = TArray<FGameplayTag>{};
+        InDefinition.Get_RequiredAreaTags().GetGameplayTagArray(RequiredTags);
+        RequiredTags.Sort([](const FGameplayTag& InLeft, const FGameplayTag& InRight)
+        {
+            return InLeft.GetTagName().LexicalLess(InRight.GetTagName());
+        });
+        for (const auto& Tag : RequiredTags)
+        { Parts.Emplace(FString::Printf(TEXT("R:%s"), *Tag.ToString())); }
+
+        auto ExcludedTags = TArray<FGameplayTag>{};
+        InDefinition.Get_ExcludedAreaTags().GetGameplayTagArray(ExcludedTags);
+        ExcludedTags.Sort([](const FGameplayTag& InLeft, const FGameplayTag& InRight)
+        {
+            return InLeft.GetTagName().LexicalLess(InRight.GetTagName());
+        });
+        for (const auto& Tag : ExcludedTags)
+        { Parts.Emplace(FString::Printf(TEXT("E:%s"), *Tag.ToString())); }
+
+        auto CostEntries = TArray<TPair<FGameplayTag, float>>{};
+        CostEntries.Reserve(InDefinition.Get_AreaCostMultipliers().Num());
+        for (const auto& Entry : InDefinition.Get_AreaCostMultipliers())
+        { CostEntries.Emplace(Entry.Key, Entry.Value); }
+        CostEntries.Sort([](const auto& InLeft, const auto& InRight)
+        {
+            return InLeft.Key.GetTagName().LexicalLess(InRight.Key.GetTagName());
+        });
+        for (const auto& Entry : CostEntries)
+        {
+            uint32 CostBits = 0;
+            FMemory::Memcpy(&CostBits, &Entry.Value, sizeof(CostBits));
+            Parts.Emplace(FString::Printf(
+                TEXT("C:%s:%08x"), *Entry.Key.ToString(), CostBits));
+        }
+
+        return FString::Join(Parts, TEXT("|"));
     }
 
     /**
@@ -100,22 +148,18 @@ namespace ck::groundnav::filter_compile_private
      */
     auto Do_CompileFilterTables(
         const FCk_GroundNav_Field&        InField,
-        const FGameplayTag&               InFilterTag,
+        const FCk_NavFilter_Definition&   InDefinition,
         const FCk_Nav_QueryFilterOverlay& InOverlay) -> FCk_GroundNav_CompiledFilterTables
     {
         auto Tables = FCk_GroundNav_CompiledFilterTables{};
 
-        const auto Definition = ck::nav_surface::TryGet_FilterDefinition(InFilterTag);
-
-        auto ExcludedTags = Definition.IsSet() ? Definition->Get_ExcludedAreaTags() : FGameplayTagContainer{};
+        auto ExcludedTags = InDefinition.Get_ExcludedAreaTags();
 
         for (const auto& OverlayTag : InOverlay.Get_ExcludedAreaTags())
         { ExcludedTags.AddTag(OverlayTag); }
 
-        const auto RequiredTags = Definition.IsSet() ? Definition->Get_RequiredAreaTags() : FGameplayTagContainer{};
-        const auto CostMultipliers = Definition.IsSet()
-            ? Definition->Get_AreaCostMultipliers()
-            : TMap<FGameplayTag, float>{};
+        const auto RequiredTags = InDefinition.Get_RequiredAreaTags();
+        const auto CostMultipliers = InDefinition.Get_AreaCostMultipliers();
 
         // Nothing to say about any plate, so nothing is worth a pass over the field.
         if (ExcludedTags.IsEmpty() && RequiredTags.IsEmpty() && CostMultipliers.IsEmpty())
@@ -162,6 +206,46 @@ namespace ck::groundnav::filter_compile_private
 
         return Tables;
     }
+
+    template <typename TTagRange>
+    auto Do_AreAreaTagsRegistered(
+        const TTagRange& InAreaTags) -> bool
+    {
+        for (const auto& AreaTag : InAreaTags)
+        {
+            const auto AreaPolicyIsRegistered = ck::nav_surface::TryGet_AreaPolicy(AreaTag).IsSet();
+            CK_ENSURE_IF_NOT(AreaPolicyIsRegistered,
+                TEXT("GroundNav rejected area policy tag [{}] because no neutral area policy is registered"), AreaTag)
+            {}
+
+            if (NOT AreaPolicyIsRegistered)
+            { return false; }
+        }
+
+        return true;
+    }
+
+    auto Do_AreDefinitionAreaTagsRegistered(
+        const FCk_NavFilter_Definition& InDefinition) -> bool
+    {
+        if (NOT Do_AreAreaTagsRegistered(InDefinition.Get_RequiredAreaTags()) ||
+            NOT Do_AreAreaTagsRegistered(InDefinition.Get_ExcludedAreaTags()))
+        { return false; }
+
+        for (const auto& CostEntry : InDefinition.Get_AreaCostMultipliers())
+        {
+            const auto AreaPolicyIsRegistered = ck::nav_surface::TryGet_AreaPolicy(CostEntry.Key).IsSet();
+            CK_ENSURE_IF_NOT(AreaPolicyIsRegistered,
+                TEXT("GroundNav rejected area policy tag [{}] because no neutral area policy is registered"),
+                CostEntry.Key)
+            {}
+
+            if (NOT AreaPolicyIsRegistered)
+            { return false; }
+        }
+
+        return true;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -169,26 +253,41 @@ namespace ck::groundnav::filter_compile_private
 namespace ck::groundnav
 {
     auto
-        Get_CompiledFilterTables(
+        TryGet_CompiledFilterTables(
             const FCk_GroundNav_FieldPtr&     InField,
             const FGameplayTag&               InFilterTag,
             const FCk_Nav_QueryFilterOverlay& InOverlay)
-        -> const FCk_GroundNav_CompiledFilterTables&
+        -> const FCk_GroundNav_CompiledFilterTables*
     {
         using namespace filter_compile_private;
 
         static const auto NoTables = FCk_GroundNav_CompiledFilterTables{};
 
-        // A field the caller no longer holds has no plates to compile against. Not an ensure: the
-        // callers that can be asked before a field is published check validity themselves, and the
-        // unfiltered answer is the one a query over no ground would get anyway.
+        const auto Definition = ck::nav_surface::TryGet_FilterDefinition(InFilterTag);
+        const auto NamedFilterResolved = NOT InFilterTag.IsValid() || Definition.IsSet();
+        CK_ENSURE_IF_NOT(NamedFilterResolved,
+            TEXT("GroundNav rejected named query filter [{}] because no valid definition resolved"), InFilterTag)
+        {}
+
+        if (NOT NamedFilterResolved)
+        { return nullptr; }
+
+        const auto DefinitionAreaTagsAreRegistered =
+            NOT Definition.IsSet() || Do_AreDefinitionAreaTagsRegistered(Definition.GetValue());
+        const auto OverlayAreaTagsAreRegistered = Do_AreAreaTagsRegistered(InOverlay.Get_ExcludedAreaTags());
+        const auto AreaTagsAreRegistered = DefinitionAreaTagsAreRegistered && OverlayAreaTagsAreRegistered;
+        if (NOT AreaTagsAreRegistered)
+        { return nullptr; }
+
+        // A field the caller no longer holds has no plates to compile against. It cannot share the
+        // empty-table success answer: callers must not turn invalid field state into a runnable query.
         if (NOT InField.IsValid())
-        { return NoTables; }
+        { return nullptr; }
 
         // A query that names no filter and no overlay can want nothing, and answering it from the
         // cache would evict a real entry to store an empty one.
         if (NOT InFilterTag.IsValid() && InOverlay.Get_ExcludedAreaTags().IsEmpty())
-        { return NoTables; }
+        { return &NoTables; }
 
         auto& Cache = Get_CompiledFilterCache();
 
@@ -199,7 +298,10 @@ namespace ck::groundnav
             return NOT InEntry.Key._Field.IsValid();
         });
 
-        const auto Key = Make_CompiledFilterCacheKey(InField, InFilterTag, InOverlay);
+        const auto DefinitionIdentity = Definition.IsSet()
+            ? Get_DefinitionIdentity(Definition.GetValue())
+            : FString{};
+        const auto Key = Make_CompiledFilterCacheKey(InField, InFilterTag, DefinitionIdentity, InOverlay);
 
         const auto Found = Cache.IndexOfByPredicate([&](const auto& InEntry)
         {
@@ -216,16 +318,19 @@ namespace ck::groundnav
                 Cache.Insert(MoveTemp(Entry), 0);
             }
 
-            return Cache[0].Value;
+            return &Cache[0].Value;
         }
 
         Cache.Insert(TPair<FCompiledFilterCacheKey, FCk_GroundNav_CompiledFilterTables>{
-            Key, Do_CompileFilterTables(*InField, InFilterTag, InOverlay)}, 0);
+            Key, Do_CompileFilterTables(
+                *InField,
+                Definition.IsSet() ? Definition.GetValue() : FCk_NavFilter_Definition{},
+                InOverlay)}, 0);
 
         if (Cache.Num() > CompiledFilterCacheCapacity)
         { Cache.SetNum(CompiledFilterCacheCapacity); }
 
-        return Cache[0].Value;
+        return &Cache[0].Value;
     }
 }
 

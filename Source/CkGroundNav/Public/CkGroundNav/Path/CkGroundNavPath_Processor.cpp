@@ -154,7 +154,7 @@ namespace ck_groundnav_path_processor
             const ck::FFragment_GroundNavPath_Params& InParams,
             const FCk_GroundNav_FieldPtr&             InField,
             const FCk_Request_GroundNavPath_FindPath& InRequest)
-        -> FCk_GroundNav_PathQuery
+        -> TOptional<FCk_GroundNav_PathQuery>
     {
         auto Query = FCk_GroundNav_PathQuery{};
 
@@ -173,11 +173,14 @@ namespace ck_groundnav_path_processor
         // become plates this search may not enter, and its per-area multipliers become the price of
         // the plates carrying them. Assigned rather than merged for the reason Get_CostParams states
         // - it leaves both tables empty, so the filter's answer IS the query's answer.
-        const auto& FilterTables = Get_CompiledFilterTables(
+        const auto* FilterTables = TryGet_CompiledFilterTables(
             InField, InRequest.Get_QueryFilter(), InRequest.Get_QueryFilterOverlay());
 
-        Query._Cost._PlateCostMultipliers = FilterTables._Multipliers;
-        Query._Cost._DeniedPlates = FilterTables._Denied;
+        if (FilterTables == nullptr)
+        { return {}; }
+
+        Query._Cost._PlateCostMultipliers = FilterTables->_Multipliers;
+        Query._Cost._DeniedPlates = FilterTables->_Denied;
 
         return Query;
     }
@@ -195,7 +198,7 @@ namespace ck_groundnav_path_processor
             const FCk_GroundNav_FieldPtr&             InField,
             const FCk_Request_GroundNavPath_FindPath& InRequest,
             const FVector&                            InAgentLocation)
-        -> FCk_GroundNav_PathPostParams
+        -> TOptional<FCk_GroundNav_PathPostParams>
     {
         auto PostParams = FCk_GroundNav_PathPostParams{};
 
@@ -204,11 +207,14 @@ namespace ck_groundnav_path_processor
         PostParams._AgentLocation = InAgentLocation;
         PostParams._Cost = Get_CostParams(InParams);
 
-        const auto& FilterTables = Get_CompiledFilterTables(
+        const auto* FilterTables = TryGet_CompiledFilterTables(
             InField, InRequest.Get_QueryFilter(), InRequest.Get_QueryFilterOverlay());
 
-        PostParams._Cost._PlateCostMultipliers = FilterTables._Multipliers;
-        PostParams._Cost._DeniedPlates = FilterTables._Denied;
+        if (FilterTables == nullptr)
+        { return {}; }
+
+        PostParams._Cost._PlateCostMultipliers = FilterTables->_Multipliers;
+        PostParams._Cost._DeniedPlates = FilterTables->_Denied;
 
         return PostParams;
     }
@@ -571,10 +577,15 @@ namespace ck
         const auto SearchDurationMs =
             static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
 
-        const auto Plan = groundnav::Get_PathPlan(
-            SearchResult,
-            *InCurrent._Field,
-            Get_PostParams(InParams, InCurrent._Field, Request, Request.Get_From()));
+        const auto PostParams = Get_PostParams(InParams, InCurrent._Field, Request, Request.Get_From());
+        if (NOT PostParams.IsSet())
+        {
+            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Blocked,
+                SearchResult._ExpansionCount, SearchResult._PlannedAgainstEpoch._Value);
+            return;
+        }
+
+        const auto Plan = groundnav::Get_PathPlan(SearchResult, *InCurrent._Field, PostParams.GetValue());
 
         auto Locations = TArray<FVector>{};
         Locations.Reserve(Plan._Waypoints.Num());
@@ -711,7 +722,8 @@ namespace ck
         DoTry_Begin(
             FCk_Handle_GroundNavPath              InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current&      InCurrent)
+            FFragment_GroundNavPath_Current&      InCurrent,
+            FFragment_GroundNavPath_Result&       InResult)
         -> void
     {
         using namespace ck_groundnav_path_processor;
@@ -730,6 +742,13 @@ namespace ck
         auto Search = groundnav::FCk_GroundNav_PathSearch{};
 
         const auto Query = Get_Query(InParams, Field, InCurrent._PendingRequest);
+        if (NOT Query.IsSet())
+        {
+            constexpr auto NoExpansions = 0;
+            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Blocked,
+                NoExpansions, Field->_Epoch._Value);
+            return;
+        }
 
         if (Get_ShouldCaptureStrictCrowdCostTimeoutReplay())
         { InCurrent._ActiveQueryForTimeoutReplay = Query; }
@@ -759,8 +778,8 @@ namespace ck
 
         const auto Status = CanRepair || HasStrictCellRoute
             ? Search.Request_BeginRepair(
-                Field, Query, InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch, HasStrictCellRoute)
-            : Search.Request_Begin(Field, Query);
+                Field, Query.GetValue(), InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch, HasStrictCellRoute)
+            : Search.Request_Begin(Field, Query.GetValue());
 
         // Ground the field itself has not baked. The episode stays parked and re-probes next tick,
         // because the volume covering it may still publish.
@@ -978,7 +997,7 @@ namespace ck
 
         InPathEntity.AddOrGet<FTag_GroundNavPath_SearchInFlight>();
 
-        FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent);
+        FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent, InResult);
 
         if (InCurrent._HasBegun && InCurrent._Search.Get_IsTerminal())
         { FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InCurrent, InResult); }
@@ -1132,10 +1151,13 @@ namespace ck
 
         if (NOT InCurrent._HasBegun)
         {
-            FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent);
+            FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent, InResult);
 
             if (NOT InCurrent._HasBegun)
             {
+                if (NOT InPathEntity.Has<FTag_GroundNavPath_SearchInFlight>())
+                { return; }
+
                 const auto DeferredForSeconds =
                     FPlatformTime::Seconds() - InCurrent._PendingSince.Get_Seconds();
 

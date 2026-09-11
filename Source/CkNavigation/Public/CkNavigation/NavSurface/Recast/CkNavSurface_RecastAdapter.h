@@ -41,9 +41,9 @@ namespace ck::nav_surface_recast
 
     // Compiles a filter tag plus a value-only overlay into the engine filter the query runs with.
     // The DEFINITION behind the tag comes from the neutral registry, so this provider and a
-    // grounded one compile the same authored intent. An unmapped tag falls back to the NavData
-    // default; a malformed overlay or definition fails closed rather than silently weakening the
-    // caller's path policy.
+    // grounded one compile the same authored intent. An empty tag uses the NavData default; a named
+    // tag with no valid definition, or a malformed overlay or definition, fails closed rather than
+    // silently weakening the caller's path policy.
     CKNAVIGATION_API auto Get_CompiledQueryFilter(
         ARecastNavMesh& InNavData,
         const FGameplayTag& InFilterTag,
