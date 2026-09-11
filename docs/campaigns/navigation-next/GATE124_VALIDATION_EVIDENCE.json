@@ -1,0 +1,2225 @@
+{
+  "schema": "navigation.gate124.validation.v1",
+  "capturedUtc": "2026-09-11T00:20:18.679060+00:00",
+  "status": "isolated-editor-ab-verified-broader-compatibility-open",
+  "project": "D:\\Repos\\BusterBlock",
+  "configuration": "Development Editor",
+  "gates": [
+    {
+      "gate": "124c",
+      "scope": "IntegratedCompatibility",
+      "boots": 3,
+      "toolboxExit": 1,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124c-IntegratedCompatibility-20260910.log",
+      "sha256": "6fb78a90d6a85b3417c83179ab0ebc24d4c98e1ec56318ab8e03b11d3a7de316",
+      "results": [
+        {
+          "result": "Success",
+          "name": "BoundsCapacity",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.BoundsCapacity"
+        },
+        {
+          "result": "Success",
+          "name": "LandscapeSegmentOwnership",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.LandscapeSegmentOwnership"
+        },
+        {
+          "result": "Success",
+          "name": "MainMapLandscapeTrace",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.MainMapLandscapeTrace"
+        },
+        {
+          "result": "Fail",
+          "name": "StartupOptions",
+          "path": "BusterBlock.UnitTests.Navigation.AB.StartupOptions"
+        },
+        {
+          "result": "Fail",
+          "name": "AuthoredMap",
+          "path": "BusterBlock.UnitTests.Navigation.NavABFixture.AuthoredMap"
+        },
+        {
+          "result": "Success",
+          "name": "AllEightNativeDefinitionsMatchLegacyConstructors",
+          "path": "BusterBlock.UnitTests.Navigation.NavFilterCompatibility.AllEightNativeDefinitionsMatchLegacyConstructors"
+        },
+        {
+          "result": "Fail",
+          "name": "MismatchAndMissingPolicyFailClosed",
+          "path": "BusterBlock.UnitTests.Navigation.NavFilterCompatibility.MismatchAndMissingPolicyFailClosed"
+        },
+        {
+          "result": "Success",
+          "name": "DestroyIsIdempotent",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.DestroyIsIdempotent"
+        },
+        {
+          "result": "Success",
+          "name": "MalformedGeometryFailsClosed",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.MalformedGeometryFailsClosed"
+        },
+        {
+          "result": "Success",
+          "name": "RealWorldCreateDestroyLifecycle",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.RealWorldCreateDestroyLifecycle"
+        }
+      ]
+    },
+    {
+      "gate": "124e",
+      "scope": "IntegratedCompatibility",
+      "boots": 2,
+      "toolboxExit": 0,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124e-IntegratedCompatibility-20260910.log",
+      "sha256": "11cff604f15acbf2c7c9776eb6055539d46d78b25f6aaad84384639e512cc6b3",
+      "results": [
+        {
+          "result": "Success",
+          "name": "BoundsCapacity",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.BoundsCapacity"
+        },
+        {
+          "result": "Success",
+          "name": "LandscapeSegmentOwnership",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.LandscapeSegmentOwnership"
+        },
+        {
+          "result": "Success",
+          "name": "MainMapLandscapeTrace",
+          "path": "BusterBlock.UnitTests.AI.Navigation.SidewalkPathNetworkDetector.MainMapLandscapeTrace"
+        },
+        {
+          "result": "Success",
+          "name": "StartupOptions",
+          "path": "BusterBlock.UnitTests.Navigation.AB.StartupOptions"
+        },
+        {
+          "result": "Success",
+          "name": "AuthoredMap",
+          "path": "BusterBlock.UnitTests.Navigation.NavABFixture.AuthoredMap"
+        },
+        {
+          "result": "Success",
+          "name": "AllEightNativeDefinitionsMatchLegacyConstructors",
+          "path": "BusterBlock.UnitTests.Navigation.NavFilterCompatibility.AllEightNativeDefinitionsMatchLegacyConstructors"
+        },
+        {
+          "result": "Success",
+          "name": "MismatchAndMissingPolicyFailClosed",
+          "path": "BusterBlock.UnitTests.Navigation.NavFilterCompatibility.MismatchAndMissingPolicyFailClosed"
+        },
+        {
+          "result": "Success",
+          "name": "DestroyIsIdempotent",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.DestroyIsIdempotent"
+        },
+        {
+          "result": "Success",
+          "name": "MalformedGeometryFailsClosed",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.MalformedGeometryFailsClosed"
+        },
+        {
+          "result": "Success",
+          "name": "RealWorldCreateDestroyLifecycle",
+          "path": "BusterBlock.UnitTests.Navigation.NavMarkupCompatibility.RealWorldCreateDestroyLifecycle"
+        }
+      ]
+    },
+    {
+      "gate": "124f",
+      "scope": "FilterCompile",
+      "boots": 1,
+      "toolboxExit": 0,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124f-FilterCompile-20260910.log",
+      "sha256": "7fe7a4a1ada78e59aa7e27106403a5a4bbda086365bf97eb642e5483f78a60a4",
+      "results": [
+        {
+          "result": "Success",
+          "name": "AvoidStandingCrowdsDeniesTheMarkedPlate",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.AvoidStandingCrowdsDeniesTheMarkedPlate"
+        },
+        {
+          "result": "Success",
+          "name": "BatchRegistrationIsAtomic",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.BatchRegistrationIsAtomic"
+        },
+        {
+          "result": "Success",
+          "name": "ConfiguredDefinitionRevalidatesBeforeCacheUse",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.ConfiguredDefinitionRevalidatesBeforeCacheUse"
+        },
+        {
+          "result": "Success",
+          "name": "NamedMissingFilterFailsClosed",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.NamedMissingFilterFailsClosed"
+        },
+        {
+          "result": "Success",
+          "name": "NoFilterRefusesNothing",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.NoFilterRefusesNothing"
+        },
+        {
+          "result": "Success",
+          "name": "RecastUnknownRequiredExcludedAndOverlayAreasFailClosed",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.RecastUnknownRequiredExcludedAndOverlayAreasFailClosed"
+        },
+        {
+          "result": "Success",
+          "name": "UnknownRequiredExcludedAndOverlayAreasFailClosed",
+          "path": "CkTests.UnitTests.CkGroundNav.FilterCompile.UnknownRequiredExcludedAndOverlayAreasFailClosed"
+        }
+      ]
+    },
+    {
+      "gate": "124g",
+      "scope": "FacadeEquivalence",
+      "boots": 1,
+      "toolboxExit": 0,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124g-FacadeEquivalence-20260910.log",
+      "sha256": "8a669844d0840a30afd871eac538def289c13a867cbd281b1f51df09e2881d0e",
+      "results": [
+        {
+          "result": "Success",
+          "name": "Equivalence_CappedRaycastRefusesPricedGroundTheUncappedOneAdmits",
+          "path": "CkTests.UnitTests.CkGroundNav.Facade.Equivalence_CappedRaycastRefusesPricedGroundTheUncappedOneAdmits"
+        },
+        {
+          "result": "Success",
+          "name": "Equivalence_FacadeAnswersEqualDirectCalls",
+          "path": "CkTests.UnitTests.CkGroundNav.Facade.Equivalence_FacadeAnswersEqualDirectCalls"
+        },
+        {
+          "result": "Success",
+          "name": "Equivalence_FilteredAnswersEqualTheDirectCallWithTheSameDeniedSet",
+          "path": "CkTests.UnitTests.CkGroundNav.Facade.Equivalence_FilteredAnswersEqualTheDirectCallWithTheSameDeniedSet"
+        }
+      ]
+    },
+    {
+      "gate": "124h",
+      "scope": "OuterGate",
+      "boots": 1,
+      "toolboxExit": 1,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124h-OuterGate-20260910.log",
+      "sha256": "143095f0d0c334073e250f6527e65c7cb1de33096094d0cbcc4435326d771b45",
+      "results": [
+        {
+          "result": "Fail",
+          "name": "OuterGateTogglesLive",
+          "path": "CkTests.UnitTests.CkCrowd.DebugDraw.OuterGateTogglesLive"
+        }
+      ]
+    },
+    {
+      "gate": "124i",
+      "scope": "OuterGate",
+      "boots": 2,
+      "toolboxExit": 0,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124i-OuterGate-20260910.log",
+      "sha256": "6dbec61d2f2b5736c8fe28f01692e36af690dc9cd5bd7a6c9f64956e7ce9b687",
+      "results": [
+        {
+          "result": "Success",
+          "name": "OuterGateTogglesLive",
+          "path": "CkTests.UnitTests.CkCrowd.DebugDraw.OuterGateTogglesLive"
+        }
+      ]
+    },
+    {
+      "gate": "124j",
+      "scope": "NpcAI",
+      "boots": 1,
+      "toolboxExit": 1,
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124j-NpcAI-20260910.log",
+      "sha256": "85b013abded7392e419c82b0cd596f4872a34c111e24a477392a04cff8a2f2ef",
+      "results": [
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_AffordabilityPredicate",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_AffordabilityPredicate"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_BelowFloorRecovery",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_BelowFloorRecovery"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_CheckoutQueueRebalancesWhenCounterRegistered",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CheckoutQueueRebalancesWhenCounterRegistered"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_CloseBasketIfPartial",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CloseBasketIfPartial"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_CombatAtCheckoutFrontDoesNotFalsePay",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_CombatAtCheckoutFrontDoesNotFalsePay"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_DormancyFlipLeavesCheckoutQueue",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_DormancyFlipLeavesCheckoutQueue"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_DownedOnDamage",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_DownedOnDamage"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_EmptyShelfNotPicked",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_EmptyShelfNotPicked"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_GiveUpLeavesCheckoutQueue",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_GiveUpLeavesCheckoutQueue"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_HitreactAfterRevive",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_HitreactAfterRevive"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_HitreactOnDamage",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_HitreactOnDamage"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_LivenessWatchdogAccrual",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_LivenessWatchdogAccrual"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_PermeableRoleParity",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_PermeableRoleParity"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_QueueRebalancesFromProbeOverlappedSlot",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_QueueRebalancesFromProbeOverlappedSlot"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_QueueRebalancesToShorterLine",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_QueueRebalancesToShorterLine"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_SidewalkForeignFollower",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkForeignFollower"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_SidewalkOwnedRoute",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkOwnedRoute"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_SidewalkProviders",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SidewalkProviders"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_SmTransitions",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_SmTransitions"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_StopRoll",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StopRoll"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_StorageShelfCustomerExcluded",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StorageShelfCustomerExcluded"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_StuckDetection",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckDetection"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_StuckInLineLeavesCheckoutQueue",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckInLineLeavesCheckoutQueue"
+        },
+        {
+          "result": "Fail",
+          "name": "Bb_AutoTest_NpcAI_StuckRecoverySuppression",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_StuckRecoverySuppression"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_TrackerBlacklistAges",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TrackerBlacklistAges"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot"
+        },
+        {
+          "result": "Success",
+          "name": "Bb_AutoTest_NpcAI_TripBudgetSeeding",
+          "path": "Project.Functional Tests.BusterBlock.Map.AutoTests.AutoTests_BB_MAP.Bb_AutoTest_NpcAI_TripBudgetSeeding"
+        }
+      ]
+    }
+  ],
+  "npcComparison": {
+    "baselinePassed": 22,
+    "currentPassed": 19,
+    "total": 27,
+    "namedDeltas": [
+      {
+        "name": "Bb_AutoTest_NpcAI_DownedOnDamage",
+        "baseline": "Fail",
+        "current": "Success"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_HitreactAfterRevive",
+        "baseline": "Success",
+        "current": "Fail"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_HitreactOnDamage",
+        "baseline": "Success",
+        "current": "Fail"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_SidewalkForeignFollower",
+        "baseline": "Success",
+        "current": "Fail"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_SmTransitions",
+        "baseline": "Success",
+        "current": "Fail"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_StuckRecoverySuppression",
+        "baseline": "Success",
+        "current": "Fail"
+      },
+      {
+        "name": "Bb_AutoTest_NpcAI_TransientStallKeepsCheckoutQueueSlot",
+        "baseline": "Fail",
+        "current": "Success"
+      }
+    ],
+    "broaderCompatibilityEstablished": false,
+    "diagnosis": "Root committed trees are identical and Recast still defers absent navdata for five seconds; no causal fix for new state/sidewalk failures has been established."
+  },
+  "abRuns": [
+    {
+      "runId": "gate124-recast-a",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-recast-a.identity.json",
+      "sha256": "c27a19436766546ee8937ed60cb6532bbdc6e6f95e2725edf4348c63751da5c5",
+      "toolboxExit": 1,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-165656\\NavigationAB_r1.log",
+          "sha256": "e92dfd8accc43aba805402abeb42a717ff2a37a1310bc07753c99d81a6b54d7d",
+          "diagnosticLines": [
+            "[2026.09.10-23.57.04:890][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.10-23.57.04:890][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.10-23.57.14:427][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-recast-a",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "Recast",
+        "effectiveProvider": "Recast",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 1,
+        "groundNavInputFingerprint": "-7193910616992859507",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "readinessPassed": true,
+        "crowdReached": false,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": false,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "one or more of 24 role/lane policy checks failed",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Success",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-groundnav-a",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-groundnav-a.identity.json",
+      "sha256": "4a8110f4d8dbe672dd42290b68d93fe4a29932ac4ac95eff158cab2735a69ed2",
+      "toolboxExit": 1,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-165824\\NavigationAB_r1.log",
+          "sha256": "dbf32504134641cc9244f2f9e3fbfafba3550863965df728bb4f29c6001a0976",
+          "diagnosticLines": [
+            "[2026.09.10-23.58.32:753][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.10-23.58.32:753][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.10-23.58.42:253][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-groundnav-a",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "GroundNav",
+        "effectiveProvider": "GroundNav",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 2,
+        "groundNavInputFingerprint": "6171562353155934096",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "readinessPassed": true,
+        "crowdReached": false,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": false,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "one or more of 24 role/lane policy checks failed",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-recast-rollback-a",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-recast-rollback-a.identity.json",
+      "sha256": "51fcd83a5435c0d92676cc181d333755c78eb22a64b7ccc1dd174df3abbcea61",
+      "toolboxExit": 1,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-170045\\NavigationAB_r1.log",
+          "sha256": "6889436cd6e1d22db76ab0c21c5706dfd3f81290f4bd2852131ec6a44e92e36b",
+          "diagnosticLines": [
+            "[2026.09.11-00.00.53:899][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.00.53:899][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.01.03:329][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-recast-rollback-a",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "Recast",
+        "effectiveProvider": "Recast",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 1,
+        "groundNavInputFingerprint": "-7193910616992859507",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "readinessPassed": true,
+        "crowdReached": false,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": false,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "one or more of 24 role/lane policy checks failed",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Success",
+            "pass": false
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-recast-b",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-recast-b.identity.json",
+      "sha256": "78929615a4f922cce132d945efc25afe2f78a2098720c9b6d1e0c9f81b8834d9",
+      "toolboxExit": 1,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-170439\\NavigationAB_r1.log",
+          "sha256": "d8600ad5d3fdb578775540a7b7933a3279fc36ae44ec515ba65932e69e79d660",
+          "diagnosticLines": [
+            "[2026.09.11-00.04.47:935][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.04.47:935][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.04.57:243][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-recast-b",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "Recast",
+        "effectiveProvider": "Recast",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 1,
+        "groundNavInputFingerprint": "-7193910616992859507",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "readinessPassed": true,
+        "crowdReached": false,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": false,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "a lane wall or role/lane policy check failed",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Success",
+            "pass": false,
+            "routeDetails": "partial=0 points=7 | X=-1800.000 Y=600.000 Z=1.000 | X=-174.997 Y=830.449 Z=1.000 | X=-140.000 Y=835.000 Z=1.000 | X=140.000 Y=835.000 Z=1.000 | X=174.997 Y=830.449 Z=1.000 | X=1800.000 Y=600.000 Z=1.000 | X=1800.000 Y=600.000 Z=1.000"
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "diagnostics": [
+          "wall0:Blocked hit=X=-1500.000 Y=240.000 Z=0.000",
+          "wall1:Blocked hit=X=-1500.000 Y=840.000 Z=0.000",
+          "lane0:center=X=0.000 Y=0.000 Z=0.000 projected=X=-0.000 Y=-0.000 Z=1.000 tags=(GameplayTags=)",
+          "lane0:recastArea=Nav.Area.Restricted live=1",
+          "lane0:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane0:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane1:center=X=0.000 Y=600.000 Z=0.000 projected=X=-0.000 Y=600.000 Z=1.000 tags=(GameplayTags=)",
+          "lane1:recastArea=Nav.Area.Restricted live=0",
+          "lane1:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=1",
+          "lane1:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane2:center=X=0.000 Y=1200.000 Z=0.000 projected=X=-0.000 Y=1200.000 Z=1.000 tags=(GameplayTags=)",
+          "lane2:recastArea=Nav.Area.Restricted live=0",
+          "lane2:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane2:recastArea=Nav.Area.Crowd.Agent live=1"
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-groundnav-b",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-groundnav-b.identity.json",
+      "sha256": "2644c5191aa18fa48b69ad1c0aa640489c6932f7e1d18f66a83547298e3cdbb5",
+      "toolboxExit": 1,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-170604\\NavigationAB_r1.log",
+          "sha256": "416830739b217ed85a97f8db0db77b1ff65c73f0b185ba8468bb31ae22aac216",
+          "diagnosticLines": [
+            "[2026.09.11-00.06.12:884][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.06.12:884][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.06.22:175][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-groundnav-b",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "GroundNav",
+        "effectiveProvider": "GroundNav",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 2,
+        "groundNavInputFingerprint": "6171562353155934096",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "readinessPassed": true,
+        "crowdReached": false,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": false,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "a lane wall or role/lane policy check failed",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false,
+            "routeDetails": "partial=0 points=0"
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false,
+            "routeDetails": "partial=0 points=0"
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false,
+            "routeDetails": "partial=0 points=0"
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Blocked",
+            "pass": false,
+            "routeDetails": "partial=0 points=0"
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "diagnostics": [
+          "wall0:Blocked hit=X=-1500.000 Y=275.000 Z=0.000",
+          "wall1:Blocked hit=X=-1500.000 Y=875.000 Z=0.000",
+          "lane0:center=X=0.000 Y=0.000 Z=0.000 projected=X=0.000 Y=0.000 Z=0.000 tags=(GameplayTags=)",
+          "lane0:recastArea=Nav.Area.Restricted live=1",
+          "lane0:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane0:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane1:center=X=0.000 Y=600.000 Z=0.000 projected=X=0.000 Y=600.000 Z=0.000 tags=(GameplayTags=)",
+          "lane1:recastArea=Nav.Area.Restricted live=0",
+          "lane1:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=1",
+          "lane1:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane2:center=X=0.000 Y=1200.000 Z=0.000 projected=X=0.000 Y=1200.000 Z=0.000 tags=(GameplayTags=)",
+          "lane2:recastArea=Nav.Area.Restricted live=0",
+          "lane2:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane2:recastArea=Nav.Area.Crowd.Agent live=1"
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-recast-c",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-recast-c.identity.json",
+      "sha256": "454f82612ebe0093c6d31bc1d99683ac0aaa7a73a9aa15fe94d137b2da2ffc24",
+      "toolboxExit": 0,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-171232\\NavigationAB_r1.log",
+          "sha256": "2af068a48c32487f5cadbbc21e5d81358b3f9b47e6de509ce285a4075dabaeea",
+          "diagnosticLines": [
+            "[2026.09.11-00.12.40:871][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.12.40:871][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.12.50:330][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-recast-c",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "Recast",
+        "effectiveProvider": "Recast",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 1,
+        "groundNavInputFingerprint": "-7193910616992859507",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "markupHalfWidthY": 300,
+        "readinessPassed": true,
+        "crowdReached": true,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": true,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "diagnostics": [
+          "wall0:Blocked hit=X=-1500.000 Y=240.000 Z=0.000",
+          "wall1:Blocked hit=X=-1500.000 Y=840.000 Z=0.000",
+          "lane0:center=X=0.000 Y=0.000 Z=0.000 projected=X=-0.000 Y=-0.000 Z=1.000 tags=(GameplayTags=)",
+          "lane0:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane0:recastArea=Nav.Area.Restricted live=1",
+          "lane0:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane0:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane1:center=X=0.000 Y=600.000 Z=0.000 projected=X=-0.000 Y=600.000 Z=1.000 tags=(GameplayTags=)",
+          "lane1:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane1:recastArea=Nav.Area.Restricted live=0",
+          "lane1:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=1",
+          "lane1:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane2:center=X=0.000 Y=1200.000 Z=0.000 projected=X=-0.000 Y=1200.000 Z=1.000 tags=(GameplayTags=)",
+          "lane2:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane2:recastArea=Nav.Area.Restricted live=0",
+          "lane2:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane2:recastArea=Nav.Area.Crowd.Agent live=1"
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-groundnav-c",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-groundnav-c.identity.json",
+      "sha256": "930cae11c88f43672142f3263deb40ead71ce1c4fc706dd99c78f4ee8bdf00cc",
+      "toolboxExit": 0,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-171324\\NavigationAB_r1.log",
+          "sha256": "b8914ae9e72d0cc95cc997c9c68f51fd4ca57eeec9d2e3fa153e677ffc24f262",
+          "diagnosticLines": [
+            "[2026.09.11-00.13.32:771][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.13.32:771][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.13.42:150][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-groundnav-c",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "GroundNav",
+        "effectiveProvider": "GroundNav",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 4,
+        "groundNavInputFingerprint": "-3161426630511728553",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "markupHalfWidthY": 300,
+        "readinessPassed": true,
+        "crowdReached": true,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": true,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "diagnostics": [
+          "wall0:Blocked hit=X=-1500.000 Y=275.000 Z=0.000",
+          "wall1:Blocked hit=X=-1500.000 Y=875.000 Z=0.000",
+          "lane0:center=X=0.000 Y=0.000 Z=0.000 projected=X=0.000 Y=0.000 Z=0.000 tags=(GameplayTags=)",
+          "lane0:groundNavStatus=Success tags=(GameplayTags=((TagName=\"Nav.Area.Restricted\"))) cost=1.000000",
+          "lane0:recastArea=Nav.Area.Restricted live=1",
+          "lane0:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane0:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane1:center=X=0.000 Y=600.000 Z=0.000 projected=X=0.000 Y=600.000 Z=0.000 tags=(GameplayTags=)",
+          "lane1:groundNavStatus=Success tags=(GameplayTags=((TagName=\"Nav.Area.BusterBlock.CustomerShoppingBoundary\"))) cost=1.000000",
+          "lane1:recastArea=Nav.Area.Restricted live=0",
+          "lane1:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=1",
+          "lane1:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane2:center=X=0.000 Y=1200.000 Z=0.000 projected=X=0.000 Y=1200.000 Z=0.000 tags=(GameplayTags=)",
+          "lane2:groundNavStatus=Success tags=(GameplayTags=((TagName=\"Nav.Area.Crowd.Agent\"))) cost=64.000000",
+          "lane2:recastArea=Nav.Area.Restricted live=0",
+          "lane2:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane2:recastArea=Nav.Area.Crowd.Agent live=1"
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    },
+    {
+      "runId": "gate124-recast-rollback-c",
+      "manifest": "D:\\Repos\\BusterBlock\\Saved\\Logs\\NavigationAB-gate124-recast-rollback-c.identity.json",
+      "sha256": "9d9d5ea301d3c224d6d0c3203ce7073fe4a7f38d84329b55432af5042afe6533",
+      "toolboxExit": 0,
+      "sourceAndArtifactsUnchanged": true,
+      "reportIdentityMatches": true,
+      "runtimeLogs": [
+        {
+          "path": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Gauntlet\\20260910-171425\\NavigationAB_r1.log",
+          "sha256": "c532706fac31cd5919e8f20f8cd42a89615532229d65fbaff4722f1f130dd54c",
+          "diagnosticLines": [
+            "[2026.09.11-00.14.33:314][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_USERNAME failed with error: 2",
+            "[2026.09.11-00.14.33:314][  0]LogTemp: Warning: Constructor: Registry query for SIK_STEAM_PASSWORD failed with error: 2",
+            "[2026.09.11-00.14.42:755][  0]LogAutomationTest: Error: Saving and loading a serialized object containing FText properties failed to maintain FText values."
+          ]
+        }
+      ],
+      "report": {
+        "schema": "BusterBlock.NavigationAB.v1",
+        "scenario": "AccessAndShoppingV1",
+        "runId": "gate124-recast-rollback-c",
+        "seed": 124,
+        "seedUsage": "reserved provenance; deterministic fixed workload has no random choices",
+        "requestedProvider": "Recast",
+        "effectiveProvider": "Recast",
+        "map": "/Game/Tests/Navigation/BusterBlockNavigationAB",
+        "routingScope": "24 provider-neutral policy queries and one Employee Crowd route; game direct projections/sidewalk extraction retain Recast",
+        "recastProfile": "effective supported-agent profile; declared ini radius 45 is overridden by the game's supported-agent radius 35",
+        "recastAgentRadius": 35,
+        "recastAgentHeight": 144,
+        "recastDefaultCellHeight": 1,
+        "crowdAndGroundNavProfile": "42/192; open tall fixture only, no clearance-equivalence claim",
+        "groundNavBuildEpoch": 1,
+        "groundNavInputFingerprint": "-7193910616992859507",
+        "providerHealthBeforeCleanup": "Ready",
+        "surfaceSettledBeforeCleanup": true,
+        "permissiveStandingCrowdCost": 64,
+        "markupHalfWidthY": 300,
+        "readinessPassed": true,
+        "crowdReached": true,
+        "cleanupComplete": true,
+        "markupRemovalSettledBeforeFieldRetirement": true,
+        "pass": true,
+        "performanceEligible": false,
+        "packageAccepted": false,
+        "failureReason": "",
+        "filters": [
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Customer.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane0:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane1:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.CustomerShopping.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Employee.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon",
+            "expectation": "lane2:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane0:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane1:complete",
+            "observed": "Success",
+            "pass": true
+          },
+          {
+            "tag": "Nav.Filter.Goon.Strict",
+            "expectation": "lane2:denied",
+            "observed": "Blocked",
+            "pass": true
+          }
+        ],
+        "diagnostics": [
+          "wall0:Blocked hit=X=-1500.000 Y=240.000 Z=0.000",
+          "wall1:Blocked hit=X=-1500.000 Y=840.000 Z=0.000",
+          "lane0:center=X=0.000 Y=0.000 Z=0.000 projected=X=-0.000 Y=-0.000 Z=1.000 tags=(GameplayTags=)",
+          "lane0:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane0:recastArea=Nav.Area.Restricted live=1",
+          "lane0:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane0:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane1:center=X=0.000 Y=600.000 Z=0.000 projected=X=-0.000 Y=600.000 Z=1.000 tags=(GameplayTags=)",
+          "lane1:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane1:recastArea=Nav.Area.Restricted live=0",
+          "lane1:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=1",
+          "lane1:recastArea=Nav.Area.Crowd.Agent live=0",
+          "lane2:center=X=0.000 Y=1200.000 Z=0.000 projected=X=-0.000 Y=1200.000 Z=1.000 tags=(GameplayTags=)",
+          "lane2:groundNavStatus=Success tags=(GameplayTags=) cost=1.000000",
+          "lane2:recastArea=Nav.Area.Restricted live=0",
+          "lane2:recastArea=Nav.Area.BusterBlock.CustomerShoppingBoundary live=0",
+          "lane2:recastArea=Nav.Area.Crowd.Agent live=1"
+        ],
+        "schedulerSettings": {
+          "Recast.MaxPathQueriesPerFrame": 8,
+          "ck.GroundNav.MaxSearchesPerFrame": "8",
+          "ck.GroundNav.SliceBudgetMs": "1",
+          "ck.GroundNav.MaxIterationsPerSlice": "0",
+          "ck.GroundNav.MaxDeferralSeconds": "5"
+        }
+      }
+    }
+  ],
+  "noLocalCookOrPackage": true,
+  "performanceClaim": false,
+  "finalThreeRunsSameSourceAndArtifacts": true,
+  "finalCheckpoint": "GATE124_FINAL_CHECKPOINT.json",
+  "buildAttempts": [
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124-IntegratedCompatibility-20260910.log",
+      "sha256": "966921b9f999ca8b10e71633b473127f009518c0887c8c5ab0e79f6c53c8476b",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 2.45 seconds",
+        "Result: Failed (OtherCompilationError)",
+        "Total execution time: 742.24 seconds"
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124b-IntegratedCompatibility-20260910.log",
+      "sha256": "2a88977df2637220611dccd02ad6e0dc018399743e0c72a1cad8b53d3542cfdd",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.63 seconds",
+        "Result: Failed (OtherCompilationError)",
+        "Total execution time: 76.86 seconds"
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124c-IntegratedCompatibility-20260910.log",
+      "sha256": "6fb78a90d6a85b3417c83179ab0ebc24d4c98e1ec56318ab8e03b11d3a7de316",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.59 seconds",
+        "Result: Succeeded",
+        "Total execution time: 7.24 seconds",
+        "=== Build succeeded ==="
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124d-IntegratedCompatibility-20260910.log",
+      "sha256": "10e58ca02059c1b341a7f5dad13c253a4defa6936acbaebc97ae05b2d0d91277",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.78 seconds",
+        "Result: Failed (OtherCompilationError)",
+        "Total execution time: 19.07 seconds"
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124e-IntegratedCompatibility-20260910.log",
+      "sha256": "11cff604f15acbf2c7c9776eb6055539d46d78b25f6aaad84384639e512cc6b3",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.67 seconds",
+        "Result: Succeeded",
+        "Total execution time: 7.65 seconds",
+        "=== Build succeeded ==="
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124i-OuterGate-20260910.log",
+      "sha256": "6dbec61d2f2b5736c8fe28f01692e36af690dc9cd5bd7a6c9f64956e7ce9b687",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.63 seconds",
+        "Result: Succeeded",
+        "Total execution time: 14.61 seconds",
+        "=== Build succeeded ==="
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124k-ABDiagnosticsBuild-20260910.log",
+      "sha256": "0ead5d39dcf7f1ed0380bb5e79371542d1ab4daa8d0e7dc941f5b201cde2ae15",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.61 seconds",
+        "Result: Succeeded",
+        "Total execution time: 16.74 seconds",
+        "=== Build succeeded ==="
+      ]
+    },
+    {
+      "log": "D:\\Repos\\BusterBlock\\Saved\\Logs\\Nav-Gate124l-ABLaneIsolationBuild-20260910.log",
+      "sha256": "3a8b9b94cc78ad732dc44b99954b939b255b9d1b7e7c59877e0a3d10c264c5c5",
+      "evidence": [
+        "Result: Succeeded",
+        "Total execution time: 1.62 seconds",
+        "Result: Succeeded",
+        "Total execution time: 14.65 seconds",
+        "=== Build succeeded ==="
+      ]
+    }
+  ],
+  "remainingLimits": [
+    "NpcAI 19/27 versus entry 22/27 remains unresolved; named deltas retained. These are observed test differences, not all proven production regressions.",
+    "Final paint half-width 300 ends at lane walls. Earlier 325 overlap failures remain evidence; production overlapping-area semantics are not accepted.",
+    "Each final Editor-game log contains the FText serialization startup self-test error; no ensures or AngelScript errors observed in those three logs.",
+    "Effective Recast 35/144 default cell height 1 differs from Crowd/GroundNav 42/192; no clearance parity claim.",
+    "Async GroundNav markup rejection rollback lacks direct callback-drain coverage.",
+    "Installed routes do not independently invalidate on filter-policy hot mutation; per-run policy is frozen.",
+    "Editor, streaming, cooked data, package, performance and production-map adoption acceptance remain deferred in the runbook."
+  ]
+}
