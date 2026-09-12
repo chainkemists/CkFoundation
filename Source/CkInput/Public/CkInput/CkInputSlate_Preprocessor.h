@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkCore/Enums/CkEnums.h"
+
 #include "CkInput/CkInputSource_Fragment_Data.h"
 
 #include <Framework/Application/IInputProcessor.h>
@@ -11,6 +13,24 @@ class UGameInstance;
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck::input_slate
+{
+    struct FGameplayInputOwnershipState
+    {
+        bool ApplicationIsActive = false;
+        bool ConsoleIsActive = false;
+        bool KeyboardUserOwnsViewport = false;
+        bool AnyUserOwnsViewport = false;
+    };
+
+    CKINPUT_API auto
+    Get_CanRecordGameplayInput(
+        ECk_EnableDisable InRequireGameplayInputOwnership,
+        const FGameplayInputOwnershipState& InState) -> bool;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 /**
  * Records the raw device events Slate delivers into the owning local player's input-source inbox, and does
  * nothing else with them.
@@ -19,10 +39,9 @@ class UGameInstance;
  * Slate index 0 with the loading screen's and the debugger's pre-processors without any of them arbitrating
  * against another.
  *
- * Recording is gated on this game instance's viewport holding DIRECT user focus. That is what keeps the
- * editor's own keystrokes out of a source during PIE, what stops a background PIE window from recording the
- * foreground window's input, and what keeps console/chat typing out of the record — a text field steals focus
- * to a viewport DESCENDANT, and its keystrokes belong to the field, not the game.
+ * Recording is gated on this game instance owning gameplay input: the application is active, its console is
+ * closed, and the keyboard user directly focuses its game viewport. Projects can opt back into the prior
+ * any-Slate-user direct-focus policy through CkInput project settings.
  */
 class FCk_InputSlate_Preprocessor : public IInputProcessor
 {
@@ -101,7 +120,7 @@ private:
     DoFlushRecordedDownKeys() -> void;
 
     auto
-    DoGet_HasViewportFocus() const -> bool;
+    DoGet_CanRecordGameplayInput() const -> bool;
 
     auto
     DoTryGet_RoutedSource(

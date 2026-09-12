@@ -4,12 +4,15 @@
 
 #include "CkInput/CkInput_Log.h"
 #include "CkInput/CkInputSource_Utils.h"
+#include "CkInput/Settings/CkInput_Settings.h"
 #include "CkInput/Subsystem/CkInputSource_Subsystem.h"
 
 #include <CoreGlobals.h>
+#include <Engine/Console.h>
 #include <Engine/GameInstance.h>
 #include <Engine/GameViewportClient.h>
 #include <Engine/LocalPlayer.h>
+#include <Framework/Application/SlateApplication.h>
 #include <HAL/IConsoleManager.h>
 #include <Input/Events.h>
 #include <Widgets/SViewport.h>
@@ -57,6 +60,23 @@ namespace ck_input_slate_preprocessor
 
 // --------------------------------------------------------------------------------------------------------------------
 
+auto
+    ck::input_slate::
+    Get_CanRecordGameplayInput(
+        ECk_EnableDisable InRequireGameplayInputOwnership,
+        const FGameplayInputOwnershipState& InState)
+    -> bool
+{
+    if (InRequireGameplayInputOwnership == ECk_EnableDisable::Disable)
+    { return InState.AnyUserOwnsViewport; }
+
+    return InState.ApplicationIsActive &&
+           NOT InState.ConsoleIsActive &&
+           InState.KeyboardUserOwnsViewport;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 FCk_InputSlate_Preprocessor::
     FCk_InputSlate_Preprocessor(
         UGameInstance* InGameInstance)
@@ -79,7 +99,7 @@ auto
     if (_RecordedDownKeys.IsEmpty())
     { return; }
 
-    if (DoGet_HasViewportFocus())
+    if (DoGet_CanRecordGameplayInput())
     { return; }
 
     DoFlushRecordedDownKeys();
@@ -280,7 +300,7 @@ auto
     if (NOT InKey.IsValid())
     { return; }
 
-    if (NOT DoGet_HasViewportFocus())
+    if (NOT DoGet_CanRecordGameplayInput())
     { return; }
 
     DoWriteEvent(InKey, InEventType, InAnalogValue, InRawDeviceUserIndex);
@@ -358,9 +378,12 @@ auto
 
 auto
     FCk_InputSlate_Preprocessor::
-    DoGet_HasViewportFocus() const
+    DoGet_CanRecordGameplayInput() const
     -> bool
 {
+    if (NOT FSlateApplication::IsInitialized())
+    { return false; }
+
     const auto* GameInstance = _GameInstance.Get();
     if (ck::Is_NOT_Valid(GameInstance))
     { return false; }
@@ -373,11 +396,17 @@ auto
     if (NOT ViewportWidget.IsValid())
     { return false; }
 
-    // DIRECT focus only. The console (and any chat/text field hosted in the viewport's overlay) steals focus
-    // to a DESCENDANT, and those keystrokes belong to the text field, not the game — descendant-focus recorded
-    // "slomo 0.1" into the input record as gameplay presses. The focus-loss flush releases anything held when
-    // a text field takes over, so the strictness cannot strand a phantom press.
-    return ViewportWidget->HasAnyUserFocus().IsSet();
+    const auto& SlateApplication = FSlateApplication::Get();
+    const auto OwnershipState = ck::input_slate::FGameplayInputOwnershipState{
+        .ApplicationIsActive = SlateApplication.IsActive(),
+        .ConsoleIsActive = ViewportClient->ViewportConsole != nullptr &&
+                           ViewportClient->ViewportConsole->ConsoleActive(),
+        .KeyboardUserOwnsViewport = SlateApplication.GetKeyboardFocusedWidget() == ViewportWidget,
+        .AnyUserOwnsViewport = ViewportWidget->HasAnyUserFocus().IsSet()
+    };
+
+    return ck::input_slate::Get_CanRecordGameplayInput(
+        UCk_Utils_Input_Settings_UE::Get_RequireGameplayInputOwnership(), OwnershipState);
 }
 
 auto
