@@ -174,8 +174,11 @@ Documented under *The Slate writer* below.
 
 ### `UCk_Input_ProjectSettings_UE` — `Settings/CkInput_Settings.h`
 
-One config field: `_MappingContextScanPaths` (`TArray<FDirectoryPath>`, `ContentDir`), read through
-`UCk_Utils_Input_Settings_UE::Get_MappingContextScanPaths()`.
+Two config fields: `_MappingContextScanPaths` (`TArray<FDirectoryPath>`, `ContentDir`), read through
+`UCk_Utils_Input_Settings_UE::Get_MappingContextScanPaths()`; and `_RequireGameplayInputOwnership`,
+enabled by default and read through `Get_RequireGameplayInputOwnership()`. Disabling the latter restores
+the Slate writer's prior any-user direct-focus gate for projects that deliberately accept background,
+console-active, or non-keyboard-user input while a Slate user still focuses their viewport.
 
 ---
 
@@ -524,12 +527,16 @@ debugger's pre-processors without any of them arbitrating against another.
 | `HandleMouseWheelOrGestureEvent` | `Pressed` **and** `Released` pairs on `EKeys::MouseScrollUp`/`MouseScrollDown`, then one `AnalogAxis` row on `EKeys::MouseWheelAxis` carrying this event's signed delta. See *The wheel* below. Trackpad gestures write nothing at all. Zero-delta events write nothing |
 
 Every row funnels through `DoRecordEvent` and is dropped unless it clears, in order: a valid `FKey`;
-**DIRECT viewport focus** (`GetGameViewportWidget()->HasAnyUserFocus()` on THIS game instance — what
-keeps the editor's own keystrokes out of a source during PIE, stops a background PIE window recording the
-foreground window's input, and keeps CONSOLE/CHAT typing out of the record: a text field steals focus to
-a viewport DESCENDANT, so descendant-counting focus recorded `slomo 0.1` as gameplay presses); and
-resolution to a live source. A UMG widget that takes keyboard focus mid-game therefore also pauses
-recording — the flush below releases anything held at that boundary, so nothing phantoms.
+**gameplay input ownership** on THIS game instance (Slate is initialized and active, the viewport console
+is inactive, and the keyboard user's exact focused widget is this game viewport); and resolution to a live
+source. This keeps editor keystrokes, Shift+F1 mouse release, console typing, and input delivered while the
+application is inactive out of gameplay. A UMG widget that takes keyboard focus mid-game also pauses
+recording. The flush below releases anything held at each ownership boundary, so nothing phantoms.
+
+Projects that disable `RequireGameplayInputOwnership` use the preceding behavior verbatim:
+`GetGameViewportWidget()->HasAnyUserFocus()`. That compatibility policy is intentionally permissive: any
+Slate user can keep the gate open, the application need not be active, and an active console does not close
+it because Unreal deliberately returns console focus to the game viewport.
 
 **Losing viewport focus flushes every recorded-down key as a synthetic `Released`.** The focus gate
 means a release that happens while unfocused (alt-tab, a click on an editor panel) never records, so a
