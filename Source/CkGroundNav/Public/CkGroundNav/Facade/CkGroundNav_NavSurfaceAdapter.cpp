@@ -649,6 +649,12 @@ namespace ck::groundnav::nav_surface_adapter_private
             : ECk_NavSurface_ProviderHealth::NoData;
     }
 
+    auto Do_IsSurfaceQueryable(
+        UWorld* InWorld) -> bool
+    {
+        return world_fields::Get_FieldCount(InWorld) > 0;
+    }
+
     auto Do_IsBuildInProgress(
         UWorld* InWorld) -> bool
     {
@@ -1085,6 +1091,7 @@ auto
     Table._FindDistanceToWall = &nav_surface_adapter_private::Do_FindDistanceToWall;
     Table._SurfaceBounds = &nav_surface_adapter_private::Do_SurfaceBounds;
     Table._ProviderHealth = &nav_surface_adapter_private::Do_ProviderHealth;
+    Table._IsSurfaceQueryable = &nav_surface_adapter_private::Do_IsSurfaceQueryable;
     Table._IsBuildInProgress = &nav_surface_adapter_private::Do_IsBuildInProgress;
     Table._IsSurfaceSettled = &nav_surface_adapter_private::Do_IsSurfaceSettled;
     Table._SurfaceRevision = &nav_surface_adapter_private::Do_SurfaceRevision;

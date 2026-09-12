@@ -220,6 +220,15 @@ public:
     Get_ProviderHealth(
         const UObject* InWorldContext);
 
+    /** Whether the selected provider has a published surface its query capabilities can answer from. */
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|NavSurface",
+              DisplayName = "[Ck][NavSurface] Get Is Surface Queryable",
+              meta = (WorldContext = "InWorldContext"))
+    static bool
+    Get_IsSurfaceQueryable(
+        const UObject* InWorldContext);
+
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|NavSurface",
               DisplayName = "[Ck][NavSurface] Get Is Build In Progress",

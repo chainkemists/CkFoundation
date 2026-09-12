@@ -443,6 +443,23 @@ auto
 
 auto
     UCk_Utils_NavSurface_UE::
+    Get_IsSurfaceQueryable(
+        const UObject* InWorldContext)
+    -> bool
+{
+    auto* World = ck_nav_surface_utils::Get_World(InWorldContext);
+
+    const auto* Table = ck_nav_surface_utils::TryGet_ProviderTable(World);
+    if (Table == nullptr)
+    { return false; }
+
+    return Table->_IsSurfaceQueryable(World);
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_NavSurface_UE::
     Get_IsBuildInProgress(
         const UObject* InWorldContext)
     -> bool
