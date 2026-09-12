@@ -23,10 +23,9 @@ void FCkProfileModule::StartupModule()
     FCoreDelegates::OnBeginFrame.AddRaw(this, &FCkProfileModule::OnBeginFrame);
     FCoreDelegates::OnEndFrame.AddRaw(this, &FCkProfileModule::OnEndFrame);
 
-    // NOT gated on STATS. The named-event cache in CkScopedStat.cpp keys on the same epoch and is
-    // compiled in every configuration, so registering only under STATS would leave it with nothing
-    // to invalidate it - and AngelScript recycles function ids, so a recompile could then hand a
-    // recycled id the previous function's name.
+    // NOT gated on STATS: the named-event cache shares this epoch and is compiled in every
+    // configuration, so a STATS-only registration would leave it with nothing to invalidate it -
+    // and AngelScript recycles function ids, so a recompile would hand a recycled id a stale name.
 #if WITH_ANGELSCRIPT_CK
     _PreCompileDelegateHandle = FAngelscriptCodeModule::GetPreCompile().AddStatic(
         &ck::Invalidate_ActiveScriptScopeStatCache);
