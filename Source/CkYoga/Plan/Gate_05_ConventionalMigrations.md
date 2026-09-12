@@ -1,6 +1,18 @@
 ﻿# Gate 05: Conventional debugger migrations
 
-**Status:** Gate 04 and the bounded Intent InputHud, Aggro, AI roster, Dialog, Texture page/window-navigation, Save, Object Pool, Style Lab, CkUIDebugger, GOAP, and Visual LOD authored slices recorded in `PROGRESS.md` are verified at their stated boundaries. The current source census does not close the conventional workstream: GOAP/Texture/AI outer-shell scope, the GOAP Inspector gateway, Texture Checker Apply/Restore/PIE, broader consumers, and cross-environment acceptance remain open. Browser-reference parity remains blocked and unwaived.
+**Status:** Gate 04 and the bounded Intent InputHud, Aggro, AI roster, Dialog, Texture page/window-navigation, Save, Object Pool, Style Lab, CkUIDebugger, GOAP, and Visual LOD authored slices recorded in `PROGRESS.md` are verified at their stated boundaries. CTO disposition makes the remaining endpoint explicit: every debugger's stable outer layout and inspector presentation must be authored HTML/CSS, with specialized graph/view/paint controls retained only through explicit authored native ports. GOAP is the first complete proving host, including its Inspector Gateway and safe Agent List retirement; Texture/AI and the remaining debugger shells/inspectors follow as bounded slices. Every debugger also requires applicable teardown evidence. Narrow breakpoint restacking, packaging, keyboard accessibility and localization are deferred; Resource Inspector `+` is excluded; network multiplayer is conditional. Controller and representative measured performance gates remain required.
+
+## CTO-approved remaining sequence
+
+1. Inventory the exact native layout ownership of every production debugger: window chrome, tabs, splitters, pane hosts, inspector surfaces, specialized native ports and teardown hooks. The inventory must name the source owner and the intended authored resource boundary.
+2. Define/reuse a common authored outer-shell and inspector composition contract. C++ owns data, commands, selection, validation and native specialized widgets; HTML/CSS owns stable hierarchy, sizing, spacing, chrome and responsive scroll/wrap behavior.
+3. Complete GOAP end to end: author the main shell and Inspector Gateway, retain graph/specialized widgets as ports, move Agent List selection synchronization to the surviving owner, then delete the retired panel only after focused behavior and lifetime proof.
+4. Migrate Texture, AI and every other debugger's remaining native shell/inspector in reviewable slices. Preserve existing actions such as Texture Checker Apply/Restore and their PIE routing while moving their layout.
+5. Run a real local-player controller gate covering gamepad navigation/confirm/back plus two-local-Slate-user isolation on representative production hosts.
+6. Establish an approved performance budget/reference machine and measure representative large-data hosts; do not convert structural virtualization assertions into timing claims.
+7. Close with an all-debugger teardown matrix. Each host must exercise its applicable close/window removal, owner expiry, accepted/rejected reload, world reset/EndPIE, held callback, focus/capture and popup paths and prove no stale dispatch or retained ownership.
+
+The deferred rows remain documented future work and do not block this campaign. They are not silently accepted. Resource Inspector `+` is excluded rather than deferred and must not receive placeholder behavior.
 
 ## First slice: Intent Debugger InputHud controls
 
