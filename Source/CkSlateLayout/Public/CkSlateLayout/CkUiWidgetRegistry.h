@@ -7,11 +7,14 @@
 
 struct FSlateBrush;
 class FCkUiCollection;
+class FCkUiFloatSeries;
 
 DECLARE_DELEGATE_OneParam(FCkUiOnBoolChanged, bool);
 DECLARE_DELEGATE_OneParam(FCkUiOnNumberChanged, float);
 DECLARE_DELEGATE_TwoParams(FCkUiOnNumberCommitted, float, ETextCommit::Type);
+DECLARE_DELEGATE_TwoParams(FCkUiOnIntegerCommitted, int32, ETextCommit::Type);
 DECLARE_DELEGATE_OneParam(FCkUiOnStringChanged, const FString&);
+DECLARE_DELEGATE_OneParam(FCkUiOnColorCommitted, FLinearColor);
 
 /** A numeric interaction has an explicit end; capture loss must not masquerade as a commit. */
 enum class ECkUiInteractionPhase : uint8 { Begin, Commit, Cancel };
@@ -63,16 +66,21 @@ struct FCkUiCustomWidgetArguments
     TMap<FString, TAttribute<FText>> TextBindings;
     TMap<FString, TAttribute<const FSlateBrush*>> ImageBindings;
     TMap<FString, TAttribute<float>> NumberBindings;
+    TMap<FString, TAttribute<int32>> IntegerBindings;
     TMap<FString, TAttribute<bool>> BoolBindings;
     TMap<FString, TAttribute<FString>> StringBindings;
     TMap<FString, TAttribute<FLinearColor>> ColorBindings;
     TMap<FString, TSharedPtr<FCkUiCollection>> Collections;
+    /** Non-owning, read-only series handles. Pin only for the duration of a game-thread read. */
+    TMap<FString, TWeakPtr<const FCkUiFloatSeries>> FloatSeriesBindings;
     TMap<FString, FSimpleDelegate> Actions;
     TMap<FString, FOnTextChanged> TextChanged;
     TMap<FString, FOnTextCommitted> TextCommitted;
     TMap<FString, FCkUiOnBoolChanged> BoolChanged;
     TMap<FString, FCkUiOnNumberChanged> NumberChanged;
     TMap<FString, FCkUiOnNumberCommitted> NumberCommitted;
+    TMap<FString, FCkUiOnIntegerCommitted> IntegerCommitted;
+    TMap<FString, FCkUiOnColorCommitted> ColorCommitted;
     TMap<FString, FCkUiOnNumberInteraction> NumberInteraction;
     TMap<FString, FCkUiOnStringChanged> StringChanged;
     /** Authored source name for every value binding, event, and action property. */
@@ -125,10 +133,20 @@ public:
     virtual auto GetPointerCaptures() const -> TArray<FCkUiPointerCapture> { return {}; }
     /** Release owned transient UI when an ancestor becomes inactive. Preserve persistent model/draft state. */
     virtual void ReleaseTransientInteraction() {}
+    /**
+     * Release owned transient UI because the owning FCkUiView is being destroyed. The default keeps
+     * normal ancestor-retirement behavior. Overrides may suppress restoration into a released view.
+     * This hook must be idempotent and preserve any explicit external focus redirect made by callbacks.
+     */
+    virtual void ReleaseOwnerInteraction() { ReleaseTransientInteraction(); }
     /** Local-state-only hooks: suppress this exact synthetic capture loss, then retain or reset the
      * interaction according to InRestored. No events, model/focus/capture mutation or view reentry. */
     virtual void BeginPointerCaptureTransfer(const FCkUiPointerCapture&) noexcept {}
     virtual void EndPointerCaptureTransfer(const FCkUiPointerCapture&, bool InRestored) noexcept {}
+    /** Paired local-only hooks around synthetic focus ancestry repair. They must not dispatch events,
+     * mutate models, focus, captures, or reenter the view. */
+    virtual void BeginFocusTransfer() noexcept {}
+    virtual void EndFocusTransfer() noexcept {}
 
     virtual auto PrepareReload(const FCkUiCustomWidgetArguments&, FString& OutFailure) const -> TUniquePtr<ICkUiPreparedWidgetUpdate> = 0;
 };

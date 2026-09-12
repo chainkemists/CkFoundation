@@ -31,6 +31,8 @@ public:
     auto Prepare(const FCkUiNode& InDefinition, FCellFactory InFactory, TAttribute<FText> InFilter,
         FOnCkUiTreeSelectionChanged InSelectionChanged, FString& OutFailure,
         FOnCkUiContextMenuOpening InAuthoredContextMenu = {}) -> TUniquePtr<ICkUiPreparedWidgetUpdate>;
+    /** Optional native host key hook. Authored Shift+F10 context menus retain precedence; an unhandled reply falls through to STreeView. */
+    void SetHostKeyDownHandler(FOnKeyDown InHandler);
     void ReleaseContextMenu();
     auto TrySelectKey(TOptional<FString> InKey, bool InNotify = false) -> bool;
     auto TrySetExpanded(const FString& InKey, bool bInExpanded) -> bool;

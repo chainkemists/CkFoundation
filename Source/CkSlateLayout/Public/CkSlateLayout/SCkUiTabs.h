@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Input/Reply.h"
+#include "Styling/SlateTypes.h"
 #include "Widgets/SCompoundWidget.h"
 
 struct FKeyEvent;
@@ -36,7 +37,8 @@ public:
      * immediately, but defers selection visibility and focus reconciliation to Tick.
      */
     void SetConfiguration(TArray<FPanel> InPanels, TAttribute<FString> InValue,
-        FCkUiOnStringChanged InChanged, TAttribute<bool> InCanDispatchEvents, FSlateFontInfo InFont);
+        FCkUiOnStringChanged InChanged, TAttribute<bool> InCanDispatchEvents, FSlateFontInfo InFont,
+        FCkUiTabsVisualStyle InVisualStyle);
 
     /** Makes held widgets inert after their view has released this container. */
     void Deactivate();
@@ -52,6 +54,7 @@ private:
     void MoveHeaderFocus(const FString& InKey, int32 InDirection, bool bToBoundary, int32 InUserIndex);
     bool IsKeyEnabled(const FString& InKey) const;
     bool IsKeySelected(const FString& InKey) const;
+    void UpdateHeaderAppearance();
     void Reconcile();
     void ReconcileSelectionAndOwnedFocus();
     void ReconcileDisabledHeaderFocus();
@@ -65,6 +68,9 @@ private:
     TAttribute<bool> _CanDispatchEvents;
     FCkUiOnStringChanged _Changed;
     FSlateFontInfo _Font;
+    FCkUiTabsVisualStyle _VisualStyle;
+    FButtonStyle _CoreHeaderStyle;
+    FButtonStyle _FlatHeaderStyle;
     FString _AppliedSelectedKey;
     bool _ReconcilePending = false;
     bool _Active = true;

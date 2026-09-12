@@ -1,10 +1,13 @@
 #include "CkSlateLayout/SCkUiTabs.h"
 #include "CkSlateLayout/CkFlexLayoutTypes.h"
 
+#include "Brushes/SlateNoResource.h"
 #include "Framework/Application/SlateApplication.h"
 #include "Framework/Application/SlateUser.h"
 #include "Input/Events.h"
+#include "Styling/SlateBrush.h"
 #include "Styling/CoreStyle.h"
+#include "Widgets/Images/SImage.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Layout/SBox.h"
 #include "Widgets/Layout/SWrapBox.h"
@@ -20,6 +23,8 @@ struct SCkUiTabs::FEntry
     TFunction<void()> OnDeactivate;
     TSharedPtr<SButton> Header;
     TSharedPtr<STextBlock> HeaderLabel;
+    TSharedPtr<SBox> HeaderPresentation;
+    TSharedPtr<SBox> Underline;
     TSharedPtr<SBox> ContentHost;
 };
 
@@ -28,6 +33,11 @@ SCkUiTabs::~SCkUiTabs() = default;
 
 void SCkUiTabs::Construct(const FArguments& InArgs)
 {
+    _CoreHeaderStyle = FCoreStyle::Get().GetWidgetStyle<FButtonStyle>(TEXT("Button"));
+    _FlatHeaderStyle = _CoreHeaderStyle;
+    const FSlateNoResource FlatBrush;
+    _FlatHeaderStyle.SetNormal(FlatBrush).SetHovered(FlatBrush).SetPressed(FlatBrush).SetDisabled(FlatBrush)
+        .SetNormalPadding(FMargin(0.0f)).SetPressedPadding(FMargin(0.0f));
     SAssignNew(_Headers, SWrapBox).UseAllottedSize(true);
     SAssignNew(_Panels, SVerticalBox);
     ChildSlot
@@ -48,8 +58,8 @@ void SCkUiTabs::Construct(const FArguments& InArgs)
             float LineHeight = 0.0f;
             for (const FEntry& Entry : Tabs->_Entries)
             {
-                if (!Entry.Header.IsValid()) { continue; }
-                const FVector2D Size = Entry.Header->GetDesiredSize();
+                if (!Entry.HeaderPresentation.IsValid()) { continue; }
+                const FVector2D Size = Entry.HeaderPresentation->GetDesiredSize();
                 if (HasWidth && LineWidth > 0.0f && LineWidth + Size.X > Args.AvailableWidth)
                 { HeaderWidth = FMath::Max(HeaderWidth, LineWidth); HeaderHeight += LineHeight; LineWidth = 0.0f; LineHeight = 0.0f; }
                 LineWidth += Size.X;
@@ -82,8 +92,8 @@ void SCkUiTabs::Construct(const FArguments& InArgs)
             float HeaderHeight = 0.0f;
             for (const FEntry& Entry : Tabs->_Entries)
             {
-                if (!Entry.Header.IsValid()) { continue; }
-                const FVector2D Size = Entry.Header->GetDesiredSize();
+                if (!Entry.HeaderPresentation.IsValid()) { continue; }
+                const FVector2D Size = Entry.HeaderPresentation->GetDesiredSize();
                 if (LineWidth > 0.0f && LineWidth + Size.X > Width)
                 { HeaderHeight += LineHeight; LineWidth = 0.0f; LineHeight = 0.0f; }
                 LineWidth += Size.X;
@@ -100,7 +110,8 @@ void SCkUiTabs::Construct(const FArguments& InArgs)
 }
 
 void SCkUiTabs::SetConfiguration(TArray<FPanel> InPanels, TAttribute<FString> InValue,
-    FCkUiOnStringChanged InChanged, TAttribute<bool> InCanDispatchEvents, FSlateFontInfo InFont)
+    FCkUiOnStringChanged InChanged, TAttribute<bool> InCanDispatchEvents, FSlateFontInfo InFont,
+    FCkUiTabsVisualStyle InVisualStyle)
 {
     TSet<FString> Keys;
     for (const FPanel& Panel : InPanels)
@@ -127,11 +138,13 @@ void SCkUiTabs::SetConfiguration(TArray<FPanel> InPanels, TAttribute<FString> In
     _Changed = MoveTemp(InChanged);
     _CanDispatchEvents = MoveTemp(InCanDispatchEvents);
     _Font = MoveTemp(InFont);
+    _VisualStyle = MoveTemp(InVisualStyle);
     _ReconcilePending = true;
     // View publication may repair a focused retained child immediately after
     // this call.  Mount staged panel ancestry now, while selection/focus stays
     // on the last Tick-applied key.
     Reconcile();
+    UpdateHeaderAppearance();
 }
 
 void SCkUiTabs::Deactivate()
@@ -188,6 +201,30 @@ bool SCkUiTabs::IsRetainedHeader(const TSharedPtr<SWidget>& InWidget) const
     return _Entries.ContainsByPredicate([&InWidget](const FEntry& Entry) { return Entry.Header == InWidget; });
 }
 
+void SCkUiTabs::UpdateHeaderAppearance()
+{
+    for (FEntry& Entry : _Entries)
+    {
+        if (Entry.Header.IsValid())
+        {
+            Entry.Header->SetButtonStyle(_VisualStyle.Enabled ? &_FlatHeaderStyle : &_CoreHeaderStyle);
+            Entry.Header->SetContentPadding(_VisualStyle.Enabled ? _VisualStyle.HeaderPadding : FMargin(4.0f, 2.0f));
+            Entry.Header->Invalidate(EInvalidateWidgetReason::Layout | EInvalidateWidgetReason::Paint);
+        }
+        if (Entry.HeaderLabel.IsValid())
+        {
+            Entry.HeaderLabel->SetFont(_Font);
+            Entry.HeaderLabel->Invalidate(EInvalidateWidgetReason::Layout | EInvalidateWidgetReason::Paint);
+        }
+        if (Entry.Underline.IsValid())
+        {
+            Entry.Underline->SetHeightOverride(_VisualStyle.Enabled ? _VisualStyle.UnderlineHeight.Get(2.0f) : 0.0f);
+            Entry.Underline->SetVisibility(_VisualStyle.Enabled ? EVisibility::Visible : EVisibility::Collapsed);
+        }
+        if (Entry.HeaderPresentation.IsValid()) { Entry.HeaderPresentation->Invalidate(EInvalidateWidgetReason::Layout | EInvalidateWidgetReason::Paint); }
+    }
+}
+
 void SCkUiTabs::ActivateKey(const FString& InKey)
 {
     if (!_Active || _Dispatching || !_CanDispatchEvents.Get(false) || !IsKeyEnabled(InKey) || !_Changed.IsBound()) { return; }
@@ -242,16 +279,48 @@ void SCkUiTabs::Reconcile()
             SAssignNew(Entry.HeaderLabel, STextBlock)
                 .Text_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
                 { const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin(); const FEntry* Found = Owner.IsValid() ? Owner->_Entries.FindByPredicate([&Key](const FEntry& Item) { return Item.Key.Equals(Key, ESearchCase::CaseSensitive); }) : nullptr; return Found != nullptr ? Found->Label.Get(FText::GetEmpty()) : FText::GetEmpty(); })
-                .Font(_Font);
+                .Font(_Font)
+                .ColorAndOpacity_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
+                {
+                    const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin();
+                    if (!Owner.IsValid() || !Owner->_VisualStyle.Enabled) { return FSlateColor::UseForeground(); }
+                    return FSlateColor(Owner->IsKeySelected(Key)
+                        ? Owner->_VisualStyle.ActiveColor.Get(FLinearColor(0.18f, 0.42f, 0.90f, 1.0f))
+                        : Owner->_VisualStyle.InactiveColor.Get(FLinearColor::White));
+                });
             SAssignNew(Entry.Header, SButton)
-                .ButtonStyle(&FCoreStyle::Get().GetWidgetStyle<FButtonStyle>(TEXT("Button")))
+                .ButtonStyle(_VisualStyle.Enabled ? &_FlatHeaderStyle : &_CoreHeaderStyle)
+                .ContentPadding(_VisualStyle.Enabled ? _VisualStyle.HeaderPadding : FMargin(4.0f, 2.0f))
                 .IsEnabled_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
                 { const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin(); return Owner.IsValid() && Owner->_Active && Owner->_CanDispatchEvents.Get(false) && Owner->IsKeyEnabled(Key); })
                 .OnClicked_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
                 { if (const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin()) { Owner->ActivateKey(Key); } return FReply::Handled(); })
                 .ButtonColorAndOpacity_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
-                { const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin(); return Owner.IsValid() && Owner->IsKeySelected(Key) ? FLinearColor(0.18f, 0.42f, 0.90f, 1.0f) : FLinearColor::White; })
+                {
+                    const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin();
+                    return Owner.IsValid() && !Owner->_VisualStyle.Enabled && Owner->IsKeySelected(Key)
+                        ? FLinearColor(0.18f, 0.42f, 0.90f, 1.0f) : FLinearColor::White;
+                })
                 [Entry.HeaderLabel.ToSharedRef()];
+            SAssignNew(Entry.Underline, SBox)
+                .HeightOverride(_VisualStyle.Enabled ? _VisualStyle.UnderlineHeight.Get(2.0f) : 0.0f)
+                .Visibility(_VisualStyle.Enabled ? EVisibility::Visible : EVisibility::Collapsed)
+                [
+                    SNew(SImage)
+                    .Image(FCoreStyle::Get().GetBrush(TEXT("WhiteBrush")))
+                    .ColorAndOpacity_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
+                    {
+                        const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin();
+                        if (!Owner.IsValid() || !Owner->_VisualStyle.Enabled || !Owner->IsKeySelected(Key)) { return FLinearColor::Transparent; }
+                        return Owner->_VisualStyle.UnderlineColor.Get(FLinearColor(0.18f, 0.42f, 0.90f, 1.0f));
+                    })
+                ];
+            SAssignNew(Entry.HeaderPresentation, SBox)
+                [
+                    SNew(SVerticalBox)
+                    + SVerticalBox::Slot().AutoHeight()[Entry.Header.ToSharedRef()]
+                    + SVerticalBox::Slot().AutoHeight()[Entry.Underline.ToSharedRef()]
+                ];
         }
         else if (Entry.HeaderLabel.IsValid()) { Entry.HeaderLabel->SetFont(_Font); }
         if (!Entry.ContentHost.IsValid())
@@ -273,11 +342,12 @@ void SCkUiTabs::Reconcile()
         Next.Add(MoveTemp(Entry));
     }
     _Entries = MoveTemp(Next);
+    UpdateHeaderAppearance();
     _Headers->ClearChildren();
     _Panels->ClearChildren();
     for (FEntry& Entry : _Entries)
     {
-        _Headers->AddSlot()[Entry.Header.ToSharedRef()];
+        _Headers->AddSlot()[Entry.HeaderPresentation.ToSharedRef()];
         _Panels->AddSlot().FillHeight(1.0f)[Entry.ContentHost.ToSharedRef()];
     }
     _PendingPanels.Reset();
@@ -304,6 +374,7 @@ void SCkUiTabs::ReconcileSelectionAndOwnedFocus()
     {
         if (Entry.ContentHost.IsValid()) { Entry.ContentHost->Invalidate(EInvalidateWidgetReason::Visibility); }
         if (Entry.Header.IsValid()) { Entry.Header->Invalidate(EInvalidateWidgetReason::Paint); }
+        if (Entry.HeaderPresentation.IsValid()) { Entry.HeaderPresentation->Invalidate(EInvalidateWidgetReason::Paint); }
     }
     if (Previous.IsEmpty() || !FSlateApplication::IsInitialized()) { return; }
     const FEntry* PreviousEntry = _Entries.FindByPredicate([&Previous](const FEntry& Entry) { return Entry.Key.Equals(Previous, ESearchCase::CaseSensitive); });

@@ -20,7 +20,7 @@ public:
     };
 
     SLATE_BEGIN_ARGS(SCkUiRepeat) {}
-        SLATE_ARGUMENT(TSharedPtr<FCkUiCollection>, Collection)
+        SLATE_ARGUMENT(TSharedPtr<const FCkUiCollection>, Collection)
         SLATE_EVENT(FCkUiRepeatRefresh, OnRefresh)
     SLATE_END_ARGS()
 
@@ -40,7 +40,7 @@ public:
 private:
     void MarkDirty();
 
-    TSharedPtr<FCkUiCollection> _Collection;
+    TSharedPtr<const FCkUiCollection> _Collection;
     FDelegateHandle _CollectionChangedHandle;
     FCkUiRepeatRefresh _OnRefresh;
     TSharedPtr<SCkFlexBox> _Box;

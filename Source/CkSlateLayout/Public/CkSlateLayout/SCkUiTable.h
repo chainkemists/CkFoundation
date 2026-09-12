@@ -16,7 +16,8 @@ class CKSLATELAYOUT_API SCkUiTable final : public SCompoundWidget
 {
 public:
     using FRecord = TSharedPtr<const FCkUiRecord>;
-    using FCellFactory = TFunction<TSharedPtr<FCkUiView>(const FCkUiNode&, TWeakPtr<const FCkUiRecord>, FString&)>;
+    /** The cell dispatch gate is false once its configuration retires, its virtual row retires, or its source record ceases to be current. A same-key field update retains its gate. */
+    using FCellFactory = TFunction<TSharedPtr<FCkUiView>(const FCkUiNode&, TWeakPtr<const FCkUiRecord>, TAttribute<bool>, FString&)>;
 
     SLATE_BEGIN_ARGS(SCkUiTable) {}
         SLATE_ARGUMENT(TSharedPtr<FCkUiCollection>, Collection)
@@ -36,6 +37,8 @@ public:
     auto TrySelectKey(TOptional<FString> InKey, bool InNotify = false) -> bool;
     auto TryRefresh() -> bool;
     auto GetSelectedKey() const -> TOptional<FString>;
+    /** Set only while a legacy table context-menu callback is synchronously constructing its menu. */
+    auto GetContextMenuKey() const -> TOptional<FString>;
     auto GetVisibleRecordCount() const -> int32;
     auto GetLiveRowCount() const -> int32;
     auto GetList() const -> TSharedPtr<SListView<FRecord>>;

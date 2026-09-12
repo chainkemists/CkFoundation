@@ -4,9 +4,14 @@
 #include "CkSlateLayout/CkUiContextMenu.h"
 #include "CkSlateLayout/SCkUiSurface.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Brushes/SlateColorBrush.h"
+#include "Brushes/SlateNoResource.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
+#include "Styling/AppStyle.h"
 #include "Styling/CoreStyle.h"
 
 #include "Widgets/Layout/SBox.h"
+#include "Widgets/SBoxPanel.h"
 #include "Widgets/SNullWidget.h"
 #include "Widgets/Text/STextBlock.h"
 #include "Widgets/Views/SHeaderRow.h"
@@ -34,6 +39,7 @@ namespace ck_ui_table
         TArray<FColumn> Columns;
         bool Selectable = true;
         float RowHeight = 24.0f;
+        FCkUiTableVisualStyle VisualStyle;
         TAttribute<FText> Filter;
         SCkUiTable::FCellFactory Factory;
         FOnCkUiTableSelectionChanged OnSelectionChanged;
@@ -45,7 +51,7 @@ namespace ck_ui_table
     {
     public:
         TFunction<void(SCkUiTable::FRecord, const FPointerEvent&)> OnItemRightClicked;
-        TFunction<bool(const FKeyEvent&)> OnContextMenuKey;
+        TFunction<TOptional<FReply>(const FGeometry&, const FKeyEvent&)> OnContextMenuKey;
 
         virtual void Private_OnItemRightClicked(SCkUiTable::FRecord InRecord, const FPointerEvent& InMouseEvent) override
         {
@@ -55,8 +61,12 @@ namespace ck_ui_table
 
         virtual FReply OnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override
         {
-            return OnContextMenuKey && OnContextMenuKey(InKeyEvent) ? FReply::Handled()
-                : SListView<SCkUiTable::FRecord>::OnKeyDown(InGeometry, InKeyEvent);
+            if (OnContextMenuKey)
+            {
+                const TOptional<FReply> Reply = OnContextMenuKey(InGeometry, InKeyEvent);
+                if (Reply.IsSet()) { return Reply.GetValue(); }
+            }
+            return SListView<SCkUiTable::FRecord>::OnKeyDown(InGeometry, InKeyEvent);
         }
 
         void OpenLegacyContextMenu(const FPointerEvent& InMouseEvent) { OnRightMouseButtonUp(InMouseEvent); }
@@ -68,11 +78,23 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     class FRow;
     class FPreparedUpdate;
 
+    struct FCellScope final
+    {
+        bool Active = true;
+    };
+
+    struct FConfigurationToken final
+    {
+        bool Active = true;
+    };
+
     TSharedPtr<FCkUiCollection> Collection;
     FSlateFontInfo BaseFont;
     TSharedPtr<ck_ui_table::FList> List;
     TSharedPtr<FCkUiContextMenuHost> ContextMenu = MakeShared<FCkUiContextMenuHost>();
     TSharedPtr<SHeaderRow> Header;
+    FHeaderRowStyle HeaderStyle;
+    FTableRowStyle RowStyle;
     TArray<FRecord> VisibleRows;
     TArray<TWeakPtr<FRow>> LiveRows;
     TOptional<FString> SelectedKey;
@@ -80,6 +102,7 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     TOptional<FName> SortColumn;
     EColumnSortMode::Type SortMode = EColumnSortMode::None;
     ck_ui_table::FConfiguration Configuration;
+    TSharedPtr<FConfigurationToken> ConfigurationToken;
     FDelegateHandle CollectionChangedHandle;
     FString LastCellError;
     FString AppliedFilter;
@@ -90,6 +113,7 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
 
     ~FImpl()
     {
+        if (ConfigurationToken.IsValid()) { ConfigurationToken->Active = false; }
         ReleaseContextMenu();
         if (Collection.IsValid() && CollectionChangedHandle.IsValid())
         { Collection->OnChanged().Remove(CollectionChangedHandle); }
@@ -105,6 +129,29 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     auto IsVisibleRecord(const FRecord& InRecord) const -> bool
     {
         return IsCurrentRecord(InRecord) && VisibleRows.Contains(InRecord);
+    }
+
+    auto MakeCellDispatchGate(const FRecord& InRecord, const TSharedRef<FCellScope>& InScope,
+        const TSharedPtr<FConfigurationToken>& InConfigurationToken) const -> TAttribute<bool>
+    {
+        if (!InRecord.IsValid() || !InConfigurationToken.IsValid()) { return TAttribute<bool>(false); }
+        const TWeakPtr<const FImpl> WeakImpl = AsShared();
+        const TWeakPtr<const FCkUiRecord> WeakRecord = InRecord;
+        const TWeakPtr<FCellScope> WeakScope = InScope;
+        const TWeakPtr<FConfigurationToken> WeakConfigurationToken = InConfigurationToken;
+        // A collection update retains this record object for its stable key. Its revision is field data, not row identity.
+        const FString ExpectedKey = InRecord->GetKey();
+        return TAttribute<bool>::CreateLambda([WeakImpl, WeakRecord, WeakScope, WeakConfigurationToken, ExpectedKey]()
+        {
+            const TSharedPtr<const FImpl> Impl = WeakImpl.Pin();
+            const TSharedPtr<const FCkUiRecord> Record = WeakRecord.Pin();
+            const TSharedPtr<FCellScope> Scope = WeakScope.Pin();
+            const TSharedPtr<FConfigurationToken> Token = WeakConfigurationToken.Pin();
+            return Impl.IsValid() && Record.IsValid() && Scope.IsValid() && Scope->Active && Token.IsValid() && Token->Active
+                && Impl->ConfigurationToken.Get() == Token.Get()
+                && Record->GetKey() == ExpectedKey
+                && Impl->IsVisibleRecord(Record);
+        });
     }
 
     void ReleaseContextMenu()
@@ -136,21 +183,53 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     {
         if (!Configuration.OnAuthoredContextMenu.IsBound())
         {
-            if (List.IsValid()) { List->OpenLegacyContextMenu(InMouseEvent); }
+            if (!IsVisibleRecord(InRecord) || !List.IsValid()) { ContextMenuKey.Reset(); return; }
+            ContextMenuKey = InRecord->GetKey();
+            List->OpenLegacyContextMenu(InMouseEvent);
+            ContextMenuKey.Reset();
             return;
         }
         const FWidgetPath OwnerPath = InMouseEvent.GetEventPath() != nullptr ? *InMouseEvent.GetEventPath() : FWidgetPath{};
         if (InRecord.IsValid()) { OpenAuthoredContextMenu(InRecord->GetKey(), OwnerPath, InMouseEvent.GetScreenSpacePosition(), InMouseEvent.GetUserIndex()); }
     }
 
-    auto OnContextMenuKey(const FKeyEvent& InKeyEvent) -> bool
+    auto OnContextMenuKey(const FGeometry&, const FKeyEvent& InKeyEvent) -> TOptional<FReply>
     {
         // This engine's InputCore key table does not expose the Windows Context/Menu key.
         const bool bContextKey = InKeyEvent.GetKey() == EKeys::F10 && InKeyEvent.IsShiftDown();
-        if (!bContextKey || !Configuration.OnAuthoredContextMenu.IsBound()) { return false; }
-        if (!SelectedKey.IsSet()) { return true; }
+        if (!bContextKey) { return {}; }
+        if (!SelectedKey.IsSet()) { return FReply::Handled(); }
         const FRecord Record = Collection.IsValid() ? Collection->FindRecord(SelectedKey.GetValue()) : FRecord{};
-        if (!IsVisibleRecord(Record)) { return true; }
+        if (!IsVisibleRecord(Record)) { return FReply::Handled(); }
+        if (!Configuration.OnAuthoredContextMenu.IsBound())
+        {
+            ContextMenuKey.Reset();
+            if (!List.IsValid() || !Configuration.OnContextMenu.IsBound()) { return FReply::Handled(); }
+            TSharedPtr<SWidget> Parent = List;
+            FVector2f Position = List->GetCachedGeometry().GetLayoutBoundingRect().GetBottomLeft();
+            if (const TSharedPtr<ITableRow> Row = List->WidgetFromItem(Record); Row.IsValid())
+            {
+                Parent = Row->AsWidget();
+                Position = Parent->GetCachedGeometry().GetLayoutBoundingRect().GetBottomLeft();
+            }
+            if (!Parent.IsValid()) { return FReply::Handled(); }
+
+            FWidgetPath OwnerPath;
+            FSlateApplication& Slate = FSlateApplication::Get();
+            if (!Slate.GeneratePathToWidgetUnchecked(Parent.ToSharedRef(), OwnerPath)) { return FReply::Handled(); }
+
+            const FOnContextMenuOpening Callback = Configuration.OnContextMenu;
+            ContextMenuKey = Record->GetKey();
+            const TSharedPtr<SWidget> Menu = Callback.Execute();
+            ContextMenuKey.Reset();
+            if (Menu.IsValid())
+            {
+                Slate.PushMenu(Parent.ToSharedRef(), OwnerPath, Menu.ToSharedRef(), Position,
+                    FPopupTransitionEffect(FPopupTransitionEffect::ContextMenu), true, FVector2f::ZeroVector,
+                    TOptional<EPopupMethod>{}, true, InKeyEvent.GetUserIndex());
+            }
+            return FReply::Handled();
+        }
         FWidgetPath OwnerPath;
         TSharedPtr<SWidget> Parent = List;
         FVector2f Position = List->GetCachedGeometry().GetLayoutBoundingRect().GetBottomLeft();
@@ -167,7 +246,7 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         }
         else if (Parent.IsValid()) { Slate.GeneratePathToWidgetUnchecked(Parent.ToSharedRef(), OwnerPath); }
         OpenAuthoredContextMenu(SelectedKey.GetValue(), OwnerPath, Position, InKeyEvent.GetUserIndex(), Parent);
-        return true;
+        return FReply::Handled();
     }
 
     auto FindColumn(const FName InId) const -> const ck_ui_table::FColumn*
@@ -184,13 +263,13 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     }
 
     auto MakeCells(const ck_ui_table::FConfiguration& InConfiguration, const FRecord& InRecord,
-        ck_ui_table::FCellViews& OutCells, FString& OutFailure) const -> bool
+        const TAttribute<bool>& InDispatchGate, ck_ui_table::FCellViews& OutCells, FString& OutFailure) const -> bool
     {
         if (!IsCurrentRecord(InRecord)) { OutFailure = TEXT("table row record is no longer current"); return false; }
         for (const ck_ui_table::FColumn& Column : InConfiguration.Columns)
         {
             FString Failure;
-            const TSharedPtr<FCkUiView> View = InConfiguration.Factory(Column.CellRoot, TWeakPtr<const FCkUiRecord>(InRecord), Failure);
+            const TSharedPtr<FCkUiView> View = InConfiguration.Factory(Column.CellRoot, TWeakPtr<const FCkUiRecord>(InRecord), InDispatchGate, Failure);
             if (!View.IsValid() || !Failure.IsEmpty())
             {
                 OutFailure = Failure.IsEmpty() ? FString::Printf(TEXT("table cell factory returned no view for column '%s'"), *Column.Id.ToString()) : Failure;
@@ -201,7 +280,8 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         return true;
     }
 
-    auto GetCell(const FRecord& InRecord, const FName InColumn, ck_ui_table::FCellViews& InOutCells) -> TSharedRef<SWidget>
+    auto GetCell(const FRecord& InRecord, const FName InColumn, const TAttribute<bool>& InDispatchGate,
+        ck_ui_table::FCellViews& InOutCells) -> TSharedRef<SWidget>
     {
         const TSharedPtr<FImpl> KeepAlive = AsShared();
         if (!IsCurrentRecord(InRecord)) { return ErrorCell(TEXT("table row record is no longer current")); }
@@ -211,7 +291,7 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         const ck_ui_table::FColumn* Column = FindColumn(InColumn);
         if (Column == nullptr) { return ErrorCell(TEXT("table column is no longer current")); }
         FString Failure;
-        const TSharedPtr<FCkUiView> View = Configuration.Factory(Column->CellRoot, TWeakPtr<const FCkUiRecord>(InRecord), Failure);
+        const TSharedPtr<FCkUiView> View = Configuration.Factory(Column->CellRoot, TWeakPtr<const FCkUiRecord>(InRecord), InDispatchGate, Failure);
         if (!View.IsValid() || !Failure.IsEmpty())
         { return ErrorCell(Failure.IsEmpty() ? FString::Printf(TEXT("table cell factory returned no view for column '%s'"), *InColumn.ToString()) : Failure); }
         InOutCells.Add(InColumn, View);
@@ -243,6 +323,7 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         {
         case ECkUiFieldKind::Text: bLess = Left->Text.ToString() < Right->Text.ToString(); bGreater = Right->Text.ToString() < Left->Text.ToString(); break;
         case ECkUiFieldKind::Number: bLess = Left->Number < Right->Number; bGreater = Right->Number < Left->Number; break;
+        case ECkUiFieldKind::Integer: bLess = Left->Integer < Right->Integer; bGreater = Right->Integer < Left->Integer; break;
         case ECkUiFieldKind::Bool: bLess = !Left->Bool && Right->Bool; bGreater = Left->Bool && !Right->Bool; break;
         default: return A->GetKey() < B->GetKey();
         }
@@ -319,6 +400,14 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         SortColumn = InMode == EColumnSortMode::None ? TOptional<FName>{} : TOptional<FName>{InColumn};
         SortMode = InMode;
         bProjectionDirty = true;
+        if (Header.IsValid()) { Header->Invalidate(EInvalidateWidgetReason::Paint); }
+    }
+
+    auto GetSortIndicatorText(const FName InColumn) const -> FText
+    {
+        if (!SortColumn.IsSet() || SortColumn.GetValue() != InColumn || SortMode == EColumnSortMode::None)
+        { return FText::FromString(TEXT("↕")); }
+        return SortMode == EColumnSortMode::Ascending ? FText::FromString(TEXT("↑")) : FText::FromString(TEXT("↓"));
     }
 
     void AddHeaderColumn(const ck_ui_table::FColumn& InColumn)
@@ -327,11 +416,28 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
         Arguments.DefaultLabel(InColumn.Header).MinSize(InColumn.MinWidth);
         auto Font = BaseFont;
         if (InColumn.HeaderStyle.FontSize.IsSet()) { Font.Size = InColumn.HeaderStyle.FontSize.GetValue(); }
+        if (InColumn.HeaderStyle.LetterSpacing.IsSet()) { Font.LetterSpacing = InColumn.HeaderStyle.LetterSpacing.GetValue(); }
         if (InColumn.HeaderStyle.Bold) { Font.TypefaceFontName = TEXT("Bold"); }
+        TSharedRef<SWidget> HeaderContent = SNew(STextBlock).Text(InColumn.Header).Font(Font)
+            .ColorAndOpacity(InColumn.HeaderStyle.Color.IsSet()
+                ? FSlateColor(InColumn.HeaderStyle.Color.GetValue()) : FSlateColor::UseForeground());
+        if (!InColumn.SortField.IsEmpty() && Configuration.VisualStyle.SortIndicatorColor.IsSet())
+        {
+            const FName ColumnId = InColumn.Id;
+            const TWeakPtr<FImpl> WeakImpl = AsShared();
+            HeaderContent = SNew(SHorizontalBox)
+                + SHorizontalBox::Slot().AutoWidth()[HeaderContent]
+                + SHorizontalBox::Slot().AutoWidth().Padding(FMargin(4.0f, 0.0f, 0.0f, 0.0f))
+                [SNew(STextBlock).Text(TAttribute<FText>::CreateLambda([WeakImpl, ColumnId]()
+                {
+                    const TSharedPtr<FImpl> Impl = WeakImpl.Pin();
+                    return Impl.IsValid() ? Impl->GetSortIndicatorText(ColumnId) : FText::GetEmpty();
+                })).Font(Font).ColorAndOpacity(FSlateColor(Configuration.VisualStyle.SortIndicatorColor.GetValue()))];
+        }
         Arguments.HAlignHeader(InColumn.HeaderStyle.HAlign).VAlignHeader(InColumn.HeaderStyle.VAlign)
-            [SNew(STextBlock).Text(InColumn.Header).Font(Font)
-                .ColorAndOpacity(InColumn.HeaderStyle.Color.IsSet()
-                    ? FSlateColor(InColumn.HeaderStyle.Color.GetValue()) : FSlateColor::UseForeground())];
+            .HeaderContentPadding(Configuration.VisualStyle.HasHeaderPadding
+                ? TOptional<FMargin>(Configuration.VisualStyle.HeaderPadding) : TOptional<FMargin>())
+            [HeaderContent];
         if (!InColumn.SortField.IsEmpty())
         {
             const FName ColumnId = InColumn.Id;
@@ -350,7 +456,8 @@ struct SCkUiTable::FImpl final : public TSharedFromThis<FImpl>
     }
 
     void PruneLiveRows() { LiveRows.RemoveAll([](const TWeakPtr<FRow>& Row) { return !Row.IsValid(); }); }
-    void Commit(ck_ui_table::FConfiguration&& InConfiguration, TArray<TPair<TSharedPtr<FRow>, ck_ui_table::FCellViews>>&& InCells);
+    void Commit(ck_ui_table::FConfiguration&& InConfiguration, TSharedPtr<FConfigurationToken> InConfigurationToken,
+        TArray<TPair<TSharedPtr<FRow>, ck_ui_table::FCellViews>>&& InCells);
 };
 
 class SCkUiTable::FImpl::FRow final : public SMultiColumnTableRow<SCkUiTable::FRecord>
@@ -365,10 +472,16 @@ public:
     {
         _Record = InArgs._Record;
         _Impl = InArgs._Impl;
-        SMultiColumnTableRow<SCkUiTable::FRecord>::Construct(FSuperRowType::FArguments().Padding(FMargin(0.0f)).ShowSelection(true), InOwner);
+        _CellScope = MakeShared<FCellScope>();
+        const TSharedPtr<FImpl> Impl = _Impl.Pin();
+        auto Arguments = FSuperRowType::FArguments().Padding(FMargin(0.0f)).ShowSelection(true);
+        if (Impl.IsValid()) { Arguments.Style(&Impl->RowStyle); }
+        SMultiColumnTableRow<SCkUiTable::FRecord>::Construct(Arguments, InOwner);
         SignalSelectionMode = ETableRowSignalSelectionMode::Instantaneous;
-        if (const TSharedPtr<FImpl> Impl = _Impl.Pin()) { Impl->LiveRows.Add(StaticCastSharedRef<FRow>(AsShared())); }
+        if (Impl.IsValid()) { Impl->LiveRows.Add(StaticCastSharedRef<FRow>(AsShared())); }
     }
+
+    ~FRow() { _CellScope->Active = false; }
 
     auto GetRecord() const -> SCkUiTable::FRecord { return _Record; }
     auto ReplaceCells(ck_ui_table::FCellViews&& InCells) -> ck_ui_table::FCellViews
@@ -376,6 +489,14 @@ public:
         auto Previous = MoveTemp(_Cells);
         _Cells = MoveTemp(InCells);
         return Previous;
+    }
+
+    auto GetCellDispatchGate(const TSharedPtr<FConfigurationToken>& InConfigurationToken = {}) const -> TAttribute<bool>
+    {
+        const TSharedPtr<FImpl> Impl = _Impl.Pin();
+        const TSharedPtr<FConfigurationToken> Token = InConfigurationToken.IsValid()
+            ? InConfigurationToken : (Impl.IsValid() ? Impl->ConfigurationToken : TSharedPtr<FConfigurationToken>{});
+        return Impl.IsValid() ? Impl->MakeCellDispatchGate(_Record, _CellScope, Token) : TAttribute<bool>(false);
     }
 
     virtual auto GenerateWidgetForColumn(const FName& InColumn) -> TSharedRef<SWidget> override
@@ -386,20 +507,60 @@ public:
         if (!Impl->IsCurrentRecord(_Record)) { return SNullWidget::NullWidget; }
         if (Impl->FindColumn(InColumn) == nullptr) { return SNew(STextBlock).Text(FText::FromString(TEXT("table column is unavailable"))); }
         return SNew(SBox).HeightOverride(Impl->Configuration.RowHeight).Clipping(EWidgetClipping::ClipToBounds)
-            [Impl->GetCell(_Record, InColumn, _Cells)];
+            [Impl->GetCell(_Record, InColumn, GetCellDispatchGate(), _Cells)];
     }
 
 private:
     SCkUiTable::FRecord _Record;
     TWeakPtr<FImpl> _Impl;
+    TSharedRef<FCellScope> _CellScope = MakeShared<FCellScope>();
     ck_ui_table::FCellViews _Cells;
 };
 
-void SCkUiTable::FImpl::Commit(ck_ui_table::FConfiguration&& InConfiguration,
+void SCkUiTable::FImpl::Commit(ck_ui_table::FConfiguration&& InConfiguration, TSharedPtr<FConfigurationToken> InConfigurationToken,
     TArray<TPair<TSharedPtr<FRow>, ck_ui_table::FCellViews>>&& InCells)
 {
     const TSharedPtr<FImpl> KeepAlive = AsShared();
+    ReleaseContextMenu();
+    if (ConfigurationToken.IsValid()) { ConfigurationToken->Active = false; }
+    ConfigurationToken = MoveTemp(InConfigurationToken);
     Configuration = MoveTemp(InConfiguration);
+    HeaderStyle = FAppStyle::Get().GetWidgetStyle<FHeaderRowStyle>(TEXT("TableView.Header"));
+    RowStyle = FCoreStyle::Get().GetWidgetStyle<FTableRowStyle>(TEXT("TableView.Row"));
+    if (Configuration.VisualStyle.Enabled)
+    {
+        const FCkUiTableVisualStyle& Visual = Configuration.VisualStyle;
+        if (Visual.HeaderBackground.IsSet())
+        { HeaderStyle.SetBackgroundBrush(FSlateColorBrush(Visual.HeaderBackground.GetValue())); }
+        if (Visual.SortIndicatorColor.IsSet())
+        {
+            const FSlateNoResource NoResource;
+            HeaderStyle.ColumnStyle.SetSortPrimaryAscendingImage(NoResource).SetSortPrimaryDescendingImage(NoResource)
+                .SetSortSecondaryAscendingImage(NoResource).SetSortSecondaryDescendingImage(NoResource);
+            HeaderStyle.LastColumnStyle.SetSortPrimaryAscendingImage(NoResource).SetSortPrimaryDescendingImage(NoResource)
+                .SetSortSecondaryAscendingImage(NoResource).SetSortSecondaryDescendingImage(NoResource);
+        }
+        const FLinearColor Separator = Visual.RowSeparatorColor.Get(FLinearColor::Transparent);
+        const float SeparatorWidth = Visual.RowSeparatorWidth.Get(Visual.RowSeparatorColor.IsSet() ? 1.0f : 0.0f);
+        const auto RowBrush = [&Separator, SeparatorWidth](const FLinearColor& InBackground)
+        { return FSlateRoundedBoxBrush(InBackground, 0.0f, Separator, SeparatorWidth); };
+        if (Visual.RowBackground.IsSet() || Visual.RowSeparatorColor.IsSet())
+        {
+            const FSlateRoundedBoxBrush Brush = RowBrush(Visual.RowBackground.Get(FLinearColor::Transparent));
+            RowStyle.SetEvenRowBackgroundBrush(Brush).SetOddRowBackgroundBrush(Brush);
+        }
+        if (Visual.RowHoverBackground.IsSet())
+        {
+            const FSlateRoundedBoxBrush Brush = RowBrush(Visual.RowHoverBackground.GetValue());
+            RowStyle.SetEvenRowBackgroundHoveredBrush(Brush).SetOddRowBackgroundHoveredBrush(Brush);
+        }
+        if (Visual.RowSelectedBackground.IsSet())
+        {
+            const FSlateRoundedBoxBrush Brush = RowBrush(Visual.RowSelectedBackground.GetValue());
+            RowStyle.SetActiveBrush(Brush).SetActiveHoveredBrush(Brush)
+                .SetInactiveBrush(Brush).SetInactiveHoveredBrush(Brush);
+        }
+    }
     if (!Configuration.Selectable)
     {
         SelectedKey.Reset();
@@ -422,24 +583,27 @@ void SCkUiTable::FImpl::Commit(ck_ui_table::FConfiguration&& InConfiguration,
     { if (Pair.Key.IsValid()) { PreviousCells.Add(Pair.Key->ReplaceCells(MoveTemp(Pair.Value))); } }
     Header->ClearColumns();
     for (const ck_ui_table::FColumn& Column : Configuration.Columns) { AddHeaderColumn(Column); }
+    Header->Invalidate(EInvalidateWidgetReason::PaintAndVolatility);
+    List->Invalidate(EInvalidateWidgetReason::PaintAndVolatility);
     bProjectionDirty = true;
 }
 
 class SCkUiTable::FImpl::FPreparedUpdate final : public ICkUiPreparedWidgetUpdate
 {
 public:
-    FPreparedUpdate(TWeakPtr<FImpl> InImpl, ck_ui_table::FConfiguration&& InConfiguration,
+    FPreparedUpdate(TWeakPtr<FImpl> InImpl, ck_ui_table::FConfiguration&& InConfiguration, TSharedPtr<FConfigurationToken> InConfigurationToken,
         TArray<TPair<TSharedPtr<FRow>, ck_ui_table::FCellViews>>&& InCells)
-        : _Impl(MoveTemp(InImpl)), _Configuration(MoveTemp(InConfiguration)), _Cells(MoveTemp(InCells)) {}
+        : _Impl(MoveTemp(InImpl)), _Configuration(MoveTemp(InConfiguration)), _ConfigurationToken(MoveTemp(InConfigurationToken)), _Cells(MoveTemp(InCells)) {}
 
     virtual void Commit() noexcept override
     {
-        if (const TSharedPtr<FImpl> Impl = _Impl.Pin()) { Impl->Commit(MoveTemp(_Configuration), MoveTemp(_Cells)); }
+        if (const TSharedPtr<FImpl> Impl = _Impl.Pin()) { Impl->Commit(MoveTemp(_Configuration), MoveTemp(_ConfigurationToken), MoveTemp(_Cells)); }
     }
 
 private:
     TWeakPtr<FImpl> _Impl;
     ck_ui_table::FConfiguration _Configuration;
+    TSharedPtr<FConfigurationToken> _ConfigurationToken;
     TArray<TPair<TSharedPtr<FRow>, ck_ui_table::FCellViews>> _Cells;
 };
 
@@ -454,7 +618,9 @@ void SCkUiTable::Construct(const FArguments& InArgs)
         ChildSlot[SNew(STextBlock).Text(FText::FromString(_Impl->LastCellError))];
         return;
     }
-    SAssignNew(_Impl->Header, SHeaderRow);
+    _Impl->HeaderStyle = FAppStyle::Get().GetWidgetStyle<FHeaderRowStyle>(TEXT("TableView.Header"));
+    _Impl->RowStyle = FCoreStyle::Get().GetWidgetStyle<FTableRowStyle>(TEXT("TableView.Row"));
+    SAssignNew(_Impl->Header, SHeaderRow).Style(&_Impl->HeaderStyle);
     SAssignNew(_Impl->List, ck_ui_table::FList)
         .ListItemsSource(&_Impl->VisibleRows)
         .SelectionMode(ESelectionMode::Single)
@@ -472,16 +638,18 @@ void SCkUiTable::Construct(const FArguments& InArgs)
             const TSharedPtr<FImpl> Impl = WeakImpl.Pin();
             const FOnContextMenuOpening Callback = Impl.IsValid() && !Impl->Configuration.OnAuthoredContextMenu.IsBound()
                 ? Impl->Configuration.OnContextMenu : FOnContextMenuOpening{};
-            return Callback.IsBound() ? Callback.Execute() : TSharedPtr<SWidget>{};
+            const TSharedPtr<SWidget> Menu = Callback.IsBound() ? Callback.Execute() : TSharedPtr<SWidget>{};
+            if (Impl.IsValid()) { Impl->ContextMenuKey.Reset(); }
+            return Menu;
         }));
     _Impl->List->OnItemRightClicked = [WeakImpl = TWeakPtr<FImpl>(_Impl)](FRecord InRecord, const FPointerEvent& InMouseEvent)
     {
         if (const TSharedPtr<FImpl> Impl = WeakImpl.Pin()) { Impl->OnItemRightClicked(MoveTemp(InRecord), InMouseEvent); }
     };
-    _Impl->List->OnContextMenuKey = [WeakImpl = TWeakPtr<FImpl>(_Impl)](const FKeyEvent& InKeyEvent)
+    _Impl->List->OnContextMenuKey = [WeakImpl = TWeakPtr<FImpl>(_Impl)](const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) -> TOptional<FReply>
     {
         const TSharedPtr<FImpl> Impl = WeakImpl.Pin();
-        return Impl.IsValid() && Impl->OnContextMenuKey(InKeyEvent);
+        return Impl.IsValid() ? Impl->OnContextMenuKey(InGeometry, InKeyEvent) : TOptional<FReply>{};
     };
     _Impl->CollectionChangedHandle = _Impl->Collection->OnChanged().AddSP(_Impl.ToSharedRef(), &FImpl::OnCollectionChanged);
     ChildSlot[_Impl->List.ToSharedRef()];
@@ -525,8 +693,10 @@ auto SCkUiTable::Prepare(const FCkUiNode& InDefinition, FCellFactory InFactory, 
 
     const TSharedPtr<FImpl> KeepAlive = _Impl;
     TGuardValue<bool> Guard(_Impl->bPreparing, true);
+    const TSharedPtr<FImpl::FConfigurationToken> ConfigurationToken = MakeShared<FImpl::FConfigurationToken>();
     auto Configuration = ck_ui_table::FConfiguration{};
     Configuration.Selectable = InDefinition.TableSelectable;
+    Configuration.VisualStyle = InDefinition.TableVisualStyle;
     Configuration.RowHeight = InDefinition.RowHeight;
     Configuration.Filter = MoveTemp(InFilter);
     Configuration.Factory = MoveTemp(InFactory);
@@ -571,10 +741,10 @@ auto SCkUiTable::Prepare(const FCkUiNode& InDefinition, FCellFactory InFactory, 
         // Collection publication precedes Slate's deferred destruction of removed rows.
         if (!_Impl->IsCurrentRecord(Record)) { continue; }
         ck_ui_table::FCellViews RowCells;
-        if (!_Impl->MakeCells(Configuration, Record, RowCells, OutFailure) || !OutFailure.IsEmpty()) { return {}; }
+        if (!_Impl->MakeCells(Configuration, Record, Row->GetCellDispatchGate(ConfigurationToken), RowCells, OutFailure) || !OutFailure.IsEmpty()) { return {}; }
         Cells.Emplace(Row, MoveTemp(RowCells));
     }
-    return MakeUnique<FImpl::FPreparedUpdate>(_Impl, MoveTemp(Configuration), MoveTemp(Cells));
+    return MakeUnique<FImpl::FPreparedUpdate>(_Impl, MoveTemp(Configuration), ConfigurationToken, MoveTemp(Cells));
 }
 
 auto SCkUiTable::TrySelectKey(TOptional<FString> InKey, const bool InNotify) -> bool
@@ -614,6 +784,7 @@ auto SCkUiTable::TryRefresh() -> bool
 }
 
 auto SCkUiTable::GetSelectedKey() const -> TOptional<FString> { return _Impl.IsValid() ? _Impl->SelectedKey : TOptional<FString>{}; }
+auto SCkUiTable::GetContextMenuKey() const -> TOptional<FString> { return _Impl.IsValid() ? _Impl->ContextMenuKey : TOptional<FString>{}; }
 auto SCkUiTable::GetVisibleRecordCount() const -> int32 { return _Impl.IsValid() ? _Impl->VisibleRows.Num() : 0; }
 auto SCkUiTable::GetList() const -> TSharedPtr<SListView<FRecord>>
 {

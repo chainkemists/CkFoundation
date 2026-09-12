@@ -49,9 +49,13 @@ enum class ECkUiCustomPropertyKind : uint8
     BoolChanged,
     NumberChanged,
     NumberCommitted,
+    ColorCommitted,
     NumberInteraction,
     StringChanged,
     CollectionBinding,
+    FloatSeriesBinding,
+    IntegerBinding,
+    IntegerCommitted,
 };
 
 struct FCkUiCustomPropertyValue
@@ -87,14 +91,98 @@ struct FCkUiStyle
     TOptional<float> MaxWidth;
     TOptional<float> MaxHeight;
     TOptional<float> FontSize;
+    /** CSS em tracking converted to Slate's one-thousandth-em letter spacing. */
+    TOptional<int32> LetterSpacing;
+    /** Optional face selection; omitted inherits the consumer's base font. */
+    TOptional<bool> Monospace;
     bool Bold = false;
     bool AllowWrapping = true;
     ETextWrappingPolicy WrappingPolicy = ETextWrappingPolicy::DefaultWrapping;
     ETextOverflowPolicy OverflowPolicy = ETextOverflowPolicy::Clip;
     TOptional<FLinearColor> Color;
     TOptional<FLinearColor> Background;
+    TOptional<FLinearColor> BorderColor;
+    TOptional<float> BorderWidth;
+    TOptional<float> BorderRadius;
     EHorizontalAlignment HAlign = HAlign_Fill;
     EVerticalAlignment VAlign = VAlign_Fill;
+};
+
+/** Optional authored presentation for a built-in button. Any -ck-button-* declaration enables it. */
+struct FCkUiButtonVisualStyle
+{
+    bool Enabled = false;
+    TOptional<FLinearColor> Background;
+    TOptional<FLinearColor> BorderColor;
+    TOptional<FLinearColor> HoverBackground;
+    TOptional<FLinearColor> HoverBorderColor;
+    TOptional<FLinearColor> PressedBackground;
+    TOptional<FLinearColor> PressedBorderColor;
+    TOptional<FLinearColor> DisabledBackground;
+    TOptional<FLinearColor> DisabledBorderColor;
+    TOptional<FLinearColor> Color;
+    TOptional<FLinearColor> DisabledColor;
+    TOptional<float> Radius;
+    TOptional<float> OutlineWidth;
+    FMargin ContentPadding = FMargin(9.0f, 6.0f);
+};
+
+/** Optional authored presentation for a built-in menu button. Any -ck-menu-button-* declaration enables it. */
+struct FCkUiMenuButtonVisualStyle
+{
+    bool Enabled = false;
+    TOptional<FLinearColor> Background;
+    TOptional<FLinearColor> BorderColor;
+    TOptional<FLinearColor> HoverBackground;
+    TOptional<FLinearColor> HoverBorderColor;
+    TOptional<FLinearColor> PressedBackground;
+    TOptional<FLinearColor> PressedBorderColor;
+    TOptional<FLinearColor> DisabledBackground;
+    TOptional<FLinearColor> DisabledBorderColor;
+    TOptional<float> Radius;
+    TOptional<float> OutlineWidth;
+    FMargin ContentPadding = FMargin(9.0f, 6.0f);
+    bool HasContentPadding = false;
+    TOptional<bool> HasDownArrow;
+};
+
+/** Optional authored presentation for a built-in tabs control. Any -ck-tabs-* declaration enables it. */
+struct FCkUiTabsVisualStyle
+{
+    bool Enabled = false;
+    TOptional<FLinearColor> InactiveColor;
+    TOptional<FLinearColor> ActiveColor;
+    TOptional<FLinearColor> UnderlineColor;
+    TOptional<float> UnderlineHeight;
+    TOptional<float> FontSize;
+    TOptional<bool> Bold;
+    FMargin HeaderPadding = FMargin(8.0f, 6.0f);
+};
+
+/** Optional authored presentation for a built-in table. Any -ck-table-* declaration enables it. */
+struct FCkUiTableVisualStyle
+{
+    bool Enabled = false;
+    TOptional<FLinearColor> HeaderBackground;
+    TOptional<FLinearColor> SortIndicatorColor;
+    FMargin HeaderPadding = FMargin(0.0f);
+    bool HasHeaderPadding = false;
+    TOptional<FLinearColor> RowBackground;
+    TOptional<FLinearColor> RowHoverBackground;
+    TOptional<FLinearColor> RowSelectedBackground;
+    TOptional<FLinearColor> RowSeparatorColor;
+    TOptional<float> RowSeparatorWidth;
+};
+
+/** Optional authored presentation for a built-in tree. Any -ck-tree-* declaration enables it. */
+struct FCkUiTreeVisualStyle
+{
+    bool Enabled = false;
+    TOptional<FLinearColor> RowBackground;
+    TOptional<FLinearColor> RowHoverBackground;
+    TOptional<FLinearColor> RowSelectedBackground;
+    TOptional<FLinearColor> SelectedAccentColor;
+    TOptional<float> SelectedAccentWidth;
 };
 
 struct FCkUiNode
@@ -102,6 +190,8 @@ struct FCkUiNode
     FString Id;
     ECkUiNodeKind Kind = ECkUiNodeKind::Column;
     FString Binding;
+    /** Nested-repeat child collection name; resolved against the enclosing repeat record in a future surface slice. */
+    FString ChildBinding;
     FString VisibilityBinding;
     FString ColorBinding;
     FString TooltipBinding;
@@ -114,6 +204,8 @@ struct FCkUiNode
     FString Action;
     /** Per-item action emitted by a button rendered under a repeat item subtree. */
     FString ItemAction;
+    /** Custom event property to repeat-item handler name; rewritten by the innermost repeat. */
+    TMap<FString, FString> ItemEventBindings;
     // Ordinary button enabled state; resolved by the owning view.
     FString ButtonEnabledBinding;
     FString Text;
@@ -124,6 +216,8 @@ struct FCkUiNode
     FString HeaderBinding;
     FString SortField;
     FString FilterBinding;
+    /** Tree-only Bool schema field used to project nodes without mutating the collection. */
+    FString ProjectionField;
     FString SelectionAction;
     FString ContextMenuAction;
     FString ContextMenuReference;
@@ -133,10 +227,17 @@ struct FCkUiNode
     FString TabEnabledBinding;
     FString MenuReference;
     bool TableSelectable = true;
+    /** Tree-only: unmodified left clicks on parent rows toggle native expansion. */
+    bool TreeExpandOnRowClick = false;
     float RowHeight = 24.0f;
     TMap<FString, FString> FieldBindings;
     TMap<FString, FCkUiCustomPropertyValue> CustomProperties;
     FCkUiStyle Style;
+    FCkUiButtonVisualStyle ButtonVisualStyle;
+    FCkUiMenuButtonVisualStyle MenuButtonVisualStyle;
+    FCkUiTabsVisualStyle TabsVisualStyle;
+    FCkUiTableVisualStyle TableVisualStyle;
+    FCkUiTreeVisualStyle TreeVisualStyle;
     TArray<FCkUiNode> Children;
 };
 

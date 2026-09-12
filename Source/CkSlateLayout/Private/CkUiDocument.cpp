@@ -85,6 +85,23 @@ namespace ck_ui_document
         return FMath::IsFinite(OutValue);
     }
 
+    auto ParseLetterSpacing(const FString& InRaw, int32& OutSpacing) -> bool
+    {
+        FString Value = InRaw.TrimStartAndEnd();
+        if (Value == TEXT("0"))
+        {
+            OutSpacing = 0;
+            return true;
+        }
+        if (!Value.EndsWith(TEXT("em"), ESearchCase::CaseSensitive)) { return false; }
+
+        Value.LeftChopInline(2, EAllowShrinking::No);
+        float Em = 0.0f;
+        if (!ParseFloat(Value, false, Em) || Em < -1.0f || Em > 10.0f) { return false; }
+        OutSpacing = FMath::RoundToInt(Em * 1000.0f);
+        return true;
+    }
+
     auto ResolveToken(const FString& InValue, const TMap<FString, FString>& InTokens, TSet<FString>& InResolving, FString& OutValue) -> bool
     {
         const auto Value = InValue.TrimStartAndEnd();
@@ -198,7 +215,7 @@ namespace ck_ui_document
     {
         auto Parts = TArray<FString>{};
         InRaw.ParseIntoArrayWS(Parts);
-        if (Parts.Num() != 1 && Parts.Num() != 2 && Parts.Num() != 4) { return false; }
+        if (Parts.Num() != 1 && Parts.Num() != 2 && Parts.Num() != 3 && Parts.Num() != 4) { return false; }
         auto Values = TArray<float>{}; Values.Reserve(Parts.Num());
         for (const auto& Part : Parts)
         {
@@ -208,6 +225,7 @@ namespace ck_ui_document
         }
         if (Values.Num() == 1) { OutPadding = FMargin(Values[0]); }
         else if (Values.Num() == 2) { OutPadding = FMargin(Values[1], Values[0], Values[1], Values[0]); }
+        else if (Values.Num() == 3) { OutPadding = FMargin(Values[1], Values[0], Values[1], Values[2]); }
         else { OutPadding = FMargin(Values[3], Values[0], Values[1], Values[2]); }
         return true;
     }
@@ -220,10 +238,70 @@ namespace ck_ui_document
             || InProperty == TEXT("min-width") || InProperty == TEXT("min-height")
             || InProperty == TEXT("max-width") || InProperty == TEXT("max-height")
             || InProperty == TEXT("width") || InProperty == TEXT("height")
-            || InProperty == TEXT("font-size") || InProperty == TEXT("font-weight")
+            || InProperty == TEXT("font-size") || InProperty == TEXT("font-family") || InProperty == TEXT("font-weight") || InProperty == TEXT("letter-spacing")
             || InProperty == TEXT("text-wrap") || InProperty == TEXT("overflow-wrap") || InProperty == TEXT("text-overflow")
             || InProperty == TEXT("color") || InProperty == TEXT("background-color")
-            || InProperty == TEXT("horizontal-align") || InProperty == TEXT("vertical-align");
+            || InProperty == TEXT("border-color") || InProperty == TEXT("border-width") || InProperty == TEXT("border-radius")
+            || InProperty == TEXT("horizontal-align") || InProperty == TEXT("vertical-align")
+            || InProperty == TEXT("-ck-button-background") || InProperty == TEXT("-ck-button-border-color")
+            || InProperty == TEXT("-ck-button-hover-background") || InProperty == TEXT("-ck-button-hover-border-color")
+            || InProperty == TEXT("-ck-button-pressed-background") || InProperty == TEXT("-ck-button-pressed-border-color")
+            || InProperty == TEXT("-ck-button-disabled-background") || InProperty == TEXT("-ck-button-disabled-border-color")
+            || InProperty == TEXT("-ck-button-color") || InProperty == TEXT("-ck-button-disabled-color")
+            || InProperty == TEXT("-ck-button-radius") || InProperty == TEXT("-ck-button-outline-width")
+            || InProperty == TEXT("-ck-button-padding-x") || InProperty == TEXT("-ck-button-padding-y")
+            || InProperty == TEXT("-ck-menu-button-background") || InProperty == TEXT("-ck-menu-button-border-color")
+            || InProperty == TEXT("-ck-menu-button-hover-background") || InProperty == TEXT("-ck-menu-button-hover-border-color")
+            || InProperty == TEXT("-ck-menu-button-pressed-background") || InProperty == TEXT("-ck-menu-button-pressed-border-color")
+            || InProperty == TEXT("-ck-menu-button-disabled-background") || InProperty == TEXT("-ck-menu-button-disabled-border-color")
+            || InProperty == TEXT("-ck-menu-button-radius") || InProperty == TEXT("-ck-menu-button-outline-width")
+            || InProperty == TEXT("-ck-menu-button-padding-x") || InProperty == TEXT("-ck-menu-button-padding-y")
+            || InProperty == TEXT("-ck-menu-button-arrow")
+            || InProperty == TEXT("-ck-tabs-inactive-color") || InProperty == TEXT("-ck-tabs-active-color")
+            || InProperty == TEXT("-ck-tabs-underline-color") || InProperty == TEXT("-ck-tabs-underline-height")
+            || InProperty == TEXT("-ck-tabs-font-size") || InProperty == TEXT("-ck-tabs-font-weight")
+            || InProperty == TEXT("-ck-tabs-header-padding-x") || InProperty == TEXT("-ck-tabs-header-padding-y")
+            || InProperty == TEXT("-ck-table-header-background")
+            || InProperty == TEXT("-ck-table-sort-indicator-color")
+            || InProperty == TEXT("-ck-table-header-padding-x") || InProperty == TEXT("-ck-table-header-padding-y")
+            || InProperty == TEXT("-ck-table-row-background") || InProperty == TEXT("-ck-table-row-hover-background")
+            || InProperty == TEXT("-ck-table-row-selected-background") || InProperty == TEXT("-ck-table-row-separator-color")
+            || InProperty == TEXT("-ck-table-row-separator-width")
+            || InProperty == TEXT("-ck-tree-row-background") || InProperty == TEXT("-ck-tree-row-hover-background")
+            || InProperty == TEXT("-ck-tree-row-selected-background") || InProperty == TEXT("-ck-tree-row-selected-accent-color")
+            || InProperty == TEXT("-ck-tree-row-selected-accent-width");
+    }
+
+    auto IsButtonVisualProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.StartsWith(TEXT("-ck-button-"), ESearchCase::CaseSensitive);
+    }
+
+    auto IsMenuButtonVisualProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.StartsWith(TEXT("-ck-menu-button-"), ESearchCase::CaseSensitive);
+    }
+
+    auto IsTabsVisualProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.StartsWith(TEXT("-ck-tabs-"), ESearchCase::CaseSensitive);
+    }
+
+    auto IsTableVisualProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.StartsWith(TEXT("-ck-table-"), ESearchCase::CaseSensitive);
+    }
+
+    auto IsTreeVisualProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.StartsWith(TEXT("-ck-tree-"), ESearchCase::CaseSensitive);
+    }
+
+    auto IsVisualColorProperty(const FString& InProperty) -> bool
+    {
+        return InProperty.EndsWith(TEXT("background"), ESearchCase::CaseSensitive)
+            || InProperty.EndsWith(TEXT("border-color"), ESearchCase::CaseSensitive)
+            || InProperty.EndsWith(TEXT("-color"), ESearchCase::CaseSensitive);
     }
 
     auto ParseStylesheet(const FString& InStylesheet, TArray<FStyleRule>& OutRules, TArray<FString>& OutErrors, const FString& InSource) -> bool
@@ -293,8 +371,34 @@ namespace ck_ui_document
             { InOutState.Error(TEXT("invalid CSS value for '") + InProperty + TEXT("'")); return false; }
             return true;
         }
+        if (IsButtonVisualProperty(InProperty) || IsMenuButtonVisualProperty(InProperty) || IsTabsVisualProperty(InProperty) || IsTableVisualProperty(InProperty) || IsTreeVisualProperty(InProperty))
+        {
+            if (InProperty == TEXT("-ck-menu-button-arrow"))
+            {
+                if (Value != TEXT("visible") && Value != TEXT("hidden"))
+                { InOutState.Error(TEXT("invalid CSS value for '") + InProperty + TEXT("'")); return false; }
+                return true;
+            }
+            if (InProperty == TEXT("-ck-tabs-font-weight"))
+            {
+                if (Value != TEXT("normal") && Value != TEXT("bold"))
+                { InOutState.Error(TEXT("invalid CSS value for '") + InProperty + TEXT("'")); return false; }
+                return true;
+            }
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(TEXT("invalid CSS color value for '") + InProperty + TEXT("'")); return false; }
+                return true;
+            }
+            float Length = 0.0f;
+            const bool bFontSize = InProperty == TEXT("-ck-tabs-font-size");
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f || (bFontSize && (Length < 1.0f || Length > 512.0f)))
+            { InOutState.Error(TEXT("invalid CSS length value for '") + InProperty + TEXT("'")); return false; }
+            return true;
+        }
         if (InProperty == TEXT("padding")) { FMargin Padding; if (!ParsePadding(Value, Padding)) { InOutState.Error(TEXT("invalid CSS padding")); return false; } return true; }
-        if (InProperty == TEXT("color") || InProperty == TEXT("background-color")) { FLinearColor Color; if (!ParseColor(Value, Color)) { InOutState.Error(TEXT("invalid CSS color")); return false; } return true; }
+        if (InProperty == TEXT("color") || InProperty == TEXT("background-color") || InProperty == TEXT("border-color")) { FLinearColor Color; if (!ParseColor(Value, Color)) { InOutState.Error(TEXT("invalid CSS color")); return false; } return true; }
         if (InProperty == TEXT("text-wrap"))
         {
             if (Value != TEXT("wrap") && Value != TEXT("nowrap")) { InOutState.Error(TEXT("invalid CSS text-wrap")); return false; }
@@ -315,6 +419,12 @@ namespace ck_ui_document
             if (Value != TEXT("clip") && Value != TEXT("ellipsis")) { InOutState.Error(TEXT("invalid CSS text-overflow")); return false; }
             return true;
         }
+        if (InProperty == TEXT("font-family"))
+        {
+            if (Value != TEXT("monospace") && Value != TEXT("sans-serif"))
+            { InOutState.Error(TEXT("invalid CSS font-family")); return false; }
+            return true;
+        }
         if (InProperty == TEXT("horizontal-align") || InProperty == TEXT("vertical-align") || InProperty == TEXT("font-weight"))
         {
             const auto Valid = InProperty == TEXT("horizontal-align") ? (Value == TEXT("fill") || Value == TEXT("left") || Value == TEXT("center") || Value == TEXT("right"))
@@ -322,6 +432,13 @@ namespace ck_ui_document
                 : (Value == TEXT("normal") || Value == TEXT("bold"));
             if (!Valid) { InOutState.Error(TEXT("invalid CSS value for '") + InProperty + TEXT("'")); }
             return Valid;
+        }
+        if (InProperty == TEXT("letter-spacing"))
+        {
+            int32 LetterSpacing = 0;
+            if (!ParseLetterSpacing(Value, LetterSpacing))
+            { InOutState.Error(TEXT("invalid CSS letter-spacing value")); return false; }
+            return true;
         }
         const auto IsDimension = InProperty != TEXT("flex-grow") && InProperty != TEXT("flex-shrink");
         float Number = 0.0f;
@@ -413,11 +530,159 @@ namespace ck_ui_document
         if (Schema == nullptr && !bCustom) { InOutState.Error(FString::Printf(TEXT("node '%s': unsupported node kind"), *InOutNode.Id)); return false; }
         const auto InvalidForNode = [&InOutState, &InOutNode, &InProperty]() -> bool
         { InOutState.Error(FString::Printf(TEXT("node '%s': property '%s' is not applicable"), *InOutNode.Id, *InProperty)); return false; };
+        if (IsButtonVisualProperty(InProperty))
+        {
+            if (InOutNode.Kind != ECkUiNodeKind::Button) { return InvalidForNode(); }
+            InOutNode.ButtonVisualStyle.Enabled = true;
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS color value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+                if (InProperty == TEXT("-ck-button-background")) { InOutNode.ButtonVisualStyle.Background = Color; }
+                else if (InProperty == TEXT("-ck-button-border-color")) { InOutNode.ButtonVisualStyle.BorderColor = Color; }
+                else if (InProperty == TEXT("-ck-button-hover-background")) { InOutNode.ButtonVisualStyle.HoverBackground = Color; }
+                else if (InProperty == TEXT("-ck-button-hover-border-color")) { InOutNode.ButtonVisualStyle.HoverBorderColor = Color; }
+                else if (InProperty == TEXT("-ck-button-pressed-background")) { InOutNode.ButtonVisualStyle.PressedBackground = Color; }
+                else if (InProperty == TEXT("-ck-button-pressed-border-color")) { InOutNode.ButtonVisualStyle.PressedBorderColor = Color; }
+                else if (InProperty == TEXT("-ck-button-disabled-background")) { InOutNode.ButtonVisualStyle.DisabledBackground = Color; }
+                else if (InProperty == TEXT("-ck-button-disabled-border-color")) { InOutNode.ButtonVisualStyle.DisabledBorderColor = Color; }
+                else if (InProperty == TEXT("-ck-button-color")) { InOutNode.ButtonVisualStyle.Color = Color; }
+                else { InOutNode.ButtonVisualStyle.DisabledColor = Color; }
+                return true;
+            }
+            float Length = 0.0f;
+            const bool bFontSize = InProperty == TEXT("-ck-tabs-font-size");
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f || (bFontSize && (Length < 1.0f || Length > 512.0f)))
+            { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS length value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+            if (InProperty == TEXT("-ck-button-radius")) { InOutNode.ButtonVisualStyle.Radius = Length; }
+            else if (InProperty == TEXT("-ck-button-outline-width")) { InOutNode.ButtonVisualStyle.OutlineWidth = Length; }
+            else if (InProperty == TEXT("-ck-button-padding-x")) { InOutNode.ButtonVisualStyle.ContentPadding.Left = Length; InOutNode.ButtonVisualStyle.ContentPadding.Right = Length; }
+            else { InOutNode.ButtonVisualStyle.ContentPadding.Top = Length; InOutNode.ButtonVisualStyle.ContentPadding.Bottom = Length; }
+            return true;
+        }
+        if (IsMenuButtonVisualProperty(InProperty))
+        {
+            if (InOutNode.Kind != ECkUiNodeKind::MenuButton) { return InvalidForNode(); }
+            InOutNode.MenuButtonVisualStyle.Enabled = true;
+            if (InProperty == TEXT("-ck-menu-button-arrow"))
+            {
+                InOutNode.MenuButtonVisualStyle.HasDownArrow = Value == TEXT("visible");
+                return true;
+            }
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS color value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+                if (InProperty == TEXT("-ck-menu-button-background")) { InOutNode.MenuButtonVisualStyle.Background = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-border-color")) { InOutNode.MenuButtonVisualStyle.BorderColor = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-hover-background")) { InOutNode.MenuButtonVisualStyle.HoverBackground = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-hover-border-color")) { InOutNode.MenuButtonVisualStyle.HoverBorderColor = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-pressed-background")) { InOutNode.MenuButtonVisualStyle.PressedBackground = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-pressed-border-color")) { InOutNode.MenuButtonVisualStyle.PressedBorderColor = Color; }
+                else if (InProperty == TEXT("-ck-menu-button-disabled-background")) { InOutNode.MenuButtonVisualStyle.DisabledBackground = Color; }
+                else { InOutNode.MenuButtonVisualStyle.DisabledBorderColor = Color; }
+                return true;
+            }
+            float Length = 0.0f;
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f)
+            { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS length value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+            if (InProperty == TEXT("-ck-menu-button-radius")) { InOutNode.MenuButtonVisualStyle.Radius = Length; }
+            else if (InProperty == TEXT("-ck-menu-button-outline-width")) { InOutNode.MenuButtonVisualStyle.OutlineWidth = Length; }
+            else if (InProperty == TEXT("-ck-menu-button-padding-x"))
+            {
+                InOutNode.MenuButtonVisualStyle.HasContentPadding = true;
+                InOutNode.MenuButtonVisualStyle.ContentPadding.Left = Length;
+                InOutNode.MenuButtonVisualStyle.ContentPadding.Right = Length;
+            }
+            else
+            {
+                InOutNode.MenuButtonVisualStyle.HasContentPadding = true;
+                InOutNode.MenuButtonVisualStyle.ContentPadding.Top = Length;
+                InOutNode.MenuButtonVisualStyle.ContentPadding.Bottom = Length;
+            }
+            return true;
+        }
+        if (IsTabsVisualProperty(InProperty))
+        {
+            if (InOutNode.Kind != ECkUiNodeKind::Tabs) { return InvalidForNode(); }
+            InOutNode.TabsVisualStyle.Enabled = true;
+            if (InProperty == TEXT("-ck-tabs-font-weight"))
+            {
+                InOutNode.TabsVisualStyle.Bold = Value == TEXT("bold");
+                return true;
+            }
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS color value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+                if (InProperty == TEXT("-ck-tabs-inactive-color")) { InOutNode.TabsVisualStyle.InactiveColor = Color; }
+                else if (InProperty == TEXT("-ck-tabs-active-color")) { InOutNode.TabsVisualStyle.ActiveColor = Color; }
+                else { InOutNode.TabsVisualStyle.UnderlineColor = Color; }
+                return true;
+            }
+            float Length = 0.0f;
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f)
+            { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS length value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+            if (InProperty == TEXT("-ck-tabs-underline-height")) { InOutNode.TabsVisualStyle.UnderlineHeight = Length; }
+            else if (InProperty == TEXT("-ck-tabs-font-size")) { InOutNode.TabsVisualStyle.FontSize = Length; }
+            else if (InProperty == TEXT("-ck-tabs-header-padding-x")) { InOutNode.TabsVisualStyle.HeaderPadding.Left = Length; InOutNode.TabsVisualStyle.HeaderPadding.Right = Length; }
+            else { InOutNode.TabsVisualStyle.HeaderPadding.Top = Length; InOutNode.TabsVisualStyle.HeaderPadding.Bottom = Length; }
+            return true;
+        }
+        if (IsTableVisualProperty(InProperty))
+        {
+            if (InOutNode.Kind != ECkUiNodeKind::Table) { return InvalidForNode(); }
+            InOutNode.TableVisualStyle.Enabled = true;
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS color value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+                if (InProperty == TEXT("-ck-table-header-background")) { InOutNode.TableVisualStyle.HeaderBackground = Color; }
+                else if (InProperty == TEXT("-ck-table-sort-indicator-color")) { InOutNode.TableVisualStyle.SortIndicatorColor = Color; }
+                else if (InProperty == TEXT("-ck-table-row-background")) { InOutNode.TableVisualStyle.RowBackground = Color; }
+                else if (InProperty == TEXT("-ck-table-row-hover-background")) { InOutNode.TableVisualStyle.RowHoverBackground = Color; }
+                else if (InProperty == TEXT("-ck-table-row-selected-background")) { InOutNode.TableVisualStyle.RowSelectedBackground = Color; }
+                else { InOutNode.TableVisualStyle.RowSeparatorColor = Color; }
+                return true;
+            }
+            float Length = 0.0f;
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f)
+            { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS length value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+            if (InProperty == TEXT("-ck-table-header-padding-x"))
+            { InOutNode.TableVisualStyle.HeaderPadding.Left = Length; InOutNode.TableVisualStyle.HeaderPadding.Right = Length; InOutNode.TableVisualStyle.HasHeaderPadding = true; }
+            else if (InProperty == TEXT("-ck-table-header-padding-y"))
+            { InOutNode.TableVisualStyle.HeaderPadding.Top = Length; InOutNode.TableVisualStyle.HeaderPadding.Bottom = Length; InOutNode.TableVisualStyle.HasHeaderPadding = true; }
+            else { InOutNode.TableVisualStyle.RowSeparatorWidth = Length; }
+            return true;
+        }
+        if (IsTreeVisualProperty(InProperty))
+        {
+            if (InOutNode.Kind != ECkUiNodeKind::Tree) { return InvalidForNode(); }
+            InOutNode.TreeVisualStyle.Enabled = true;
+            if (IsVisualColorProperty(InProperty))
+            {
+                FLinearColor Color;
+                if (!ParseColor(Value, Color)) { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS color value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+                if (InProperty == TEXT("-ck-tree-row-background")) { InOutNode.TreeVisualStyle.RowBackground = Color; }
+                else if (InProperty == TEXT("-ck-tree-row-hover-background")) { InOutNode.TreeVisualStyle.RowHoverBackground = Color; }
+                else if (InProperty == TEXT("-ck-tree-row-selected-background")) { InOutNode.TreeVisualStyle.RowSelectedBackground = Color; }
+                else { InOutNode.TreeVisualStyle.SelectedAccentColor = Color; }
+                return true;
+            }
+            float Width = 0.0f;
+            if (!ParseFloat(Value, true, Width) || Width < 0.0f)
+            { InOutState.Error(FString::Printf(TEXT("node '%s': invalid CSS length value for '%s'"), *InOutNode.Id, *InProperty)); return false; }
+            InOutNode.TreeVisualStyle.SelectedAccentWidth = Width;
+            return true;
+        }
         if (InProperty == TEXT("gap") && (bCustom || !Schema->bAllowsGap)) { return InvalidForNode(); }
         if (InProperty == TEXT("flex-wrap") && InOutNode.Kind != ECkUiNodeKind::Row && InOutNode.Kind != ECkUiNodeKind::Column && InOutNode.Kind != ECkUiNodeKind::Repeat) { return InvalidForNode(); }
         if (InProperty == TEXT("padding") && (bCustom || !Schema->bAllowsPadding)) { return InvalidForNode(); }
         if (InProperty == TEXT("background-color") && (bCustom || !Schema->bAllowsBackground)) { return InvalidForNode(); }
-        if ((InProperty == TEXT("font-size") || InProperty == TEXT("font-weight") || InProperty == TEXT("color")) && (bCustom || !Schema->bAllowsTextStyle)) { return InvalidForNode(); }
+        if ((InProperty == TEXT("border-color") || InProperty == TEXT("border-width") || InProperty == TEXT("border-radius"))
+            && (bCustom || !Schema->bAllowsBackground)) { return InvalidForNode(); }
+        if ((InProperty == TEXT("font-size") || InProperty == TEXT("font-family") || InProperty == TEXT("font-weight") || InProperty == TEXT("letter-spacing") || InProperty == TEXT("color")) && (bCustom || !Schema->bAllowsTextStyle)) { return InvalidForNode(); }
+        if (InProperty == TEXT("font-family") && InOutNode.Kind != ECkUiNodeKind::Text && InOutNode.Kind != ECkUiNodeKind::Button && InOutNode.Kind != ECkUiNodeKind::MenuButton && InOutNode.Kind != ECkUiNodeKind::Tabs) { return InvalidForNode(); }
         if ((InProperty == TEXT("text-wrap") || InProperty == TEXT("overflow-wrap") || InProperty == TEXT("text-overflow")) && InOutNode.Kind != ECkUiNodeKind::Text && InOutNode.Kind != ECkUiNodeKind::Button) { return InvalidForNode(); }
         if (InProperty == TEXT("padding")) { if (!ParsePadding(Value, InOutNode.Style.Padding)) { InOutState.Error(TEXT("invalid padding on '") + InOutNode.Id + TEXT("'")); return false; } return true; }
         if (InProperty == TEXT("text-wrap")) { InOutNode.Style.AllowWrapping = Value == TEXT("wrap"); return true; }
@@ -431,8 +696,17 @@ namespace ck_ui_document
         }
         if (InProperty == TEXT("overflow-wrap")) { InOutNode.Style.WrappingPolicy = Value == TEXT("anywhere") ? ETextWrappingPolicy::AllowPerCharacterWrapping : ETextWrappingPolicy::DefaultWrapping; return true; }
         if (InProperty == TEXT("text-overflow")) { InOutNode.Style.OverflowPolicy = Value == TEXT("ellipsis") ? ETextOverflowPolicy::Ellipsis : ETextOverflowPolicy::Clip; return true; }
-        if (InProperty == TEXT("color") || InProperty == TEXT("background-color"))
-        { FLinearColor Color; if (!ParseColor(Value, Color)) { InOutState.Error(TEXT("invalid color on '") + InOutNode.Id + TEXT("'")); return false; } if (InProperty == TEXT("color")) { InOutNode.Style.Color = Color; } else { InOutNode.Style.Background = Color; } return true; }
+        if (InProperty == TEXT("color") || InProperty == TEXT("background-color") || InProperty == TEXT("border-color"))
+        { FLinearColor Color; if (!ParseColor(Value, Color)) { InOutState.Error(TEXT("invalid color on '") + InOutNode.Id + TEXT("'")); return false; } if (InProperty == TEXT("color")) { InOutNode.Style.Color = Color; } else if (InProperty == TEXT("background-color")) { InOutNode.Style.Background = Color; } else { InOutNode.Style.BorderColor = Color; } return true; }
+        if (InProperty == TEXT("border-width") || InProperty == TEXT("border-radius"))
+        {
+            float Length = 0.0f;
+            if (!ParseFloat(Value, true, Length) || Length < 0.0f)
+            { InOutState.Error(TEXT("invalid length on '") + InOutNode.Id + TEXT("'")); return false; }
+            if (InProperty == TEXT("border-width")) { InOutNode.Style.BorderWidth = Length; }
+            else { InOutNode.Style.BorderRadius = Length; }
+            return true;
+        }
         if (InProperty == TEXT("horizontal-align") || InProperty == TEXT("vertical-align"))
         {
             if (InProperty == TEXT("horizontal-align"))
@@ -451,6 +725,19 @@ namespace ck_ui_document
             if (Value == TEXT("bold")) { InOutNode.Style.Bold = true; return true; }
             InOutState.Error(TEXT("invalid font-weight on '") + InOutNode.Id + TEXT("'"));
             return false;
+        }
+        if (InProperty == TEXT("font-family"))
+        {
+            InOutNode.Style.Monospace = Value == TEXT("monospace");
+            return true;
+        }
+        if (InProperty == TEXT("letter-spacing"))
+        {
+            int32 LetterSpacing = 0;
+            if (!ParseLetterSpacing(Value, LetterSpacing))
+            { InOutState.Error(TEXT("invalid letter-spacing on '") + InOutNode.Id + TEXT("'")); return false; }
+            InOutNode.Style.LetterSpacing = LetterSpacing;
+            return true;
         }
         const auto IsGrowShrink = InProperty == TEXT("flex-grow") || InProperty == TEXT("flex-shrink");
         const auto IsDimension = InProperty == TEXT("gap") || InProperty == TEXT("min-width") || InProperty == TEXT("min-height") || InProperty == TEXT("max-width") || InProperty == TEXT("max-height") || InProperty == TEXT("width") || InProperty == TEXT("height") || InProperty == TEXT("font-size");
@@ -497,15 +784,15 @@ namespace ck_ui_document
     auto IsBindingProperty(const ECkUiCustomPropertyKind InKind) -> bool
     {
         return InKind == ECkUiCustomPropertyKind::TextBinding || InKind == ECkUiCustomPropertyKind::ImageBinding
-            || InKind == ECkUiCustomPropertyKind::NumberBinding || InKind == ECkUiCustomPropertyKind::BoolBinding
+            || InKind == ECkUiCustomPropertyKind::NumberBinding || InKind == ECkUiCustomPropertyKind::IntegerBinding || InKind == ECkUiCustomPropertyKind::BoolBinding
             || InKind == ECkUiCustomPropertyKind::StringBinding || InKind == ECkUiCustomPropertyKind::ColorBinding
-            || InKind == ECkUiCustomPropertyKind::CollectionBinding;
+            || InKind == ECkUiCustomPropertyKind::CollectionBinding || InKind == ECkUiCustomPropertyKind::FloatSeriesBinding;
     }
 
     enum class EValueKind : uint8
     {
-        Text, Number, Bool, Color, TextBinding, ImageBinding, NumberBinding,
-        BoolBinding, StringBinding, Action, ColorBinding, TextChanged, TextCommitted, BoolChanged, NumberChanged, NumberCommitted, NumberInteraction, StringChanged, SearchBinding, NativeBinding, CollectionBinding,
+        Text, Number, Bool, Color, TextBinding, ImageBinding, NumberBinding, IntegerBinding,
+        BoolBinding, StringBinding, Action, ColorBinding, TextChanged, TextCommitted, BoolChanged, NumberChanged, NumberCommitted, IntegerCommitted, ColorCommitted, NumberInteraction, StringChanged, SearchBinding, NativeBinding, CollectionBinding, FloatSeriesBinding,
     };
 
     struct FValue
@@ -541,9 +828,9 @@ namespace ck_ui_document
     auto IsBindingKind(const EValueKind InKind) -> bool
     {
         return InKind == EValueKind::TextBinding || InKind == EValueKind::ImageBinding
-            || InKind == EValueKind::NumberBinding || InKind == EValueKind::BoolBinding
+            || InKind == EValueKind::NumberBinding || InKind == EValueKind::IntegerBinding || InKind == EValueKind::BoolBinding
             || InKind == EValueKind::StringBinding || InKind == EValueKind::ColorBinding
-            || InKind == EValueKind::SearchBinding || InKind == EValueKind::NativeBinding || InKind == EValueKind::CollectionBinding;
+            || InKind == EValueKind::SearchBinding || InKind == EValueKind::NativeBinding || InKind == EValueKind::CollectionBinding || InKind == EValueKind::FloatSeriesBinding;
     }
 
     auto CustomKind(const ECkUiCustomPropertyKind InKind) -> EValueKind
@@ -557,6 +844,7 @@ namespace ck_ui_document
         case ECkUiCustomPropertyKind::TextBinding: return EValueKind::TextBinding;
         case ECkUiCustomPropertyKind::ImageBinding: return EValueKind::ImageBinding;
         case ECkUiCustomPropertyKind::NumberBinding: return EValueKind::NumberBinding;
+        case ECkUiCustomPropertyKind::IntegerBinding: return EValueKind::IntegerBinding;
         case ECkUiCustomPropertyKind::BoolBinding: return EValueKind::BoolBinding;
         case ECkUiCustomPropertyKind::StringBinding: return EValueKind::StringBinding;
         case ECkUiCustomPropertyKind::Action: return EValueKind::Action;
@@ -566,9 +854,12 @@ namespace ck_ui_document
         case ECkUiCustomPropertyKind::BoolChanged: return EValueKind::BoolChanged;
         case ECkUiCustomPropertyKind::NumberChanged: return EValueKind::NumberChanged;
         case ECkUiCustomPropertyKind::NumberCommitted: return EValueKind::NumberCommitted;
+        case ECkUiCustomPropertyKind::IntegerCommitted: return EValueKind::IntegerCommitted;
+        case ECkUiCustomPropertyKind::ColorCommitted: return EValueKind::ColorCommitted;
         case ECkUiCustomPropertyKind::NumberInteraction: return EValueKind::NumberInteraction;
         case ECkUiCustomPropertyKind::StringChanged: return EValueKind::StringChanged;
         case ECkUiCustomPropertyKind::CollectionBinding: return EValueKind::CollectionBinding;
+        case ECkUiCustomPropertyKind::FloatSeriesBinding: return EValueKind::FloatSeriesBinding;
         default: return EValueKind::Text;
         }
     }
@@ -592,9 +883,9 @@ namespace ck_ui_document
             {TEXT("text"), EValueKind::Text}, {TEXT("number"), EValueKind::Number},
             {TEXT("bool"), EValueKind::Bool}, {TEXT("color"), EValueKind::Color},
             {TEXT("text-binding"), EValueKind::TextBinding}, {TEXT("image-binding"), EValueKind::ImageBinding},
-            {TEXT("number-binding"), EValueKind::NumberBinding}, {TEXT("bool-binding"), EValueKind::BoolBinding},
-            {TEXT("string-binding"), EValueKind::StringBinding}, {TEXT("action"), EValueKind::Action}, {TEXT("text-changed"), EValueKind::TextChanged}, {TEXT("text-committed"), EValueKind::TextCommitted}, {TEXT("bool-changed"), EValueKind::BoolChanged}, {TEXT("number-changed"), EValueKind::NumberChanged}, {TEXT("number-committed"), EValueKind::NumberCommitted}, {TEXT("number-interaction"), EValueKind::NumberInteraction}, {TEXT("string-changed"), EValueKind::StringChanged}, {TEXT("search-binding"), EValueKind::SearchBinding},
-            {TEXT("color-binding"), EValueKind::ColorBinding}, {TEXT("native-binding"), EValueKind::NativeBinding}, {TEXT("collection-binding"), EValueKind::CollectionBinding}};
+            {TEXT("number-binding"), EValueKind::NumberBinding}, {TEXT("integer-binding"), EValueKind::IntegerBinding}, {TEXT("bool-binding"), EValueKind::BoolBinding},
+            {TEXT("string-binding"), EValueKind::StringBinding}, {TEXT("action"), EValueKind::Action}, {TEXT("text-changed"), EValueKind::TextChanged}, {TEXT("text-committed"), EValueKind::TextCommitted}, {TEXT("bool-changed"), EValueKind::BoolChanged}, {TEXT("number-changed"), EValueKind::NumberChanged}, {TEXT("color-committed"), EValueKind::ColorCommitted}, {TEXT("number-committed"), EValueKind::NumberCommitted}, {TEXT("integer-committed"), EValueKind::IntegerCommitted}, {TEXT("number-interaction"), EValueKind::NumberInteraction}, {TEXT("string-changed"), EValueKind::StringChanged}, {TEXT("search-binding"), EValueKind::SearchBinding},
+            {TEXT("color-binding"), EValueKind::ColorBinding}, {TEXT("native-binding"), EValueKind::NativeBinding}, {TEXT("collection-binding"), EValueKind::CollectionBinding}, {TEXT("float-series-binding"), EValueKind::FloatSeriesBinding}};
         const EValueKind* Found = Kinds.Find(InName);
         if (Found == nullptr) { return false; }
         OutKind = *Found;
@@ -623,6 +914,7 @@ namespace ck_ui_document
         case EValueKind::TextBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::TextBinding; break;
         case EValueKind::ImageBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::ImageBinding; break;
         case EValueKind::NumberBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::NumberBinding; break;
+        case EValueKind::IntegerBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::IntegerBinding; break;
         case EValueKind::BoolBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::BoolBinding; break;
         case EValueKind::StringBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::StringBinding; break;
         case EValueKind::Action: OutValue.Data.Kind = ECkUiCustomPropertyKind::Action; break;
@@ -632,9 +924,12 @@ namespace ck_ui_document
         case EValueKind::BoolChanged: OutValue.Data.Kind = ECkUiCustomPropertyKind::BoolChanged; break;
         case EValueKind::NumberChanged: OutValue.Data.Kind = ECkUiCustomPropertyKind::NumberChanged; break;
         case EValueKind::NumberCommitted: OutValue.Data.Kind = ECkUiCustomPropertyKind::NumberCommitted; break;
+        case EValueKind::IntegerCommitted: OutValue.Data.Kind = ECkUiCustomPropertyKind::IntegerCommitted; break;
+        case EValueKind::ColorCommitted: OutValue.Data.Kind = ECkUiCustomPropertyKind::ColorCommitted; break;
         case EValueKind::NumberInteraction: OutValue.Data.Kind = ECkUiCustomPropertyKind::NumberInteraction; break;
         case EValueKind::StringChanged: OutValue.Data.Kind = ECkUiCustomPropertyKind::StringChanged; break;
         case EValueKind::CollectionBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::CollectionBinding; break;
+        case EValueKind::FloatSeriesBinding: OutValue.Data.Kind = ECkUiCustomPropertyKind::FloatSeriesBinding; break;
         default: break;
         }
         switch (InKind)
@@ -864,6 +1159,7 @@ namespace ck_ui_document
                     Expected.Add(TEXT("bind-field"), EValueKind::TextBinding);
                 }
                 if (Schema->Kind == ECkUiNodeKind::Scroll || Schema->Kind == ECkUiNodeKind::Splitter || Schema->Kind == ECkUiNodeKind::Repeat) { Expected.Add(TEXT("direction"), EValueKind::Text); }
+                if (Schema->Kind == ECkUiNodeKind::Repeat) { Expected.Add(TEXT("child-bind"), EValueKind::CollectionBinding); }
                 if (Schema->Kind == ECkUiNodeKind::Text) { Expected.Add(TEXT("bind-field"), EValueKind::TextBinding); }
                 if (Schema->Kind == ECkUiNodeKind::Image) { Expected.Add(TEXT("bind-field"), EValueKind::ImageBinding); }
                 if (Schema->Kind == ECkUiNodeKind::Text || Schema->Kind == ECkUiNodeKind::Button)
@@ -880,7 +1176,13 @@ namespace ck_ui_document
                     Expected.Add(TEXT("filter-bind"), EValueKind::TextBinding);
                     Expected.Add(TEXT("selection-action"), EValueKind::Action);
                     Expected.Add(TEXT("context-menu"), EValueKind::Text);
-                    if (Schema->Kind == ECkUiNodeKind::Table) { Expected.Add(TEXT("context-menu-action"), EValueKind::Action); Expected.Add(TEXT("selectable"), EValueKind::Bool); }
+                    Expected.Add(TEXT("selectable"), EValueKind::Bool);
+                    if (Schema->Kind == ECkUiNodeKind::Tree)
+                    {
+                        Expected.Add(TEXT("projection-field"), EValueKind::Text);
+                        Expected.Add(TEXT("expand-on-row-click"), EValueKind::Bool);
+                    }
+                    else { Expected.Add(TEXT("context-menu-action"), EValueKind::Action); }
                 }
                 if (Schema->Kind == ECkUiNodeKind::TableColumn)
                 {
@@ -918,6 +1220,17 @@ namespace ck_ui_document
                     { Expected.Add(Property.Name + TEXT("-field"), CustomKind(Property.Kind)); }
                     if (Property.bRequired) { Required.Add(Attribute); }
                 }
+                const FCkUiCustomPropertySchema* Changed = Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
+                { return Property.Name == TEXT("changed") && Property.Kind == ECkUiCustomPropertyKind::BoolChanged; });
+                const FCkUiCustomPropertySchema* Committed = Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
+                {
+                    return Property.Name == TEXT("committed") && (Property.Kind == ECkUiCustomPropertyKind::NumberCommitted || Property.Kind == ECkUiCustomPropertyKind::IntegerCommitted);
+                });
+                if (Changed != nullptr) { Expected.Add(TEXT("item-changed"), EValueKind::Action); }
+                if (Committed != nullptr) { Expected.Add(TEXT("item-committed"), EValueKind::Action); }
+                const FCkUiCustomPropertySchema* ItemAction = Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
+                { return Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action; });
+                if (ItemAction != nullptr) { Expected.Add(TEXT("item-action"), EValueKind::Action); }
             }
         }
         auto Supplied = TSet<FString>{};
@@ -957,7 +1270,15 @@ namespace ck_ui_document
             const bool bButtonActionConflict = Schema != nullptr && Schema->Kind == ECkUiNodeKind::Button
                 && ((Target == TEXT("action") && Supplied.Contains(TEXT("item-action")))
                     || (Target == TEXT("item-action") && Supplied.Contains(TEXT("action"))));
-            if (Supplied.Contains(Target) || Supplied.Contains(LogicalTarget) || Supplied.Contains(FieldTarget) || bTextMetadataConflict || bTabLabelConflict || bMenuButtonLabelConflict || bTableColumnLabelConflict || bPlaceholderConflict || bContextMenuConflict || bButtonActionConflict || (Custom != nullptr && bFieldReference && Supplied.Contains(LogicalTarget + TEXT("-bind"))) || bCustomBindingConflict) { State.Error(TEXT("literal, parameter, and field reference conflict for '") + (Custom != nullptr ? CustomBase : LogicalTarget) + TEXT("'")); return false; }
+            const bool bCustomItemActionConflict = Custom != nullptr
+                && ((Target == TEXT("action") && Supplied.Contains(TEXT("item-action")))
+                    || (Target == TEXT("item-action") && Supplied.Contains(TEXT("action"))));
+            const bool bCustomItemEventConflict = Custom != nullptr
+                && ((Target == TEXT("item-changed") && Supplied.Contains(TEXT("changed")))
+                    || (Target == TEXT("changed") && Supplied.Contains(TEXT("item-changed")))
+                    || (Target == TEXT("item-committed") && Supplied.Contains(TEXT("committed")))
+                    || (Target == TEXT("committed") && Supplied.Contains(TEXT("item-committed"))));
+            if (Supplied.Contains(Target) || Supplied.Contains(LogicalTarget) || Supplied.Contains(FieldTarget) || bTextMetadataConflict || bTabLabelConflict || bMenuButtonLabelConflict || bTableColumnLabelConflict || bPlaceholderConflict || bContextMenuConflict || bButtonActionConflict || bCustomItemActionConflict || bCustomItemEventConflict || (Custom != nullptr && bFieldReference && Supplied.Contains(LogicalTarget + TEXT("-bind"))) || bCustomBindingConflict) { State.Error(TEXT("literal, parameter, and field reference conflict for '") + (Custom != nullptr ? CustomBase : LogicalTarget) + TEXT("'")); return false; }
             Supplied.Add(Target);
             auto Value = FValue{};
             if (!CompileValue(Attribute.GetValue(), LiteralTextReference ? EValueKind::Text : *ExpectedKind, Reference, Parameters, Value, State)) { return false; }
@@ -966,9 +1287,14 @@ namespace ck_ui_document
         for (const FString& Name : Required)
         {
             const bool bFieldBindingSatisfiesBind = Name == TEXT("bind") && (Schema != nullptr && (Schema->Kind == ECkUiNodeKind::Text || Schema->Kind == ECkUiNodeKind::Image || Schema->Kind == ECkUiNodeKind::Button)) && Supplied.Contains(TEXT("bind-field"));
-            const bool bItemActionSatisfiesAction = Name == TEXT("action") && Schema != nullptr && Schema->Kind == ECkUiNodeKind::Button && Supplied.Contains(TEXT("item-action"));
+            const bool bItemActionSatisfiesAction = Name == TEXT("action") && ((Schema != nullptr && Schema->Kind == ECkUiNodeKind::Button)
+                || (Custom != nullptr && Custom->Schema.Properties.ContainsByPredicate([](const FCkUiCustomPropertySchema& Property) { return Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action; }))) && Supplied.Contains(TEXT("item-action"));
             const bool bCustomFieldSatisfies = Custom != nullptr && Name.EndsWith(TEXT("-bind")) && Supplied.Contains(Name.LeftChop(5) + TEXT("-field"));
-            if (!Supplied.Contains(Name) && !bFieldBindingSatisfiesBind && !bItemActionSatisfiesAction && !bCustomFieldSatisfies) { State.Error(TEXT("missing required attribute '") + Name + TEXT("'")); return false; }
+            const bool bCustomItemEventSatisfies = Custom != nullptr
+                && ((Name == TEXT("changed") && Supplied.Contains(TEXT("item-changed")))
+                    || (Name == TEXT("committed") && Supplied.Contains(TEXT("item-committed"))));
+            const bool bChildBindingSatisfiesRepeatBind = Name == TEXT("bind") && Schema != nullptr && Schema->Kind == ECkUiNodeKind::Repeat && Supplied.Contains(TEXT("child-bind"));
+            if (!Supplied.Contains(Name) && !bFieldBindingSatisfiesBind && !bItemActionSatisfiesAction && !bCustomFieldSatisfies && !bCustomItemEventSatisfies && !bChildBindingSatisfiesRepeatBind) { State.Error(TEXT("missing required attribute '") + Name + TEXT("'")); return false; }
         }
         if (Schema != nullptr && Schema->Kind == ECkUiNodeKind::Tab
             && !Supplied.Contains(TEXT("label")) && !Supplied.Contains(TEXT("label-bind")))
@@ -1165,12 +1491,19 @@ namespace ck_ui_document
             {
                 const FString Attribute = IsBindingProperty(Property.Kind) ? Property.Name + TEXT("-bind") : Property.Name;
                 if (const FValue* FieldValue = Values.Find(Property.Name + TEXT("-field"))) { Out.FieldBindings.Add(Property.Name, FieldValue->Data.Name); }
+                else if (Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action && Values.Contains(TEXT("item-action"))) {}
                 else if (const FValue* Value = Values.Find(Attribute)) { Out.CustomProperties.Add(Property.Name, Value->Data); }
             }
+            if (const FValue* ItemAction = Values.Find(TEXT("item-action"))) { Out.ItemAction = ItemAction->Data.Name; }
+            if (const FValue* Value = Values.Find(TEXT("item-changed"))) { Out.ItemEventBindings.Add(TEXT("changed"), Value->Data.Name); }
+            if (const FValue* Value = Values.Find(TEXT("item-committed"))) { Out.ItemEventBindings.Add(TEXT("committed"), Value->Data.Name); }
         }
         else
         {
             if (const FValue* Binding = Values.Find(TEXT("bind"))) { Out.Binding = Binding->Data.Name; }
+            if (const FValue* ChildBinding = Values.Find(TEXT("child-bind"))) { Out.ChildBinding = ChildBinding->Data.Name; }
+            if (Out.Kind == ECkUiNodeKind::Repeat && !Out.Binding.IsEmpty() && !Out.ChildBinding.IsEmpty())
+            { State.Error(TEXT("repeat bind and child-bind are mutually exclusive")); return false; }
             if (const FValue* BindingField = Values.Find(TEXT("bind-field"))) { Out.FieldBindings.Add(TEXT("bind"), BindingField->Data.Name); }
             if (const FValue* Action = Values.Find(TEXT("action"))) { Out.Action = Action->Data.Name; }
             if (const FValue* ItemAction = Values.Find(TEXT("item-action"))) { Out.ItemAction = ItemAction->Data.Name; }
@@ -1185,6 +1518,17 @@ namespace ck_ui_document
                 if (const FValue* Filter = Values.Find(TEXT("filter-bind"))) { Out.FilterBinding = Filter->Data.Name; }
                 if (const FValue* Selection = Values.Find(TEXT("selection-action"))) { Out.SelectionAction = Selection->Data.Name; }
                 if (const FValue* Context = Values.Find(TEXT("context-menu-action"))) { Out.ContextMenuAction = Context->Data.Name; }
+                if (Out.Kind == ECkUiNodeKind::Tree)
+                {
+                    if (const FValue* Projection = Values.Find(TEXT("projection-field")))
+                    {
+                        Out.ProjectionField = Projection->Data.Text.ToString().TrimStartAndEnd();
+                        if (!IsName(Out.ProjectionField)) { State.Error(TEXT("tree projection-field must be an identifier")); return false; }
+                        if (!Out.FilterBinding.IsEmpty()) { State.Error(TEXT("tree projection-field and filter-bind are mutually exclusive")); return false; }
+                    }
+                    if (const FValue* ExpandOnRowClick = Values.Find(TEXT("expand-on-row-click"))) { Out.TreeExpandOnRowClick = ExpandOnRowClick->Data.Bool; }
+                    if (!Out.TableSelectable && !Out.SelectionAction.IsEmpty()) { State.Error(TEXT("non-selectable tree cannot declare selection-action")); return false; }
+                }
                 if (const FValue* Context = Values.Find(TEXT("context-menu")))
                 {
                     Out.ContextMenuReference = Context->Data.Text.ToString().TrimStartAndEnd();
@@ -1260,24 +1604,59 @@ namespace ck_ui_document
         return true;
     }
 
-    auto ValidateFieldScope(const FCkUiNode& Node, const bool bInRepeatItem, const bool bInTableCell, const bool bDirectTableColumn, FParseState& State) -> bool
+    auto ValidateFieldScope(const FCkUiNode& Node, const bool bInRepeatItem, const bool bInTableCell,
+        const bool bInTreeRow, const bool bDirectTableColumn, FParseState& State) -> bool
     {
-        if (!bInRepeatItem && !bInTableCell && !Node.FieldBindings.IsEmpty()) { State.Error(TEXT("field references are only valid inside repeat items, table cells, or tree rows")); return false; }
-        if (!Node.ItemAction.IsEmpty() && (Node.Kind != ECkUiNodeKind::Button || !bInRepeatItem))
-        { State.Error(TEXT("item-action is only valid on buttons inside repeat items")); return false; }
-        if (bInRepeatItem && (Node.Kind == ECkUiNodeKind::Repeat || Node.Kind == ECkUiNodeKind::Table || Node.Kind == ECkUiNodeKind::Tree || Node.Kind == ECkUiNodeKind::Native))
+        if (!bInRepeatItem && !bInTableCell && !bInTreeRow && !Node.FieldBindings.IsEmpty()) { State.Error(TEXT("field references are only valid inside repeat items, table cells, or tree rows")); return false; }
+        const FCkUiCustomWidgetRegistration* Custom = Node.Kind == ECkUiNodeKind::Custom && State.CustomRegistry.IsValid()
+            ? State.CustomRegistry->Find(Node.CustomTag) : nullptr;
+        const FCkUiCustomPropertySchema* ActionProperty = Custom != nullptr ? Custom->Schema.Properties.FindByPredicate(
+            [](const FCkUiCustomPropertySchema& Property) { return Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action; }) : nullptr;
+        const bool IsRepeatItemAction = bInRepeatItem && (Node.Kind == ECkUiNodeKind::Button || ActionProperty != nullptr);
+        const bool IsTableCustomAction = bInTableCell && Node.Kind == ECkUiNodeKind::Custom
+            && Custom != nullptr && (Custom->Factory || Custom->RetainedFactory) && ActionProperty != nullptr;
+        if (!Node.ItemAction.IsEmpty() && !IsRepeatItemAction && !IsTableCustomAction)
+        { State.Error(TEXT("item-action is only valid on repeat items or canonical-action table custom widgets")); return false; }
+        if (!Node.ItemEventBindings.IsEmpty() && (Node.Kind != ECkUiNodeKind::Custom || !bInRepeatItem))
+        { State.Error(TEXT("item events are only valid on custom widgets inside repeat items")); return false; }
+        if (!Node.ChildBinding.IsEmpty() && (Node.Kind != ECkUiNodeKind::Repeat || !bInRepeatItem))
+        { State.Error(TEXT("child-bind is only valid on repeat under a repeat item")); return false; }
+        if (bInRepeatItem && ((Node.Kind == ECkUiNodeKind::Repeat && Node.ChildBinding.IsEmpty()) || Node.Kind == ECkUiNodeKind::Table || Node.Kind == ECkUiNodeKind::Tree || Node.Kind == ECkUiNodeKind::Native))
         { State.Error(TEXT("repeat items do not support nested repeat, table, tree, or native nodes")); return false; }
-        if (bInTableCell && Node.Kind == ECkUiNodeKind::Splitter)
+        if ((bInTableCell || bInTreeRow) && Node.Kind == ECkUiNodeKind::Splitter)
         { State.Error(TEXT("splitter is not valid inside virtualized table cells or tree rows")); return false; }
-        if (bInTableCell && Node.Kind != ECkUiNodeKind::Row && Node.Kind != ECkUiNodeKind::Column && Node.Kind != ECkUiNodeKind::Text && Node.Kind != ECkUiNodeKind::Image && Node.Kind != ECkUiNodeKind::Scroll && Node.Kind != ECkUiNodeKind::Custom)
+        if ((bInTableCell || bInTreeRow) && Node.Kind != ECkUiNodeKind::Row && Node.Kind != ECkUiNodeKind::Column && Node.Kind != ECkUiNodeKind::Text && Node.Kind != ECkUiNodeKind::Image && Node.Kind != ECkUiNodeKind::Scroll && Node.Kind != ECkUiNodeKind::Custom)
         { State.Error(TEXT("table cells only support row, column, text, image, and scroll nodes")); return false; }
+        // Ordinary stateless custom cells remain valid without an action. A retained cell, or a
+        // factory that declares the canonical action property, is an interactive table cell and
+        // must use the single item-action path so its dispatch can be row-scoped.
+        const bool bRequiresTableItemAction = bInTableCell && Custom != nullptr
+            && (Custom->RetainedFactory || (Custom->Factory && ActionProperty != nullptr));
+        if (bRequiresTableItemAction)
+        {
+            if (Node.ItemAction.IsEmpty())
+            { State.Error(TEXT("custom table cells require a canonical item-action")); return false; }
+            bool HasEditableProperty = false;
+            for (const TPair<FString, FCkUiCustomPropertyValue>& Property : Node.CustomProperties)
+            {
+                HasEditableProperty = Property.Value.Kind == ECkUiCustomPropertyKind::StringChanged || Property.Value.Kind == ECkUiCustomPropertyKind::TextChanged
+                    || Property.Value.Kind == ECkUiCustomPropertyKind::TextCommitted || Property.Value.Kind == ECkUiCustomPropertyKind::BoolChanged
+                    || Property.Value.Kind == ECkUiCustomPropertyKind::NumberChanged || Property.Value.Kind == ECkUiCustomPropertyKind::NumberCommitted
+                    || Property.Value.Kind == ECkUiCustomPropertyKind::IntegerCommitted || Property.Value.Kind == ECkUiCustomPropertyKind::ColorCommitted
+                    || Property.Value.Kind == ECkUiCustomPropertyKind::NumberInteraction;
+                if (HasEditableProperty) { break; }
+            }
+            if (HasEditableProperty)
+            { State.Error(TEXT("interactive custom table cells cannot declare editable event properties")); return false; }
+        }
         if (Node.Kind == ECkUiNodeKind::TableColumn && !bDirectTableColumn) { State.Error(TEXT("table-column is only valid directly under table")); return false; }
         if (Node.Kind == ECkUiNodeKind::TableColumn && Node.Children.Num() != 1) { State.Error(TEXT("table-column requires one cell root")); return false; }
         for (const FCkUiNode& Child : Node.Children)
         {
             const bool bChildInRepeatItem = Node.Kind == ECkUiNodeKind::Repeat ? true : bInRepeatItem;
-            const bool bChildInCell = Node.Kind == ECkUiNodeKind::TableColumn || Node.Kind == ECkUiNodeKind::Tree ? true : bInTableCell;
-            if (!ValidateFieldScope(Child, bChildInRepeatItem, bChildInCell, Node.Kind == ECkUiNodeKind::Table, State)) { return false; }
+            const bool bChildInTableCell = Node.Kind == ECkUiNodeKind::TableColumn ? true : bInTableCell;
+            const bool bChildInTreeRow = Node.Kind == ECkUiNodeKind::Tree ? true : bInTreeRow;
+            if (!ValidateFieldScope(Child, bChildInRepeatItem, bChildInTableCell, bChildInTreeRow, Node.Kind == ECkUiNodeKind::Table, State)) { return false; }
         }
         return true;
     }
@@ -1373,7 +1752,7 @@ auto FCkUiDocumentParser::TryParse(const FString& InMarkup, const FString& InSty
         if (!AnalyzeNode(Compiled, Templates, Cache, Calls, State, 1, Summary)) { return Result; }
         FCkUiNode Expanded;
         if (!ExpandNode(Compiled, Templates, {}, {}, InCustomRegistry, State, 1, Expanded)) { return Result; }
-        if (!ValidateFieldScope(Expanded, false, false, false, State)) { return Result; }
+        if (!ValidateFieldScope(Expanded, false, false, false, false, State)) { return Result; }
         if (!ValidateTabsScope(Expanded, false, State)) { return Result; }
         Parsed.Regions.Add(Name, MoveTemp(Expanded));
     }
