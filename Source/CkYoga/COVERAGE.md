@@ -1,8 +1,26 @@
+# CTO-dispositioned closeout matrix (2026-09-11)
+
+| Census row | CTO disposition | Campaign consequence |
+| --- | --- | --- |
+| Narrow browser breakpoint restacking | Deferred; not needed in the medium term | Accept readable/reachable narrow layouts through wrap and scroll. Do not claim browser breakpoint parity. |
+| Resource Inspector navigation `+` | Excluded | Remove it from closeout acceptance until a future product contract defines the add-set. |
+| Native outer shells | Required migration | Stable debugger chrome, tabs, splitters, panes and inspector placement must be authored HTML/CSS; specialized native controls may mount only through explicit authored ports. |
+| GOAP and other inspector surfaces | Required migration | Author inspector layout/presentation for GOAP Inspector Gateway and every remaining debugger inspector while retaining production model/action ownership. |
+| GOAP Agent List P9 retirement | Accept recommended safe retirement | Move and test its surviving selection-sync role before deleting the un-slotted panel. |
+| Packaged host | Deferred | Preserve staging declarations; prove cook/stage/runtime later in a real packaged consumer, not CkPlugins. |
+| Controller/multi-user | Required bounded gate | Prove real local-player gamepad navigation/confirm/back and two-local-Slate-user isolation. Network multiplayer is conditional on actual client exposure. |
+| Accessibility | Keyboard traversal only, deferred | No accessibility gate blocks this campaign; do not claim broader semantics or certification. |
+| Localization/RTL | Deferred | Preserve localized text identity where already present, but no culture matrix blocks closeout. |
+| Performance | Required representative gate | Measure representative large-data debugger hosts; obtain approval for thresholds/hardware before judging pass/fail. |
+| Lifetime | Required for every debugger | Every debugger must prove release of views, ports, callbacks, subscriptions, focus/capture and popups across its applicable teardown paths. |
+
+This matrix supersedes the unresolved wording in the publication census below. The campaign remains open because outer-shell/inspector migration, the bounded controller gate, representative performance evidence and complete debugger teardown evidence are unfinished.
+
 # Published closeout census and acceptance boundary (2026-09-11)
 
 Published runtime-checkpoint tips: CkFoundation `8f3daa93e2969553579efa8efd45e048dcbeba08`, CkGameplayDebugger `bb5fd18f5a1b16ce633bc17335a71d78ed190a01`, and CkTests `92587fa30d21fdc419fcd836379d87c215f4ea86`; CkPlugins root `8e60f187428c550eaa29d791039f014dbd387837` is open and unmerged in PR #39. Fresh serial real-RHI `Ck.UiAuthoring` evidence passes 151/151 in `Saved/Logs/Test-UiAuthoring-Closeout-R222-RealRHI.log`; the earlier NullRHI attempt is not acceptance evidence.
 
-Current source does not support a completed P9 retirement claim: GOAP Agent List is un-slotted but still constructed/refreshed for selection synchronization. GOAP outer chrome/splitters and its distinct registered native ECS Inspector gateway remain; Texture retains native outer shell and Checker Apply/Restore; AI remains a roster-only authored slice. Package runtime, full local-player/controller and relevant multiplayer lifecycle, accessibility, culture-switch/RTL, measured performance, and broad cross-surface lifetime remain open. Browser-reference narrow restacking is blocked and unwaived, and Resource Inspector `+` remains blocked on an approved add-set contract.
+Current source does not support a completed P9 retirement claim: GOAP Agent List is un-slotted but still constructed/refreshed for selection synchronization. GOAP outer chrome/splitters and its distinct registered native ECS Inspector gateway remain; Texture retains native outer shell and Checker Apply/Restore; AI remains a roster-only authored slice. Apply the CTO matrix above: the native shells/inspectors and all-debugger teardown are required work, controller and performance retain bounded gates, while packaging, keyboard accessibility, localization and narrow restacking are deferred and Resource Inspector `+` is excluded.
 
 # GOAP authored specialized cohort checkpoint (2026-09-11)
 

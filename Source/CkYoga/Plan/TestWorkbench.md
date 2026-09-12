@@ -1,6 +1,7 @@
 # Pipeline test workbench
 
-The browser reference is a visual acceptance target. Resource Inspector remains
+The browser reference remains a design reference, but CTO-deferred narrow breakpoint
+restacking is not a campaign acceptance gate. Resource Inspector remains
 the native test host and must load documents through the production CkSlateLayout
 parser, registry, and retained view. Do not reproduce its layout in bespoke Slate
 or add a test-only renderer. Graph internals remain the agreed native exception.
@@ -32,18 +33,21 @@ browser CSS is supported, or line coverage proves correct behavior.
 | Data and collections | Stable keys, sorting/filtering, empty and large data, live mutation, independent repeated actions and bounded virtualization. |
 | Composition | Templates, custom widgets and named slots compose through production APIs; retained identity and scope isolation survive reload. |
 | Reload and failure | Valid updates commit together; invalid syntax, bindings, factories and ownership leave accepted UI and state intact. |
-| Lifetime | Removal, held stale callbacks, focus/capture loss, owner expiry, reopen and game teardown. |
-| Game delivery | Packaged resource loading, local-player input ownership, controller navigation and relevant multiplayer lifecycle checks. |
+| Lifetime | Every production debugger: removal, held stale callbacks, focus/capture loss, popup release, owner expiry, reopen, world reset and game teardown as applicable. |
+| Game delivery | Real local-player gamepad navigation/confirm/back and two-local-Slate-user isolation. Packaged runtime is deferred to a real consumer; network multiplayer is required only for debuggers exposed to clients. |
 
 Existing tests remain necessary: the integrated workbench supplements focused
-parser, widget, transaction and lifecycle tests. Full debugger migration and the
-game/package/localization/performance campaign gates remain separate obligations.
+parser, widget, transaction and lifecycle tests. Full outer-shell/inspector migration,
+the bounded controller gate, representative measured performance and all-debugger
+teardown remain campaign obligations. Package, keyboard-accessibility and localization
+acceptance are deferred; Resource Inspector navigation `+` is excluded.
 
 ## Reference translation inventory
 
 The standalone reference is CkTests/Resources/ResourceInspector/Workbench.reference.html.
-Automated browser preview was denied by URL policy; browser visual acceptance is
-pending and unwaived. Its browser scripting remains outside the native runtime.
+Automated browser preview was denied by URL policy. Narrow browser-style restacking
+is CTO-deferred and is not implied by native wrap/scroll evidence. Browser scripting
+remains outside the native runtime.
 
 The existing native ResourceInspector.ui.html already authors the three-pane
 splitter, category tree/select, search, sortable virtualized table, empty overlay,
