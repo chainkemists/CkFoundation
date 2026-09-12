@@ -41,13 +41,8 @@ namespace ck
         static thread_local FActiveScriptScopeStatThreadCache GActiveScriptScopeStatThreadCache;
 #endif
 
-        // The named-event twin of the cache above. BeginNamedEvent takes a NAME rather than a stat
-        // id, so the STATS cache cannot serve it - and the derivation it skips is the same one: a
-        // script-context walk plus three FString allocations, on every scope entry.
-        //
-        // Compiled in EVERY configuration on purpose, even though only the non-STATS ctor calls it.
-        // Gating it on !STATS would mean the editor never compiles it and no test in any
-        // configuration could reach it, which is how the STATS twin came to have this gap.
+        // Do not gate this on !STATS, however unreachable it looks there: the editor would stop
+        // compiling it, and no test in any configuration could then reach it.
         struct FActiveScriptScopeNameThreadCache
         {
             uint64               _Epoch = 0;
@@ -198,15 +193,10 @@ namespace ck
             return **Found;
         }
 
-        // Returning a pointer INTO the map is safe here, but only because of the ordering above.
-        // FString's characters live in a heap allocation the FString object owns, so relocating the
-        // object (sparse-array growth reallocs the element storage) moves the owner and not the
-        // buffer - an earlier pointer survives a later insert. What would invalidate one is
-        // overwriting the SAME key, which destroys the old FString and frees its buffer; that cannot
-        // happen here because this Add only ever follows a Find MISS on this thread's own map, with
-        // nothing in between that touches it (Get_ScriptScopeName constructs no scope of its own).
-        // The pointer dies at the next epoch change, and every caller hands it straight to
-        // BeginNamedEvent - whose sinks all copy the text - rather than retaining it.
+        // Returning a pointer INTO the map is safe: FString owns its characters in a separate heap
+        // allocation, so sparse-array growth relocates the FString and not the buffer. Overwriting
+        // the SAME key WOULD free it, but this Add only ever follows a Find miss on this thread's
+        // own map, with nothing in between that touches it.
 #if WITH_DEV_AUTOMATION_TESTS
         ++Cache._MissCount;
 #endif
@@ -461,10 +451,8 @@ FCk_ScopedStat::
 
 #else
 
-// ENABLE_GENERIC_NAMED_EVENTS is 0 in Shipping, where BeginNamedEvent is an empty inline. Without
-// this guard the scope would still derive its name for a call that compiles to nothing - caching
-// that derivation makes it cheaper, only skipping it makes it free. Begin and End are guarded
-// together so they stay paired.
+// ENABLE_GENERIC_NAMED_EVENTS is 0 in Shipping, where BeginNamedEvent is an empty inline: without
+// this guard the scope would still derive a name for a call that compiles to nothing.
 FCk_ScopedStat::
     FCk_ScopedStat()
 {

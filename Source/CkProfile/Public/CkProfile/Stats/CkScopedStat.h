@@ -27,8 +27,7 @@ namespace ck
 #endif
 
     // The named-event counterpart of the cache above, for the non-STATS FCk_ScopedStat ctor:
-    // BeginNamedEvent wants a NAME, not a stat id. Compiled in every configuration so the editor
-    // can test it, though only the non-STATS ctor calls it.
+    // BeginNamedEvent wants a NAME, not a stat id.
     //
     // Returns a pointer into this thread's cache, valid until the next epoch change. Hand it
     // straight to BeginNamedEvent; do not store it.
