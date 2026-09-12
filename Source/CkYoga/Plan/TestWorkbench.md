@@ -64,11 +64,11 @@ retains selected/query/note state, and proves narrow horizontal access separatel
 from the reviewed origin capture. This does not claim full culture/localization or
 browser visual parity.
 
-The gallery must separately expose layout direction/wrapping/alignment/constraints,
-text overflow and localization, images, buttons, search, registered form controls,
-scroll/splitter/tabs/menu behavior, typed collections/repeats/tables/trees, templates,
-and retained custom widgets with named slots. Each example must connect to a test
-and state variants. The realistic workbench alone does not prove this inventory.
+The native gallery now separately exposes the supported layout, control, data,
+collection, command, and composition inventory recorded in `GalleryCoverage.md`;
+Gate 03 rows 1-12 are complete at their stated native boundaries. This does not
+prove browser-reference parity, full culture/localization, package delivery,
+controller sessions, accessibility, measured performance, or broad lifetime.
 ## Shared retained dialog implementation and acceptance boundary
 
 The retained in-surface modal container is implemented through the shared registry
@@ -91,4 +91,4 @@ release and game teardown must release only owned transient interaction.
 
 The native Resource Inspector dialog test exercises routed backdrop blocking,
 confirm/cancel behavior, retained pins, rejected reload preservation, accepted
-reload identity and a 960x640 capture. Final focused evidence is now 114/114 authoring (R8) and 10/10 Resource Inspector (R5). Owner/foreign-user focus, Tab/DPad/Back, hidden/removal/owner-release and content-open/body-close capture release have native coverage. Full local-player/controller sessions, callback-adversarial teardown, arbitrary custom capture adapters, game/package, accessibility and performance remain open. Next: capability gallery/reference parity and remaining debugger migrations.
+reload identity and a 960x640 capture. Fresh closeout evidence is now 151/151 serial real-RHI `Ck.UiAuthoring` in `Test-UiAuthoring-Closeout-R222-RealRHI.log`; existing Resource Inspector focused evidence remains recorded in `PROGRESS.md`. Owner/foreign-user focus, Tab/DPad/Back, hidden/removal/owner-release and content-open/body-close capture release have native coverage. Full local-player/controller sessions, callback-adversarial teardown, arbitrary custom capture adapters, game/package, accessibility and performance remain open. Native gallery scope is complete; browser-reference parity and remaining debugger/environment work are not.
