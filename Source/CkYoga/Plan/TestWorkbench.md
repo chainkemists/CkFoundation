@@ -43,7 +43,7 @@ game/package/localization/performance campaign gates remain separate obligations
 
 The standalone reference is CkTests/Resources/ResourceInspector/Workbench.reference.html.
 Automated browser preview was denied by URL policy; browser visual acceptance is
-pending. Its browser scripting remains outside the native runtime.
+pending and unwaived. Its browser scripting remains outside the native runtime.
 
 The existing native ResourceInspector.ui.html already authors the three-pane
 splitter, category tree/select, search, sortable virtualized table, empty overlay,
@@ -53,10 +53,16 @@ model/resources and preserve their input/lifetime behavior.
 
 Activity is implemented with a bounded newest-first keyed collection and shared
 repeat. Explicit loading/error presentation is implemented and verified. The retained
-confirmation dialog is now implemented through the shared dialog registry and is being
-validated against the Resource Inspector production host. Editable
+confirmation dialog is implemented through the shared dialog registry and verified
+against the Resource Inspector production host. Editable
 resource labels/groups need an explicit sample-model contract; the existing note
-form is session data and must not silently become selected-resource data.
+form is session data and must not silently become selected-resource data. Native
+reference evidence is complete: `ResourceInspectorLongLabels` passes 10/10 with
+installed loading/error, pins, dialog, and long-label coverage. It preserves exact
+`NSLOCTEXT` identity/default restoration for the native search hint and Name header,
+retains selected/query/note state, and proves narrow horizontal access separately
+from the reviewed origin capture. This does not claim full culture/localization or
+browser visual parity.
 
 The gallery must separately expose layout direction/wrapping/alignment/constraints,
 text overflow and localization, images, buttons, search, registered form controls,

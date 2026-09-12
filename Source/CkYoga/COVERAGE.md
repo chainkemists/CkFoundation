@@ -1,4 +1,20 @@
+# GOAP authored specialized cohort checkpoint (2026-09-11)
+
+R218 built successfully and final serialized real-RHI R219 passed the selected authored GOAP cohort 10/10 with zero failed/skipped/contaminated tests. Production-path coverage now includes Agent Column, Agent List, Catalog, Decision, Graph, Search Trace, Squad, Timeline, World State, and the Squad-table empty fixture. Graph reset coverage proves subscription detachment across the ViewModel reset broadcast, deferred authored-view/native-port release, explicit resume, remount, and final teardown. The older GOAP module-matrix row is superseded for those surfaces; bounded outer-shell/Inspector integration and the P9 retirement sweep remain subject to a final source census.
+
+# Dialog and Texture authored cohort checkpoint (2026-09-11)
+
+The R72 authored cohort passes 12/12 with clean contamination status. Dialog timed identity across real time advancement is directly covered. Texture real-window six-tab physical routing, active-page state, and Refresh selection retention are accepted with inspected wide/narrow captures; this is not Texture PIE or an outer-shell migration, and checker Apply/Restore plus broader parity gaps remain open.
+
+# StyleLab full-window checkpoint (2026-09-11)
+
+StyleLab is now accepted for the real full-window authored path: shared chrome/scroll/sample, semantic and physical `All Tones` checkbox interaction, state mutation, `NotifyChanged`, and retained sample-root rebuild on production tick. R68/R69 build and 1/1 real-RHI evidence plus inspected wide/narrow captures are recorded in `PROGRESS.md`; browser/package/controller/accessibility/localization/performance parity remains open.
+
 # CkGameplayDebugger declarative-layout coverage
+
+## Current authored migration checkpoint (2026-09-11)
+
+Input and Save authored migrations are accepted within their bounded production paths. Input has R48 build, R49 real-RHI Input-only claim (the combined run also contained a failed Save test), runtime archive, and inspected wide/narrow Controls captures. Save has R65 build, R66 cached real-RHI 1/1, runtime archive, and inspected wide/narrow AuthoredPie captures. Save behavior covers real save mount, physical authored filter/highlight input, problems-only child+ancestor projection, four provenance toggles preserving ancestry, and stable selection/expansion/reload/lifetime. StyleLab is accepted in the newer checkpoint above; packaged/browser/controller/accessibility/localization/performance parity and narrow browser restacking remain gaps.
 
 Status: **inventory retained; shared authoring foundations now cover controls, typed collections and read-only virtualized tables.**  This records the non-graph Slate
 surfaces in `Plugins/CkGameplayDebugger/Source` for the HTML/CSS layout campaign.  Graph editor
@@ -47,6 +63,28 @@ to constrained desired height for native Slate parents. This establishes this
 consumer geometry case, not coverage of every debugger or layout transition.
 Workbench.reference.html exists; browser preview is policy-blocked and unverified.
 Native translation and the full component gallery remain incomplete.
+
+## Dialog debugger authored migration
+
+The Dialog debugger now mounts four authored regions for cooldown controls,
+runtime commands, search and main content while retaining its native window
+chrome, real collector and command routing. `DialogDebugger-R5-Authored-PIE-
+Editor.log` passes1/1 against real registry lines, timed and Forever cooldowns,
+filter/highlight, active-only, Save/Load, retained reload and stale owner release.
+Fresh960x640 and520x620 captures show readable, non-overlapping native controls
+and coherent authored rows/panes after the shared intrinsic-region repair.
+
+This accepts the scoped conventional Dialog migration. Direct retained identity
+proof is for the Forever record/repeat item; timed progress is real but timed-row
+identity is not separately asserted. Live style-axis, browser, game/package,
+controller, accessibility, localization, performance and broad lifetime gates
+remain open.
+
+## AI debugger authored roster migration
+
+The AI Overview NPC-health roster now mounts one retained authored selectable table while existing AI window chrome and other panes remain native. R14's incremental build succeeded in 12.02s; `Ck.AiDebugger.AuthoredRoster.PIE` passed 1/1 in 33s, exit 0, zero failed/skipped/contaminated, with two editor processes (inline discovery and focused lane). The production-path two-agent fixture verifies physical Crowd-handle keys, live record/row identity, atomic removal, selection routing, compatible/rejected resource reload and teardown rejection. Runtime and discovery archives are clean of automation errors, ensures, fatal/critical/unhandled diagnostics, script errors/warnings, `FullReload=true`, and timeouts.
+
+Fresh wide and narrow captures at 23:07:44 were inspected: the roster has two readable names/statuses and selection at wide width, while narrow proves horizontal reach/later context without roster overlap. This accepts only the roster migration. Legacy surrounding AI shell content clips/overlaps at constrained widths, so no whole-window responsive claim is made. Stage/evidence/event/topology panes, picker, spatial viewport, browser, game/package, controller, localization, accessibility, performance, and broad lifetime acceptance remain open.
 ## Current custom slot runtime boundary
 
 StyleLabProfiles-R2-Editor.log passes110/110 shared tests; StyleLabProfiles-
@@ -164,12 +202,18 @@ contract, rather than recreate their Slate widget on each refresh. Horizontal sc
 
 CkTests Resource Inspector loads installed resources through the production view. Its first model/view test covers search, numeric sorting, keyed selection,0/1/12/1k/10k datasets, bounded virtualization, valid/rejected file reload and model release. Test-ResourceInspector-Layout.log passed1/1; wide/narrow Slate captures were inspected, including the narrow title/action correction. BuildTest-ResourceInspector-Host-R2.log passed2/2 including the real one-client PIE host: catchall install/removal, inspector search focus/path, viewport/cursor/focus restoration, repeated close, reopen and post-EndPIE detachment. Category navigation additionally passes Test-ResourceInspector-Navigation.log2/2: native tree selection, category/query intersection, stable selected category and expansion across reload, rejected category/scenario reentrancy, and canonical10k scenario restoration. Shared flex-wrap now keeps all scenario actions visible in narrow captures. BuildTest-UiSingleSelection.log50/50 and Test-ResourceInspector-SingleSelection.log2/2 verify row/column/reverse/default wrapping and exact native single-selection for table/tree, including refresh/reload and collapsed-child selection; latest narrow/wide captures inspected. The shared text-input session-note form additionally passes Test-ResourceInspector-Form.log3/3, with native keyboard commit/rejection/reload and inspected narrow/wide captures. This does not prove split-screen/controller/travel/package behavior, the full browser reference or missing control families.
 
+## CkUIDebugger focused production PIE migrations
+
+The real `SCkUIDebuggerWindow` mounts its Event History inspector, empty state, scroll, and repeat from installed authored resources. AngelScript supplies the gameplay-tag asset, layout-config data-asset literal, and concrete CommonUI widget class. `Build-UiDebuggerHistory-Authored-R5.log` succeeds and the original one-start cached `BuildTest-UiDebuggerHistory-Authored-R6-Final.log` passes `Ck.UIDebugger.History.PIE` 1/1. The fixture proves production layout create/push/pop/clear, compatible-refresh stable record/item identity, exactly one clear event, real Clear History pointer input and empty reconciliation, consecutive newest-100 retention, populated wide/narrow captures, and teardown before `EndPIE`. The lifetime closeout build `Build-UiDebuggerHistory-Lifetime-R2.log` succeeds; its one-start combined `BuildTest-UiDebuggerHistory-Lifetime-R3-Final.log` passes both History rows 2/2 in 31 seconds with zero failed/skipped/contaminated tests.
+
+History, Layers, Summary, and the UI-specific command shell are installed authored resources. Layers add retained hierarchy/projection, Active/Inactive pills, and the 16-widget cap; Summary adds the visibility-bound no-layout message and outlined ACTIVE/INPUT/LAYERS cards; the `commands` region supplies layer filter/clear, active-only, Force Refresh, Expand/Collapse All, Clear History, and both name-depth directions. R27 build `Build-UiDebuggerCommands-R27.log` succeeded, SHA256 `2F74C65F8EA1C75144BFD88BE0C47D44F0CCB97B92A757C26BDD92F01FED4628`; cached real-RHI R28 `Test-UiDebuggerCommands-R28-Final.log` passed both CkUIDebugger rows 2/2 in 33 seconds, zero failed/skipped/contaminated, SHA256 `B970725E5076B0D52008A9387F820BA222C360ABB48DE03DBA85BD9A63ADB2DD`. Its runtime archive `UiDebuggerCommands-R28-Editor.log` SHA256 `E2E9F4AD9ACB2693F815FD03D8E6ADD1E48C84EAD89410D17F011514FC937C40` has zero latent timeouts or relevant diagnostics except an unrelated Chromium USB line. Physical Clear History observed enabled `SCkUiStyledButton` capture/tag/path at revision 2 with zero input suspensions; post-transition History/repeat/tree settled to `[Push]`, one primary child, and three visible nodes. Fresh inspected captures are wide 1206x766 SHA256 `CA8DEACDE0F28B357214D032864FA7A5BED6C7A831EB2DCDB17761497B5084A0` and narrow 426x426 SHA256 `AB281184091EBF04EFCDF156A382578EFC16E521EC2D2329E44B41FA2D1771F7`. Native WindowChrome remains only for its shared host controls; browser breakpoint parity, game/package/controller/accessibility/localization/performance, whole Gate 05, and campaign acceptance remain open.
+
 ## Module matrix
 
 | Module | Non-graph UI evidence | Declarative target and pending adapter/template work |
 | --- | --- | --- |
-| CkAggroDebugger | `Public/CkAggroDebugger/Window/SCkAggroDebuggerWindow.cpp` | Standard window composition; convert its layout and controls with base templates. |
-| CkAiDebugger | `Public/CkAiDebugger/Window/SCkAiDebuggerWindow.cpp` | Standard window composition; convert with base templates. |
+| CkAggroDebugger | `Public/CkAggroDebugger/Window/SCkAggroDebuggerWindow.cpp`; authored `Resources/UI/AggroDebugger.ui.html/.css`; real authority PIE fixture | Scoped conventional migration accepted by R6: retained engaged-only/search controls, whole-owner filtering, flat stable-key owner/target repeat, native meter semantics, compatible/rejected reload, teardown rejection and inspected wide/narrow captures. Broader environment acceptance remains campaign work. |
+| CkAiDebugger | `Public/CkAiDebugger/Window/SCkAiDebuggerWindow.cpp`; authored `Resources/UI/AiDebuggerRoster.ui.html/.css`; real two-agent PIE fixture | NPC-health roster slice accepted by R14 with physical Crowd keys, retained rows, native selection routing, reload and teardown coverage. Remaining AI shell and panes still require authored migration; constrained-width legacy shell responsiveness is open. |
 | CkAStarDebugger | `Window/SCkAStarDebuggerWindow.cpp`, `SearchHistory.cpp`, `StatsPanel.cpp`; painted `GridView/SCkAStarDebugger_GridView.cpp` | Author window/history/stats; add a registered grid-canvas control for the interactive painted grid. |
 | CkAudioDebugger | `Window/SCkAudioDebuggerWindow.cpp`; painted `FalloffCurve.cpp`, `Radar.cpp` | Author shell and ordinary controls; register retained curve and radar components. |
 | CkCrowdDebugger | `Window/SCkCrowdDebuggerWindow.cpp`, `AgentListPanel.cpp`, `AgentDetailPanel.cpp`, `EventLogPanel.cpp`, `StatsPanel.cpp`, `NavmeshStatusPanel.cpp`, `Viewport/SCkCrowdDebugger_3dViewport.cpp` | Add list/detail/event-log templates and a viewport adapter; do not leave any as permanent ports. |
@@ -200,7 +244,7 @@ CkTests Resource Inspector loads installed resources through the production view
 | CkSmDebugger | `Window/SCkSmDebuggerWindow.cpp`, `SCkSmDebuggerPackagedWindow.cpp`, `HistoryList.cpp`, `Preview/SCkSmDebugger_PreviewPane.cpp` | Author non-graph shell/history/preview composition; state-machine graph remains bespoke. |
 | CkStyleLabDebugger | `Window/SCkStyleLabWindow.cpp`, `Widgets/SCkStyleLab_ControlsPane.cpp`, `SamplePane.cpp`, `InputHudControls.cpp` | Best early component-gallery/template proving ground after common controls. |
 | CkTextureDebugger | `Window/SCkTextureDebuggerWindow.cpp`, `TextureHealthTable.cpp`, `SceneAuditTable.cpp`, `DiagnosticPages.cpp` | Texture Health source now authors its inventory columns/cells, horizontal scroll and empty overlay; its panes use the shared authored splitter; bootstrap error chrome and context-menu content builder remain native. Focused behavioral migration gate passed20/20 (TextureAuthoredInventory-R3-Editor.log); single-line ellipsis styling passed36/36 authoring and20/20 Texture tests with inspected TextWrapping captures; remaining visual acceptance is open. Extend adapters to scene-audit/list/diagnostic pages. |
-| CkUIDebugger | `Window/SCkUIDebuggerWindow.cpp` | Standard window composition; base template candidate. |
+| CkUIDebugger | `Window/SCkUIDebuggerWindow.cpp`; authored `Resources/UI/UiDebuggerHistory.ui.html/.css`, `UiDebuggerLayers.ui.html/.css`, `UiDebuggerSummary.ui.html/.css`, and `UiDebuggerCommands.ui.html/.css`; source-authored production PIE fixture | History ordering/cap/clear and lifetime, Layers hierarchy/projection/actions, Summary no-layout/ACTIVE/INPUT/LAYERS cards, and the authored command shell are accepted by focused gates. Native WindowChrome retains only shared host controls; browser breakpoint parity and broader Gate 05/campaign acceptance remain open. |
 | CkVisualLodDebugger | `Window/SCkVisualLodDebuggerWindow.cpp` | Standard window composition; base template candidate. |
 
 ## Shared families to turn into declarative templates
@@ -358,7 +402,7 @@ UiButtonEnabled-R2-Editor.log90/90, TextureAuthoredMenus-R4-Editor.log22/22, and
 
 ## Scene Audit installed menu and capture checkpoint
 
-SceneAuditAcceptance-Editor.log24/24 TextureDebugger tests verifies both installed native clipboard commands retain opening B after selection changes to A, plus1000-row bounded native realization at960x640/640x480 and1/1.5scale. SceneAuditCountCapture-Editor.log1/1 and inspected narrow PNG verifies no-wrap count badge correction. High-DPI search icons still render as gray squares in offscreen captures; full visual acceptance remains open. No packaged/controller/localization claim.
+SceneAuditAcceptance-Editor.log24/24 TextureDebugger tests verifies both installed native clipboard commands retain opening B after selection changes to A, plus1000-row bounded native realization at960x640/640x480 and1/1.5scale. SceneAuditCountCapture-Editor.log1/1 and inspected narrow PNG verifies no-wrap count badge correction. The stale high-DPI gray-square limitation is cleared by the one-start cached real-RHI `Saved/Logs/Test-SceneAuditIconRecapture-R1.log`: `Ck.TextureDebugger.LayoutCapture.SceneAudit` passed1/1 with0 failed/skipped/contaminated, SHA256 `4706BFEEE43312D81C1C695A17C925F192388C1F73CF4F81FBF4A926C6C9864C`. The refreshed 2026-09-10 12:49:56/57 local captures retained their hashes (960x640 1p0 `A01747DED29270BB5A840AF6CE02AE7B58C806313E1EAD3907407723E89CA7D0`, 1p5 `3B82770DD1E6770D2741E7FBAF86FF24202F5F34B92F3166F5AC9AC42A3C2C9A`; 640x480 1p0 `2E7FECE0EF8FCB0C4FCA4AA1A69D76342CA33FB1D3979AB32440681EDE274C8E`, 1p5 `C90AAFD73153758271F7416F099EF75A4CD8E0C976FA98092DFD71D485272EE2`). Visual inspection of both 1.5 captures confirms two complete magnifiers and no gray squares; this is capture-test plus visual evidence, not pixel-regression automation. Full visual acceptance remains open. No packaged/controller/localization claim.
 
 
 ## Material Inputs and nonselectable tables checkpoint
