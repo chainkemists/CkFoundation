@@ -118,12 +118,6 @@ public:
         UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    // Stops the per-tick push of the owning entity's world transform onto this component — use when
-    // it is about to be Unreal-physics-driven instead. Request_EnableTransformPush restores the
-    // normal ownership contract when the external owner releases the component.
-    // The disabled tag is per-COMPONENT; the owner's push memory (LastPushedTransform) keeps tracking
-    // the owner while disabled, so re-enabling never needs to re-seed it — the enable path's
-    // synchronization is what puts the returning component back in step with that memory.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push",
