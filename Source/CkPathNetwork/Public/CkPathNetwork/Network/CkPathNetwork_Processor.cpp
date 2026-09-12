@@ -176,9 +176,9 @@ namespace ck_pathnetwork_processor
         Result._Waypoints = {InFrom, InTo};
         Result._Length = static_cast<float>(FVector::Dist(InFrom, InTo));
 
-        const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld);
-        if (ProviderHealth != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         {
+            const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld);
             ck::pathnetwork::Verbose(
                 TEXT("[PNDiag] off-path nav unavailable: raw [{}] -> [{}], "
                      "world [{}], providerHealth [{}]"),
@@ -411,7 +411,7 @@ namespace ck_pathnetwork_processor
         const FCk_Nav_QueryFilterOverlay& InQueryFilterOverlay,
         float InPlanarExtentCm) -> bool
     {
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         { return true; }
 
         const auto ProjectionExtent = FVector{
@@ -470,7 +470,7 @@ namespace ck_pathnetwork_processor
     {
         OutProjectedEndpoint = InEndpoint;
 
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         { return true; }
 
         auto ProjectionQuery = FCk_NavSurface_ProjectionQuery{InEndpoint};
@@ -498,7 +498,7 @@ namespace ck_pathnetwork_processor
         ECk_NavSurface_CornerOffset InCornerOffset,
         float InCornerOffsetDistanceCm) -> bool
     {
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         { return true; }
 
         if (InOutWaypoints.Num() < 2)
@@ -560,7 +560,7 @@ namespace ck_pathnetwork_processor
         OutOriginalSegmentIndex = INDEX_NONE;
         OutRibbonRunIndex = INDEX_NONE;
 
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         { return EConstrainedPathResolution::Succeeded; }
 
         if (InOutWaypoints.Num() < 2 ||
@@ -703,7 +703,7 @@ namespace ck_pathnetwork_processor
             return false;
         }
 
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) == ECk_NavSurface_ProviderHealth::Ready)
+        if (UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         {
             const auto OriginalWaypointCount = ConnectedWaypoints.Num();
             ConnectedWaypoints = Simplify_PathByTraversal(
@@ -754,7 +754,7 @@ namespace ck_pathnetwork_processor
         if (InDesiredClearance <= UE_KINDA_SMALL_NUMBER || InOutWaypoints.Num() < 3)
         { return; }
 
-        if (UCk_Utils_NavSurface_UE::Get_ProviderHealth(InWorld) != ECk_NavSurface_ProviderHealth::Ready)
+        if (NOT UCk_Utils_NavSurface_UE::Get_IsSurfaceQueryable(InWorld))
         { return; }
 
         const auto ProjectionExtent = FVector{

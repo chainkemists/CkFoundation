@@ -40,6 +40,9 @@ namespace ck_navigation_module
         Table._ProviderHealth = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Get_ProviderHealth(InWorld); };
 
+        Table._IsSurfaceQueryable = [](UWorld* InWorld)
+        { return ck::nav_surface_recast::Get_IsSurfaceQueryable(InWorld); };
+
         Table._IsBuildInProgress = [](UWorld* InWorld)
         { return ck::nav_surface_recast::Get_IsBuildInProgress(InWorld); };
 

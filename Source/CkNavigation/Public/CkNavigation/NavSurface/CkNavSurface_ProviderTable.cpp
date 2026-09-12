@@ -99,6 +99,7 @@ auto
            static_cast<bool>(_FindDistanceToWall) &&
            static_cast<bool>(_SurfaceBounds) &&
            static_cast<bool>(_ProviderHealth) &&
+           static_cast<bool>(_IsSurfaceQueryable) &&
            static_cast<bool>(_IsBuildInProgress) &&
            static_cast<bool>(_IsSurfaceSettled) &&
            static_cast<bool>(_SurfaceRevision) &&
