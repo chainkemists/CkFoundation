@@ -44,16 +44,11 @@ namespace ck::ensure
         const FString& InFunctionName)
         -> bool
     {
-        // The ck::Ensure family in CkUtils_Common.as raises the ensure on its caller's behalf, so the
-        // innermost script frame is the wrapper rather than the site that raised it. Listed rather than
-        // prefix-matched, so a gameplay helper named EnsureStoreIsOpen keeps its own attribution.
-        //
-        // Both comparisons are CASE-SENSITIVE, and the namespace is checked, because the two failure
-        // directions are not symmetric. Missing a wrapper degrades to naming it - the behaviour that
-        // predates this list. Matching something that is NOT a wrapper skips a real frame and reports
-        // the one above it, which is worse than the bug this fixes. FString's operator== is
-        // case-INsensitive while AngelScript identifiers are case-sensitive, so a global named `ensure`
-        // would otherwise be silently swallowed.
+        // The ck::Ensure family raises the ensure on its caller's behalf, so the innermost script frame is
+        // the wrapper, not the site that raised it. Listed rather than prefix-matched, and compared
+        // case-sensitively (FString's operator== is not) because the failure directions are asymmetric:
+        // missing a wrapper merely names it, but matching a non-wrapper skips a real frame and blames
+        // whoever called it.
         constexpr auto CaseSensitive = ESearchCase::CaseSensitive;
 
         if (NOT InNamespace.Equals(TEXT("ck"), CaseSensitive))
@@ -61,8 +56,8 @@ namespace ck::ensure
 
         return InFunctionName.Equals(TEXT("Ensure"), CaseSensitive)
             || InFunctionName.Equals(TEXT("EnsureIfNot"), CaseSensitive)
-            // Reaches EnsureMsgf only through ck::Ensure above, so it cannot currently appear as a
-            // frame here. Listed so a future direct call does not silently regress attribution.
+            // Raises no ensure today - it only counts and reports - so it never appears as a frame. Listed so a
+            // later direct ensure cannot regress attribution.
             || InFunctionName.Equals(TEXT("EnsureIfNot_PrematureAssetLoad"), CaseSensitive)
             || InFunctionName.Equals(TEXT("TriggerEnsure"), CaseSensitive);
     }
@@ -84,9 +79,8 @@ namespace ck::ensure
         {
             if (auto* Context = FAngelscriptManager::GetCurrentScriptContext(); Context != nullptr)
             {
-                // Attributing frame 0 unconditionally named CkUtils_Common.as for every script ensure in
-                // the project. Worse than useless: the signature is deduped on this string, so unrelated
-                // failures collapsed into one entry and hid each other.
+                // The ensure signature dedups on this string, so taking frame 0 -- a wrapper -- collapses
+                // every unrelated script failure into one entry where they hide each other.
                 const auto CallstackSize = static_cast<int32>(Context->GetCallstackSize());
                 auto ReportedFrame = 0;
 
@@ -135,15 +129,11 @@ namespace ck::ensure
                 }
             }
 
-            // A StaticJIT-compiled function is entered as native C++ and pushes no AngelScript context,
-            // so the walk above finds nothing and every script-raised ensure reported Script::Unknown --
-            // on the one configuration whose functional parity is least proven. The transpiler does keep
-            // a frame stack (AS_JIT_DEBUG_CALLSTACKS, live in every non-Shipping config) and this
-            // exported accessor reads it, falling back to the context itself.
-            //
-            // It reports the INNERMOST frame, which under the JIT is the ck::Ensure wrapper rather than
-            // its caller, so this recovers a real file and line but not the frame-skipping above. The
-            // engine exposes no skip-count form; doing better needs an engine-side accessor.
+            // A StaticJIT-compiled function is entered as native C++ and pushes no AngelScript context, so
+            // the walk above finds nothing and the ensure reports Script::Unknown. The transpiler's own
+            // frame stack (AS_JIT_DEBUG_CALLSTACKS, non-Shipping only) still has one, but exposes only its
+            // INNERMOST frame -- under the JIT that is the ck::Ensure wrapper, not its caller. Skipping
+            // wrappers here too needs an engine-side skip-count accessor that does not exist.
             if (const auto& ExecutionPosition = FAngelscriptManager::GetAngelscriptExecutionPosition();
                 NOT ExecutionPosition.IsEmpty())
             {
