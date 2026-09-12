@@ -260,13 +260,10 @@ namespace ck::scriptprocessor_driver_generator
         Out += TEXT("    {\n");
         // Batch level, not per-entity: authored ForEachEntity bodies stay free of stat boilerplate.
         //
-        // Named explicitly rather than through the no-arg ctor, which derives "<Class>::<Method>" by
-        // walking the AngelScript context. A StaticJIT-compiled function runs as native C++ and pushes
-        // no context frame, so with the JIT on every one of these scopes reports as "Script::Unknown" --
-        // the profiler stops naming what it is timing, and says nothing about having stopped. The literal
-        // is the string that walk produces: the "<Class>::<Method>" format is pinned by
-        // CkTests/Script/CkProfile/CkAutoTest_Profile_ScopedStat.as, and the class half is the same
-        // DriverName emitted as the class declaration above.
+        // Named explicitly: the no-arg ctor derives "<Class>::<Method>" by walking the AngelScript
+        // context, and a StaticJIT-compiled function runs as native C++ with no context frame, so
+        // every scope would silently report "Script::Unknown". CkAutoTest_Profile_ScopedStat.as pins
+        // the format.
         Out += FString::Printf(TEXT("        auto _CkPerfScope = ck::ScopedStat(\"%s::ForEachBatch\");\n"), *DriverName);
         // Hoisted: batch liveness still resolves once per accessor, although generated calls use
         // the lock-free same-thread fast path. The count cannot change mid-batch by contract.
