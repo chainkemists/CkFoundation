@@ -36,39 +36,26 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 #endif
 #endif
 
-// --------------------------------------------------------------------------------------------------------------------
 // Boot-time report on the AngelScript precompiled-script cache and the StaticJIT transpiled code.
 //
-// The engine computes all of this already and logs a Warning on each rejection path. What it has
-// never had is a CONSUMER - FAngelscriptManager::bStaticJITTranspiledCodeLoaded is assigned and read
-// by nothing - which left three distinct failures indistinguishable from success in a packaged log:
-// a STALE cache (its only validity check is a build-configuration int, so a cache older than the
-// scripts loads silently and runs old code), a cache/binary GUID MISMATCH that discards every
-// transpiled function, and generated code that PREPROCESSED TO NOTHING because each generated file
-// carries the GENERATING exe's own "#if UE_BUILD_<CONFIG>".
+// The engine computes all of this and logs each rejection, but nothing consumes the result, which left
+// three failures indistinguishable from success in a packaged log: a STALE cache (its only validity
+// check is a build-configuration int, so it loads silently and runs old code), a cache/binary GUID
+// MISMATCH that discards every transpiled function, and generated code that PREPROCESSED TO NOTHING
+// because each generated file carries the GENERATING exe's own '#if UE_BUILD_<CONFIG>'.
 //
-// One reporter covers the feature's whole state rather than three log lines at three sites, so the
-// fourth silent mode is covered by construction. Nothing is cached: every value is read through at
-// report time, because a copy of engine state is a mirror that disagrees after the engine changes.
-//
-// Deliberately NOT covered: the transpiled function COUNT and the cache's own generation GUID. Both
-// live on engine-private types that Initialize() clears and deletes before any external module can
-// look, so neither is observable from here. The surviving boolean is the "zero or not" detector all
-// three failures reduce to, and the cache/corpus pairing record belongs to the build pipeline that
-// owns both artifacts, not to a runtime reporter.
-// --------------------------------------------------------------------------------------------------------------------
+// Nothing is cached here: every value is read through at report time, because a copy of engine state is
+// a mirror that disagrees after the engine changes. The transpiled-function COUNT and the cache's
+// generation GUID are deliberately not covered - Initialize() deletes both before any external module
+// can look.
 
 namespace ck_angelscript_precompiled_report
 {
 #if WITH_ANGELSCRIPT_CK
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // MIRROR OF ENGINE POLICY, not of engine state: this reproduces the cache-filename selection in
-    // FAngelscriptManager::Initialize (config-suffixed name first, unsuffixed fallback). A mirror of
-    // policy drifts silently when the engine renames, which tenet 6 forbids leaving unreconciled.
-    // The reconciler is cheap and lives in the output: every probed path is PRINTED, so a drift is
-    // visible in the same log line it would otherwise corrupt.
-    // ----------------------------------------------------------------------------------------------------------------
+    // MIRROR OF ENGINE POLICY, not of engine state: this reproduces FAngelscriptManager::Initialize's
+    // cache-filename selection, which drifts silently if the engine renames. Every probed path is PRINTED,
+    // so the drift is visible in the same log line it would otherwise corrupt.
     auto Get_CandidateCachePaths() -> TArray<FString>
     {
         const auto ScriptRoot = FAngelscriptManager::GetScriptRootDirectory();
@@ -255,25 +242,17 @@ namespace ck_angelscript_precompiled_report
 
 #endif
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Hooked on the ONE delegate that is provably ordered after what we read. AngelScript assigns
-    // bStaticJITTranspiledCodeLoaded at AngelscriptManager.cpp:573 and broadcasts
-    // GetOnInitialCompileFinished from PostInitialize_GameThread at :629, so the value is settled
-    // before we run - on the threaded init path too, where the game thread spin-waits while a worker
-    // runs Initialize_AnyThread and IsInitialized() is already true with the flag still unset.
-    // OnFEngineLoopInitComplete would ALSO work today, but only by an argument about interleaving
-    // rather than a guarantee, and a diagnostic that can read a half-initialized value is exactly the
-    // confidently-wrong report this file exists to prevent.
+    // Hooked on the one delegate provably ordered after what we read: AngelScript assigns the transpiled-code
+    // flag before broadcasting GetOnInitialCompileFinished, including on the threaded init path where
+    // IsInitialized() is already true with the flag unset. OnFEngineLoopInitComplete would also work today,
+    // but only by an argument about interleaving, and a diagnostic that can read a half-initialized value is
+    // the confidently-wrong report this file exists to prevent.
     //
-    // The up-front check is not redundant: a module loaded AFTER that delegate has already broadcast
-    // (late plugin load, editor hot-reload, DLL reload) would subscribe to something that never fires
-    // again and report nothing at all - which is exactly the silent absence this file exists to
-    // remove. GIsRunning is the right predicate for "too late to catch it" rather than for "it has
-    // broadcast": the engine loop only runs long after AngelScript initialization, so reaching here
-    // with it set means everything we read is settled. (bIsInitialCompileFinished is NOT usable for
-    // this - it is set inside InitialCompile, which runs BEFORE the flag we report on is assigned.)
-    // Same guard as CkIO_Utils' blocking-load registrar.
-    // ----------------------------------------------------------------------------------------------------------------
+    // The up-front check is not redundant: a module loaded after that delegate has broadcast (late plugin
+    // load, editor hot-reload) would subscribe to something that never fires again and report nothing at
+    // all. GIsRunning answers 'too late to catch it', not 'it has broadcast'.
+    // bIsInitialCompileFinished is NOT the substitute: it is set inside InitialCompile, which runs BEFORE
+    // the transpiled-code flag this reports on is assigned.
     struct FPrecompiledReportRegistrar
     {
         FPrecompiledReportRegistrar()
