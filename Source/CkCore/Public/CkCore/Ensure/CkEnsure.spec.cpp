@@ -114,8 +114,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCkTest_Ensure_ScriptPlumbingFrames::RunTest(const FString&)
 {
-    // The ck::Ensure family raises the ensure on its caller's behalf, so the site-identity walk steps
-    // past these frames. Naming them instead attributes every script ensure to CkUtils_Common.as.
+    // Weakened, every script-raised ensure is attributed to the ck::Ensure wrapper and dedups to one signature.
     TestTrue(TEXT("ck::Ensure is plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("Ensure")));
     TestTrue(TEXT("ck::EnsureIfNot is plumbing"),
@@ -125,7 +124,6 @@ bool FCkTest_Ensure_ScriptPlumbingFrames::RunTest(const FString&)
     TestTrue(TEXT("ck::TriggerEnsure is plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("TriggerEnsure")));
 
-    // The reason the list is exact rather than a prefix match: these must keep their own attribution.
     TestFalse(TEXT("A gameplay helper whose name begins with Ensure is not plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("EnsureStoreIsOpen")));
     TestFalse(TEXT("A gameplay helper whose name contains Ensure is not plumbing"),
@@ -133,15 +131,12 @@ bool FCkTest_Ensure_ScriptPlumbingFrames::RunTest(const FString&)
     TestFalse(TEXT("An unrelated function is not plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("ForEachBatch")));
 
-    // AngelScript identifiers are case-sensitive; FString's operator== is not. Skipping a frame that is
-    // NOT a wrapper reports the frame above it, which is worse than the bug this walk fixes -- so the
-    // comparison must not treat these as matches.
+    // FString's operator== is case-insensitive; these pin the CaseSensitive flag on both comparisons.
     TestFalse(TEXT("A lowercase homograph of a wrapper is not plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("ensure")));
     TestFalse(TEXT("A differently-cased TriggerEnsure is not plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("ck"), TEXT("triggerEnsure")));
 
-    // Same names outside the ck namespace belong to whoever declared them.
     TestFalse(TEXT("A wrapper name in another namespace is not plumbing"),
         ck::ensure::Get_IsEnsurePlumbingFunction_ForTesting(TEXT("bb"), TEXT("Ensure")));
     TestFalse(TEXT("A wrapper name at global scope is not plumbing"),
