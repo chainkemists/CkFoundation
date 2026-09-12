@@ -8,7 +8,6 @@
 
 #include <CkCore/AngelScript/CkAngelScript_TypeValidation.h>
 
-// Get_InternedBindName takes the std::string ck::Format_ANSI produces and interns it in a node-stable pool.
 #include <string>
 #include <unordered_set>
 
@@ -247,26 +246,20 @@ public:
     RegisterPropertyFunction(
         const FPropertyFunction& InPropertyFunc) -> void;
 
-    // BindNativeMethod stores this pointer RAW (FScriptNativeMethod::Name) and only dereferences it
-    // much later - when the StaticJIT transpiler emits C++, in a separate pass. A local std::string
-    // from ck::Format_ANSI is long dead by then, so the transpiler reads freed memory and emits
-    // either an invalid identifier or, where the allocation has been reused by the NEXT property's
-    // name, a real-but-wrong method that can compile and call the wrong thing.
-    //
-    // The engine guards the FBindString path with ToCString_EnsureConstant(); the raw
-    // BindNativeMethod overload has no such guard, so the lifetime is the caller's to get right.
-    // Interning is the fix: the pointer must outlive the process, because generation happens at an
-    // arbitrary later point. Bind registration is game-thread-only at startup, so no
-    // synchronisation is needed, and the pool is bounded by the number of DISTINCT property names.
+    // BindNativeMethod stores this pointer RAW (FScriptNativeMethod::Name) and dereferences it much
+    // later, in the separate pass where the StaticJIT transpiler emits C++. A local std::string is
+    // long dead by then, and where its allocation has been reused by the NEXT property's name the
+    // transpiler emits a real-but-wrong method that compiles and calls the wrong thing. The engine
+    // guards its FBindString path with ToCString_EnsureConstant(); this overload does not, so the
+    // lifetime is the caller's. Registration is game-thread-only at startup and the pool is bounded
+    // by the distinct property names, so it needs neither a lock nor a sweep.
     static auto
     Get_InternedBindName(
         const std::string& InName) -> const ANSICHAR*
     {
-        // std::unordered_set is node-based: an element's storage never moves on rehash, so the c_str()
-        // handed out stays valid for the life of the pool. The comparison is exact and byte-wise, which
-        // is load-bearing: AngelScript identifiers are case-sensitive, and an FString-keyed pool (whose
-        // hash and equality both fold case) would intern Get_foo and Get_Foo to ONE pointer - re-creating
-        // the real-but-wrong-method class this function exists to kill.
+        // Node-based, so an element's storage never moves on rehash and the c_str() handed out stays
+        // valid. Exact and byte-wise, so Get_foo and Get_Foo stay distinct - an FString-keyed pool
+        // folds case in both hash and equality and would intern them to ONE pointer.
         static std::unordered_set<std::string> Pool;
 
         return Pool.insert(InName).first->c_str();
