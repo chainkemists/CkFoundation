@@ -1,3 +1,11 @@
+# GOAP Inspector Gateway authored composition checkpoint (2026-09-12)
+
+The production `SCkGoapDebugger_InspectorGateway` now loads `GoapInspectorGateway.ui.html/.css` and gives authored markup ownership of its vertical scroll, section order, spacing surface, and six stable section ports: header, action sets, active chain, leaf action, plan preview, and empty state. Existing production C++ continues to own snapshot collection, display-set selection, actions, and every native row/card widget. Startup remains atomic with the former native column as fallback; compatible reload retains the view, rejected missing-port reload retains the last admitted tree, and destruction clears the entity, native ports, root content, and authored view.
+
+Final incremental build `scratch/yoga-goap-gateway-build-final2-20260912.log` succeeded (SHA256 `CEEF98F48EB93D473C3D52DA4D2035E78277AC690A98D50BBBC2C94F1B53E54F`). Fresh-discovery real-RHI `Ck.UiAuthoring.GoapDebugger.InspectorGateway.AuthoredComposition` in `scratch/yoga-goap-gateway-test-final-20260912.log` passed 1/1 in 33 seconds with zero failed/skipped/contaminated (SHA256 `1ABF462C5423D3C8DF02E3F0E7FA42A6ADA123B8DD21D08555C330E8D67BC242`). The first run exposed only a brittle test helper that could not see text nested in `SCkDebug_SelectableLabel`; the final fixture directly verifies the authored empty-state port instead.
+
+This is a partial Inspector migration, not closure of the Inspector acceptance row: the internal header, action-set list, active-chain, leaf-action, and plan-preview presentation remains native and must still move to authored data-bound templates. Other debugger inspectors and the all-debugger teardown matrix also remain open.
+
 # AI stable outer shell authored and verified (2026-09-12)
 
 The production `SCkAiDebuggerWindow` now authors all seven stable splitter boundaries and the ten-pane composition in `AiDebuggerShell.ui.html/.css`. The existing production roster, selected identity, behavior controls, debugger links, decision-to-motion strip, GOAP and State Machine topology, current evidence, event log and spatial viewport remain authoritative C++ native ports. The roster retains its independently authored table. The former native layout remains only as atomic startup fallback.
