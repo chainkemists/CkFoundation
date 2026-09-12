@@ -106,11 +106,14 @@ shorthand lengths. Padding expansion is limited to four source components and
 | `horizontal-align` | `fill`, `left`, `center`, `right` |
 | `vertical-align` | `fill`, `top`, `center`, `bottom` |
 | `font-size`, `font-weight` | Text/button only; font size 1–512 in Slate units, `normal` or `bold` |
+| `font-family` | Text, button, menu-button and tabs only; `monospace` selects the native Mono face, `sans-serif` selects Regular. Omitted keeps the base face; bold takes precedence. Arbitrary font names, files and URLs are unsupported. |
 | `text-wrap` | Text and ordinary buttons; `wrap` (default) or `nowrap`. Controls soft wrapping; preserves explicit line breaks |
 | `overflow-wrap` | Text and ordinary buttons; `normal` (default) or `anywhere`. Anywhere permits character wrapping for long unbroken identifiers; `text-wrap: nowrap` still disables wrapping |
 | `text-overflow` | Text and ordinary buttons; `clip` (default) or `ellipsis`. Ellipsis requires `text-wrap: nowrap`; nowrap text clips to its allocated bounds |
 | `color` | Text/button only; `#RRGGBB` or `#RRGGBBAA` in sRGB |
 | `background-color` | Container only; same color syntax |
+| `border-color` | Background-capable container; `#RRGGBB` or `#RRGGBBAA` in sRGB |
+| `border-width`, `border-radius` | Background-capable container; nonnegative length, optional `px`. A border color without a width defaults to 1; legacy background-only surfaces retain the 6-unit radius |
 
 Alignment, growth, and sizing describe a child node in its parent. Region roots
 fill their native mounts; putting these slot properties on a region root is rejected.
@@ -122,6 +125,15 @@ and virtualization. Appearance inside a native binding remains its responsibilit
 ## Native integration and ownership
 
 `FCkUiView::Create` accepts named native widgets, actions, tokens, a base font, and optional typed `FDataBindings`.
+
+Hosts can refresh their CSS token set with `TryReloadWithTokens(markup, stylesheet, tokens, source)`
+or `PollFiles(tokens)`. Candidate tokens and the document publish together only after the complete
+reload succeeds. A failed update preserves the applied tokens, revision and mounted presentation.
+File polling compares the complete source pair and candidate token set, including failed attempts;
+an identical failed attempt is not repeated until source or tokens change. `FReloadRequest::Tokens`
+allows the same transaction across a reload batch. These APIs preserve compatible retained controls
+through the normal reload path; they do not change the base font or restyle native/custom inputs
+whose adapters do not support that style. Live font sizes belong on supported authored text nodes.
 Install `GetRegion(name)` mounts in the owner, then call `ReloadFiles` or `TryReload`.
 The owner schedules `PollFiles` on the game thread; the runtime module has no editor
 file-watcher dependency. Texture Health stages the source files as loose runtime
@@ -405,7 +417,16 @@ retain their normal detached, side-effect-free construction contract.
 
 Column styles control header text and width: `flex-grow` selects a proportional
 column; a fixed authored width selects a fixed column. Sort fields currently support
-Text, Number and Bool, with stable key ordering for equal values. The native list,
+Text, Number, Integer and Bool, with stable key ordering for equal values. Table-level
+visual properties style native table chrome without replacing its input semantics:
+`-ck-table-header-background`, `-ck-table-sort-indicator-color`, `-ck-table-header-padding-x/y`,
+`-ck-table-row-background`, `-ck-table-row-hover-background`,
+`-ck-table-row-selected-background`, `-ck-table-row-separator-color`, and
+`-ck-table-row-separator-width`. Colors use the standard hex syntax and lengths are
+finite and nonnegative. Omitting every `-ck-table-*` property keeps the native default
+header and row styles. `-ck-table-sort-indicator-color` replaces native sortable-column
+arrows with authored `↕`, `↑`, and `↓` glyphs for inactive, ascending, and descending
+states; omitting it preserves native arrows. The native list,
 header, selection key, and scroll offset survive a valid structural table reload;
 the new authored header and cells replace only after preparation succeeds. Invalid
 schema or cell markup rejects the complete document even when the collection has no
@@ -532,9 +553,13 @@ Bind a `FCkUiTreeCollection` through `FDataBindings.Trees`, and a selection dele
 
 The native STreeView owns indentation, expanders, keyboard navigation and virtualization. Row field bindings use the same types as table cells. Editable/retained custom row controls and multicolumn trees are not yet supported.
 
+Tree row presentation is opt-in and only valid on `<tree>`: `-ck-tree-row-background`, `-ck-tree-row-hover-background`, `-ck-tree-row-selected-background`, `-ck-tree-row-selected-accent-color`, and `-ck-tree-row-selected-accent-width`. Colors use the normal CSS color grammar; accent width is a finite nonnegative CSS length. The accent is drawn only when both accent declarations are present and the width is nonzero; it is a hit-test-invisible selected-row decoration, while native `STreeView` continues to own selection and input.
+
 `FCkUiTreeNodeData` contains Key, optional ParentKey and Fields. Unset parent means root; an empty supplied parent is invalid. Publish using TrySetNodes: fields, roots, child adjacency and revision change together, then one OnChanged fires. Duplicate keys, absent parents, cycles, depth over256, malformed fields or excess limits reject without publication. Nodes retain shared identity by key. Limits match flat collections except the additional depth limit; roots and siblings preserve input order.
 
 `GetTree(id)` exposes SCkUiTree. TrySelectKey and TrySetExpanded operate on stable keys. User expansion survives filtering and valid reload. Filtering includes text matches plus ancestors and temporarily expands matching paths; clearing the filter restores user expansion. A selected node removed by filtering or model publication clears selection once. GetVisibleNodeCount reports all nodes in the filtered projection, including collapsed descendants; GetLiveRowCount reports realized native rows.
+
+Tree declarations remain selectable by default. `<tree selectable="false">` switches the native tree to `ESelectionMode::None`; it has no selected key, never invokes a selection callback, and rejects `selection-action`. `<tree projection-field="visible">` requires a required Bool field in the bound tree schema and is mutually exclusive with `filter-bind`. It retains the full collection and stable node keys, rendering only true nodes whose ancestors are also true; it neither expands matching paths nor prunes user expansion. `<tree expand-on-row-click="true">` makes an unmodified left click on a parent row toggle its expansion after native child controls have declined the event. Child rows, modified clicks, right clicks, and the native expander retain their normal behavior.
 
 First focused evidence:47 authoring tests pass in UiTree-Editor.log. Resource Inspector navigation, adversarial lazy-factory mutation tests, multicolumn trees and debugger migrations remain pending in the campaign ledger.
 
@@ -577,6 +602,14 @@ or after it is released. Editable controls must check CanDispatchEvents before
 changing local draft state as well: publication may cause synthetic focus callbacks.
 Prepared Commit only swaps configuration; it must not synthesize edits or clear a
 draft. Consumers should capture model owners weakly.
+
+Malformed committed text may expose an inline error hint through `error-bind`.
+That hint must remain local to the retained editor and must not depend on a
+world-tick-driven popup/menu path: in PIE, popup throttling can prevent the
+consumer's next request from draining while the error surface is open. The
+shared inline hint path preserves the malformed draft/error while allowing later
+field requests to dispatch; this behavior requires focused native and PIE
+regression coverage.
 
 Text input does not enable editable virtualized table/tree cells. Undo-history and
 text-selection preservation across reload, full navigation/IME/platform coverage,
@@ -637,6 +670,11 @@ the model. Templates use `number-changed` and `number-committed` parameter types
 `kind` defaults to `float`; `integer` rounds committed proposals. Optional finite
 `min`/`max` constrain commits. Integer intervals must contain an integer, and the
 committed result stays inside the bounds even when the bounds are fractional.
+Optional literal `fractional-digits` is a finite integer from `0` through `6`.
+It fixes float presentation to that many digits after the decimal point; omitting
+it preserves round-trip `%.9g` formatting. Integer inputs accept only omitted or
+`fractional-digits="0"`. Formatting is presentation-only: it neither rounds nor
+writes the bound model value until the user explicitly commits an edit.
 Parsing consumes the entire trimmed ASCII decimal/exponent string. Invalid and
 nonfinite numbers do not reach consumer callbacks. The model remains authoritative:
 a consumer can reject a commit by leaving its value unchanged and can supply
@@ -653,6 +691,33 @@ or mixed values, or localized numeric parsing. Those remain explicit campaign
 capabilities; do not encode missing values using NaN. Native text undo/selection
 retention across focus-path refresh also remains the shared editor's open gate.
 
+
+## Exact int32 entry
+
+Register `FCkUiInt32Input::Register(Registry)` for full-range integer model values.
+The debugger shared registry also installs this adapter atomically.
+
+```html
+<int32-input id="near-budget" value-bind="near-budget"
+             committed="set-near-budget" min="0" />
+```
+
+The value reads `FDataBindings.Integer` (`TAttribute<int32>`); committed resolves
+`FCkUiOnIntegerCommitted(int32, ETextCommit::Type)` in `IntegerCommitted`.
+Unlike float `number-input` with integer kind, this transport preserves every
+int32 value, including adjacent integers above 16,777,216. Optional min/max
+are exact decimal text literals within int32 range, defaulting to its full range.
+Invalid bounds reject configuration or reload before publication.
+
+Drafts accept finite ASCII decimal/exponent numbers. A commit rounds in double,
+clamps to the validated integer bounds, then converts to int32. Malformed,
+nonfinite, or parser-overflow drafts do not publish. The consumer remains
+responsible for domain validation and effective-value request policy.
+
+The adapter composes retained TextInput for draft, focus, Escape, validation
+presentation and reload behavior. Placeholder, enabled, read-only and error
+bindings follow the existing number-input contract. No public changed event or
+float conversion participates in integer transport.
 
 ## Numeric interaction events for custom controls
 
@@ -897,7 +962,9 @@ Top-level menu declarations describe commands independently of layout. A retaine
 
 A menu entry uses label-bind for localized model text, enabled-bind/visible-bind for booleans, and tooltip or tooltip-bind for help text. Separators have stable keys; a submenu references another menu declaration. Missing references, cycles and expansion beyond the document limits reject before publication. View validation checks all declared action and value bindings before any widget factories run.
 
-An accepted reload dismisses the owned menu and retains its button. A rejected reload preserves the open menu and current view. Removing the owner or hiding its tab closes owned transient UI. This first menu-button increment does not yet supply authored table/tree context-menu targeting; that follows with a stable row-key action contract. Native menu styling, controller/accessibility and packaged acceptance require their own evidence. See the campaign PROGRESS.md for verified versus pending behavior.
+An accepted reload dismisses the owned menu and retains its button. A rejected reload preserves the open menu and current view. Removing the owner or hiding its tab closes owned transient UI. This first menu-button increment does not yet supply authored table/tree context-menu targeting; that follows with a stable row-key action contract. Controller/accessibility and packaged acceptance require their own evidence. See the campaign PROGRESS.md for verified versus pending behavior.
+
+Menu-button presentation is opt-in and only valid on `<menu-button>`: `-ck-menu-button-background`, `-ck-menu-button-border-color`, hover/pressed/disabled `-background` and `-border-color` variants, `-ck-menu-button-radius`, `-ck-menu-button-outline-width`, and `-ck-menu-button-padding-x/y`. Colors use the normal CSS color grammar and lengths are finite and nonnegative. `-ck-menu-button-arrow` accepts `visible` (default) or `hidden`. Compatible reload retains the native anchor, updates its owned style in place, and still defers dismissal of an open popup until the next Slate tick.
 ### Row context menus
 
 Tables and trees can reference the same menu declarations used by menu buttons:
@@ -923,6 +990,8 @@ Use the literal boolean attribute `selectable="false"` on a table to present row
 An accepted reload that disables selection keeps the native table/list identity and clears selection without a selection callback. Nonempty `TrySelectKey` requests are rejected while selection is disabled. Malformed boolean values reject the document before replacing accepted state.
 
 ## Localized headers and search hints
+
+`letter-spacing` accepts CSS `em` tracking (or unitless `0`) on built-in text-style nodes. Values map to Slate's one-thousandth-em tracking and are bounded from `-1em` through `10em`; custom widgets do not inherit it.
 
 Use `label-bind` on `table-column` and `placeholder-bind` on `search` to read live `FText` values from the view's `Data.Text` bindings. These preserve localization identity; changing the bound value updates the native text without replacing the table or search control.
 
@@ -988,7 +1057,9 @@ Register `materials` in `FDataBindings.Collections` and `toggle-material` in
 `FDataBindings.ItemActions`. The item action receives the record key; the consumer
 publishes the updated expansion field through the collection API. The renderer
 validates field references against the schema even when the collection is empty.
-Custom widget typed properties use the same `property-field="field"` syntax.
+Custom widget typed properties use the same `property-field="field"` syntax. A `FloatSeriesBinding` property can use `samples-field="samples"` when the collection schema declares a required `FloatSeries` field. The record keeps only a weak handle to the host-owned `FCkUiFloatSeries`: publishing the same series pointer preserves record revision, sample mutations remain live, replacing the pointer revises the record, and an expired required series rejects the whole collection update.
+
+Within a repeat item, a custom widget may use `item-action="handler"` only when its schema declares the canonical `Action` property named `action`. It receives the same stable-key callback as a button, including record-revision, active-scope, reload, and owner-release gates. Other custom action names and ordinary `action` plus `item-action` are rejected before factories run.
 
 Value changes read through live attributes. Structural changes retain child views
 for surviving record identities. Removing and reinserting a key creates a new
@@ -1055,3 +1126,33 @@ contract for its clear-pinned-snapshots confirmation through the qualified
 `inspector-dialog/content` paths. The shared authoring gate passes 114/114 (R8) and Resource Inspector passes 10/10 (R5). These establish the focused native contract, not whole-campaign or packaged/controller-session acceptance.
 
 Custom adapters receive `ReleaseSlotPointerCaptures(slotName)` for runtime or teardown use. It releases only the explicit host user's current captures beneath that slot, using routed pointer indices and retained capture reports. Do not call it from a factory, PrepareReload, or Commit. Closing releases body capture; opening releases background capture. Capture-loss callbacks are reentrant and may redirect ownership.
+## Color picker
+
+Register `FCkUiColorPicker::Register(Registry)` and provide an explicit nonnegative
+host `FDataBindings::SlateUserIndex`. The retained `color-picker` owns a native
+swatch/button and an independent `SColorPicker` popup in an owned native-child
+`SWindow`; authored rows own labels, spacing, and section layout. This avoids both
+the engine's global color-picker singleton and `IMenu` focus-loss dismissal after
+native hexadecimal Enter.
+
+```html
+<row id="accent-row">
+  <text id="accent-label">Accent</text>
+  <color-picker id="accent" value-bind="accent-color" committed="set-accent"
+                alpha="false" enabled-bind="can-edit" read-only-bind="locked" />
+</row>
+```
+
+`value` is a required `ColorBinding`; `committed` is a required `ColorCommitted`
+callback supplied through `FDataBindings::ColorCommitted` as
+`FCkUiOnColorCommitted(FLinearColor)`. Typed templates forward it with the
+`color-committed` parameter kind. Optional `enabled` and `read-only` are boolean
+bindings; optional literal `alpha` defaults to false. Non-finite commits are
+rejected, finite channels are clamped to [0,1], and disabled alpha is forced to 1.
+The native picker commits on mouse-up. Model persistence belongs to the callback.
+
+Compatible reload keeps the retained swatch and open picker; a retained ID cannot
+change its value-binding name, host user, or alpha policy. Reload preparation and
+publication must not emit consumer callbacks. Hidden/removed ancestry and owner
+release retire only this component's popup; callbacks from a retired opening are
+inert. Full controller and packaged acceptance remains a separate campaign gate.

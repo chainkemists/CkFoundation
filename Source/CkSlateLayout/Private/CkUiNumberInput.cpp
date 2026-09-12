@@ -20,6 +20,7 @@ namespace ck_ui_number_input
         FString Kind;
         float Min = -TNumericLimits<float>::Max();
         float Max = TNumericLimits<float>::Max();
+        int32 FractionalDigits = -1;
     };
 
     class FNumberInput final : public ICkUiRetainedWidget, public TSharedFromThis<FNumberInput>
@@ -45,6 +46,21 @@ namespace ck_ui_number_input
         virtual auto GetWidget() const -> TSharedRef<SWidget> override
         {
             return _Inner->GetWidget();
+        }
+
+        virtual auto GetFocusTransferTarget() const -> TSharedPtr<SWidget> override
+        {
+            return _Inner.IsValid() ? _Inner->GetFocusTransferTarget() : nullptr;
+        }
+
+        virtual void BeginFocusTransfer() noexcept override
+        {
+            if (_Inner.IsValid()) { _Inner->BeginFocusTransfer(); }
+        }
+
+        virtual void EndFocusTransfer() noexcept override
+        {
+            if (_Inner.IsValid()) { _Inner->EndFocusTransfer(); }
         }
 
         virtual auto PrepareReload(const FCkUiCustomWidgetArguments& InArguments, FString& OutFailure) const -> TUniquePtr<ICkUiPreparedWidgetUpdate> override;
@@ -150,9 +166,10 @@ namespace ck_ui_number_input
         auto GetDisplayText() const -> FText
         {
             const float Value = _Configuration.Value.Get(0.0f);
-            return FMath::IsFinite(Value)
-                ? FText::FromString(FString::Printf(TEXT("%.9g"), static_cast<double>(Value)))
-                : FText::GetEmpty();
+            if (!FMath::IsFinite(Value)) { return FText::GetEmpty(); }
+            return FText::FromString(_Configuration.FractionalDigits >= 0
+                ? FString::Printf(TEXT("%.*f"), _Configuration.FractionalDigits, static_cast<double>(Value))
+                : FString::Printf(TEXT("%.9g"), static_cast<double>(Value)));
         }
 
         auto GetPresentationError() const -> FText
@@ -255,6 +272,19 @@ namespace ck_ui_number_input
             OutFailure = TEXT("Number input configuration is invalid.");
             return false;
         }
+
+        if (const float* FractionalDigits = InArguments.NumberProperties.Find(TEXT("fractional-digits")); FractionalDigits != nullptr)
+        {
+            const bool IsFiniteDigitsValue = FMath::IsFinite(*FractionalDigits);
+            const bool IsWholeDigitsValue = IsFiniteDigitsValue && FMath::FloorToFloat(*FractionalDigits) == *FractionalDigits;
+            if (!IsFiniteDigitsValue || !IsWholeDigitsValue || *FractionalDigits < 0.0f || *FractionalDigits > 6.0f
+                || (IsInteger && *FractionalDigits != 0.0f))
+            {
+                OutFailure = TEXT("Number input fractional-digits must be an integer from 0 to 6; integer inputs only allow 0.");
+                return false;
+            }
+            OutConfiguration.FractionalDigits = static_cast<int32>(*FractionalDigits);
+        }
         return true;
     }
 
@@ -294,6 +324,7 @@ auto FCkUiNumberInput::Register(FCkUiWidgetRegistry& InRegistry) -> FCkUiLoadRes
         {TEXT("kind"), ECkUiCustomPropertyKind::Text, false},
         {TEXT("min"), ECkUiCustomPropertyKind::Number, false},
         {TEXT("max"), ECkUiCustomPropertyKind::Number, false},
+        {TEXT("fractional-digits"), ECkUiCustomPropertyKind::Number, false},
         {TEXT("placeholder"), ECkUiCustomPropertyKind::Text, false},
         {TEXT("enabled"), ECkUiCustomPropertyKind::BoolBinding, false},
         {TEXT("read-only"), ECkUiCustomPropertyKind::BoolBinding, false},

@@ -3,7 +3,9 @@
 #include "CkUiSelection.h"
 #include "CkSlateLayout/CkUiContextMenu.h"
 #include "CkSlateLayout/SCkUiSurface.h"
+#include "Brushes/SlateRoundedBoxBrush.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Rendering/DrawElements.h"
 #include "Styling/CoreStyle.h"
 
 #include "Widgets/Layout/SBox.h"
@@ -18,11 +20,15 @@ namespace ck_ui_tree
     struct FConfiguration
     {
         FCkUiNode CellRoot;
+        FString ProjectionField;
+        bool Selectable = true;
+        bool ExpandOnRowClick = false;
         float RowHeight = 24.0f;
         TAttribute<FText> Filter;
         SCkUiTree::FCellFactory Factory;
         FOnCkUiTreeSelectionChanged OnSelectionChanged;
         FOnCkUiContextMenuOpening OnAuthoredContextMenu;
+        FCkUiTreeVisualStyle VisualStyle;
     };
 
     class FTree final : public STreeView<SCkUiTree::FNode>
@@ -30,6 +36,7 @@ namespace ck_ui_tree
     public:
         TFunction<void(SCkUiTree::FNode, const FPointerEvent&)> OnItemRightClicked;
         TFunction<bool(const FKeyEvent&)> OnContextMenuKey;
+        FOnKeyDown OnHostKeyDown;
 
         virtual void Private_OnItemRightClicked(SCkUiTree::FNode InNode, const FPointerEvent& InMouseEvent) override
         {
@@ -39,8 +46,13 @@ namespace ck_ui_tree
 
         virtual FReply OnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override
         {
-            return OnContextMenuKey && OnContextMenuKey(InKeyEvent) ? FReply::Handled()
-                : STreeView<SCkUiTree::FNode>::OnKeyDown(InGeometry, InKeyEvent);
+            if (OnContextMenuKey && OnContextMenuKey(InKeyEvent)) { return FReply::Handled(); }
+            if (OnHostKeyDown.IsBound())
+            {
+                const FReply HostReply = OnHostKeyDown.Execute(InGeometry, InKeyEvent);
+                if (HostReply.IsEventHandled()) { return HostReply; }
+            }
+            return STreeView<SCkUiTree::FNode>::OnKeyDown(InGeometry, InKeyEvent);
         }
 
         void OpenLegacyContextMenu(const FPointerEvent& InMouseEvent) { OnRightMouseButtonUp(InMouseEvent); }
@@ -54,6 +66,7 @@ struct SCkUiTree::FImpl final : public TSharedFromThis<FImpl>
 
     TSharedPtr<FCkUiTreeCollection> Collection;
     FSlateFontInfo BaseFont;
+    FTableRowStyle RowStyle;
     TSharedPtr<ck_ui_tree::FTree> Tree;
     TSharedPtr<FCkUiContextMenuHost> ContextMenu = MakeShared<FCkUiContextMenuHost>();
     TArray<FNode> FilteredRoots;
@@ -202,6 +215,31 @@ struct SCkUiTree::FImpl final : public TSharedFromThis<FImpl>
         return false;
     }
 
+    auto PassesProjection(const FNode& InNode) const -> bool
+    {
+        if (Configuration.ProjectionField.IsEmpty()) { return true; }
+        const FCkUiFieldValue* Value = InNode->FindField(Configuration.ProjectionField);
+        return Value != nullptr && Value->Kind == ECkUiFieldKind::Bool && Value->Bool;
+    }
+
+    auto CanToggleExpansionFromRow(const FNode& InNode, const FPointerEvent& InMouseEvent) const -> bool
+    {
+        return Configuration.ExpandOnRowClick && IsVisibleNode(InNode)
+            && InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton
+            && !InMouseEvent.IsControlDown() && !InMouseEvent.IsShiftDown()
+            && !InMouseEvent.IsAltDown() && !InMouseEvent.IsCommandDown()
+            && Collection->GetChildren(InNode->GetKey()).Num() > 0;
+    }
+
+    void ToggleExpansionFromRow(const FNode& InNode)
+    {
+        if (!Tree.IsValid()) { return; }
+        const bool bExpand = !Tree->IsItemExpanded(InNode);
+        if (bExpand) { UserExpandedKeys.Add(InNode->GetKey()); }
+        else { UserExpandedKeys.Remove(InNode->GetKey()); }
+        ApplyExpansion(InNode, bExpand);
+    }
+
     void Notify(TOptional<FString> InKey, const ESelectInfo::Type InInfo)
     {
         if (!Configuration.OnSelectionChanged.IsBound() || bNotifying) { return; }
@@ -227,7 +265,22 @@ struct SCkUiTree::FImpl final : public TSharedFromThis<FImpl>
         AppliedFilter = Configuration.Filter.Get(FText::GetEmpty()).ToString();
 
         auto NextKeys = TSet<FString>{};
-        if (AppliedFilter.IsEmpty())
+        if (!Configuration.ProjectionField.IsEmpty())
+        {
+            for (const FNode& Node : Collection->GetNodes())
+            {
+                if (!Node.IsValid() || !PassesProjection(Node)) { continue; }
+                bool bAncestorsPass = true;
+                for (FNode Current = Node; Current.IsValid(); )
+                {
+                    if (!PassesProjection(Current)) { bAncestorsPass = false; break; }
+                    const TOptional<FString>& Parent = Current->GetParentKey();
+                    Current = Parent.IsSet() ? Collection->FindNode(Parent.GetValue()) : FNode{};
+                }
+                if (bAncestorsPass) { NextKeys.Add(Node->GetKey()); }
+            }
+        }
+        else if (AppliedFilter.IsEmpty())
         {
             for (const FNode& Node : Collection->GetNodes()) { if (Node.IsValid()) { NextKeys.Add(Node->GetKey()); } }
         }
@@ -294,6 +347,7 @@ struct SCkUiTree::FImpl final : public TSharedFromThis<FImpl>
     void OnSelectionChanged(FNode InNode, const ESelectInfo::Type InInfo)
     {
         const TSharedPtr<FImpl> KeepAlive = AsShared();
+        if (!Configuration.Selectable) { return; }
         if (InInfo == ESelectInfo::Direct) { return; }
         if (!InNode.IsValid())
         {
@@ -332,8 +386,9 @@ public:
         _Node = InArgs._Node;
         _Impl = InArgs._Impl;
         SAssignNew(_CellBox, SBox).Clipping(EWidgetClipping::ClipToBounds);
-        STableRow<SCkUiTree::FNode>::Construct(STableRow<SCkUiTree::FNode>::FArguments().Padding(FMargin(0.0f)).ShowSelection(true)
-            [_CellBox.ToSharedRef()], InOwner);
+        auto Arguments = STableRow<SCkUiTree::FNode>::FArguments().Padding(FMargin(0.0f)).ShowSelection(true);
+        if (const TSharedPtr<FImpl> Impl = _Impl.Pin()) { Arguments.Style(&Impl->RowStyle); }
+        STableRow<SCkUiTree::FNode>::Construct(Arguments[_CellBox.ToSharedRef()], InOwner);
         SignalSelectionMode = ETableRowSignalSelectionMode::Instantaneous;
         if (const TSharedPtr<FImpl> Impl = _Impl.Pin()) { Impl->LiveRows.Add(StaticCastSharedRef<FRow>(AsShared())); }
         if (const TSharedPtr<FImpl> Impl = _Impl.Pin())
@@ -341,6 +396,32 @@ public:
             _CellBox->SetHeightOverride(Impl->Configuration.RowHeight);
             _CellBox->SetContent(Impl->GetCell(_Node, _Cell));
         }
+    }
+
+    virtual int32 OnPaint(const FPaintArgs& Args, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+        FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle,
+        const bool bParentEnabled) const override
+    {
+        const int32 PaintedLayer = STableRow<SCkUiTree::FNode>::OnPaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
+        const TSharedPtr<FImpl> Impl = _Impl.Pin();
+        if (!Impl.IsValid() || !IsItemSelected() || !Impl->Configuration.VisualStyle.SelectedAccentColor.IsSet() || !Impl->Configuration.VisualStyle.SelectedAccentWidth.IsSet()) { return PaintedLayer; }
+        const float Width = Impl->Configuration.VisualStyle.SelectedAccentWidth.GetValue();
+        if (Width <= 0.0f) { return PaintedLayer; }
+        FSlateDrawElement::MakeBox(OutDrawElements, PaintedLayer + 1,
+            AllottedGeometry.ToPaintGeometry(FVector2f{Width, AllottedGeometry.GetLocalSize().Y}, FSlateLayoutTransform{}),
+            FCoreStyle::Get().GetBrush(TEXT("WhiteBrush")), ESlateDrawEffect::None,
+            Impl->Configuration.VisualStyle.SelectedAccentColor.GetValue());
+        return PaintedLayer + 1;
+    }
+
+    virtual FReply OnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override
+    {
+        if (const TSharedPtr<FImpl> Impl = _Impl.Pin(); Impl.IsValid() && Impl->CanToggleExpansionFromRow(_Node, InMouseEvent))
+        {
+            Impl->ToggleExpansionFromRow(_Node);
+            return FReply::Handled();
+        }
+        return STableRow<SCkUiTree::FNode>::OnMouseButtonDown(InGeometry, InMouseEvent);
     }
 
     auto GetNode() const -> SCkUiTree::FNode { return _Node; }
@@ -368,11 +449,39 @@ void SCkUiTree::FImpl::Commit(ck_ui_tree::FConfiguration&& InConfiguration,
 {
     const TSharedPtr<FImpl> KeepAlive = AsShared();
     Configuration = MoveTemp(InConfiguration);
+    RowStyle = FCoreStyle::Get().GetWidgetStyle<FTableRowStyle>(TEXT("TableView.Row"));
+    const FCkUiTreeVisualStyle& VisualStyle = Configuration.VisualStyle;
+    if (VisualStyle.RowBackground.IsSet())
+    {
+        const FSlateRoundedBoxBrush Brush{VisualStyle.RowBackground.GetValue(), 0.0f};
+        RowStyle.SetEvenRowBackgroundBrush(Brush).SetOddRowBackgroundBrush(Brush);
+    }
+    if (VisualStyle.RowHoverBackground.IsSet())
+    {
+        const FSlateRoundedBoxBrush Brush{VisualStyle.RowHoverBackground.GetValue(), 0.0f};
+        RowStyle.SetEvenRowBackgroundHoveredBrush(Brush).SetOddRowBackgroundHoveredBrush(Brush);
+    }
+    if (VisualStyle.RowSelectedBackground.IsSet())
+    {
+        const FSlateRoundedBoxBrush Brush{VisualStyle.RowSelectedBackground.GetValue(), 0.0f};
+        RowStyle.SetActiveBrush(Brush).SetActiveHoveredBrush(Brush).SetInactiveBrush(Brush).SetInactiveHoveredBrush(Brush);
+    }
+    if (!Configuration.Selectable)
+    {
+        SelectedKey.Reset();
+        // Native ClearSelection returns early in None mode, so clear before changing modes.
+        Tree->ClearSelection();
+    }
+    Tree->SetSelectionMode(Configuration.Selectable ? ESelectionMode::Single : ESelectionMode::None);
     auto PreviousCells = TArray<TSharedPtr<FCkUiView>>{};
     for (TPair<TSharedPtr<FRow>, TSharedPtr<FCkUiView>>& Pair : InCells)
     { if (Pair.Key.IsValid()) { PreviousCells.Add(Pair.Key->ReplaceCell(MoveTemp(Pair.Value), Configuration.RowHeight)); } }
     bProjectionDirty = true;
-    if (Tree.IsValid()) { Tree->RequestTreeRefresh(); }
+    if (Tree.IsValid())
+    {
+        Tree->RequestTreeRefresh();
+        Tree->Invalidate(EInvalidateWidgetReason::PaintAndVolatility);
+    }
 }
 
 class SCkUiTree::FImpl::FPreparedUpdate final : public ICkUiPreparedWidgetUpdate
@@ -396,6 +505,7 @@ void SCkUiTree::Construct(const FArguments& InArgs)
     _Impl = MakeShared<FImpl>();
     _Impl->Collection = InArgs._Collection;
     _Impl->BaseFont = InArgs._BaseFont.Size > 0.0f ? InArgs._BaseFont : FCoreStyle::GetDefaultFontStyle(TEXT("Regular"), 10);
+    _Impl->RowStyle = FCoreStyle::Get().GetWidgetStyle<FTableRowStyle>(TEXT("TableView.Row"));
     if (!_Impl->Collection.IsValid())
     {
         _Impl->LastCellError = TEXT("tree requires a collection");
@@ -432,6 +542,11 @@ void SCkUiTree::Construct(const FArguments& InArgs)
 
 SCkUiTree::~SCkUiTree() = default;
 
+void SCkUiTree::SetHostKeyDownHandler(FOnKeyDown InHandler)
+{
+    if (_Impl.IsValid() && _Impl->Tree.IsValid()) { _Impl->Tree->OnHostKeyDown = MoveTemp(InHandler); }
+}
+
 void SCkUiTree::ReleaseContextMenu()
 {
     if (_Impl.IsValid()) { _Impl->ReleaseContextMenu(); }
@@ -467,11 +582,22 @@ auto SCkUiTree::Prepare(const FCkUiNode& InDefinition, FCellFactory InFactory, T
     TGuardValue<bool> Guard(_Impl->bPreparing, true);
     auto Configuration = ck_ui_tree::FConfiguration{};
     Configuration.CellRoot = InDefinition.Children[0];
+    Configuration.ProjectionField = InDefinition.ProjectionField;
+    Configuration.Selectable = InDefinition.TableSelectable;
+    Configuration.ExpandOnRowClick = InDefinition.TreeExpandOnRowClick;
     Configuration.RowHeight = InDefinition.RowHeight;
     Configuration.Filter = MoveTemp(InFilter);
     Configuration.Factory = MoveTemp(InFactory);
     Configuration.OnSelectionChanged = MoveTemp(InSelectionChanged);
     Configuration.OnAuthoredContextMenu = MoveTemp(InAuthoredContextMenu);
+    Configuration.VisualStyle = InDefinition.TreeVisualStyle;
+    if (!Configuration.ProjectionField.IsEmpty())
+    {
+        const FCkUiFieldSchema* Projection = _Impl->Collection->GetSchema().FindByPredicate([&Configuration](const FCkUiFieldSchema& Field)
+        { return Field.Name == Configuration.ProjectionField; });
+        if (Projection == nullptr || Projection->Kind != ECkUiFieldKind::Bool || !Projection->Required)
+        { OutFailure = TEXT("tree projection-field must name a required Bool schema field"); return {}; }
+    }
     const int64 PreparationRevision = _Impl->Collection->GetRevision();
     auto Cells = TArray<TPair<TSharedPtr<FImpl::FRow>, TSharedPtr<FCkUiView>>>{};
     for (const TWeakPtr<FImpl::FRow>& WeakRow : _Impl->LiveRows)
@@ -503,6 +629,7 @@ auto SCkUiTree::Prepare(const FCkUiNode& InDefinition, FCellFactory InFactory, T
 auto SCkUiTree::TrySelectKey(TOptional<FString> InKey, const bool InNotify) -> bool
 {
     if (!_Impl.IsValid() || !_Impl->Tree.IsValid() || _Impl->bPreparing || _Impl->bRefreshing || _Impl->bNotifying) { return false; }
+    if (!_Impl->Configuration.Selectable) { return false; }
     if (!InKey.IsSet())
     {
         const bool bHadSelection = _Impl->SelectedKey.IsSet();

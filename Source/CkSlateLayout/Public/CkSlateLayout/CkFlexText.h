@@ -61,6 +61,7 @@ public:
     void SetArrangedWidth(float InArrangedWidth);
     void SetText(TAttribute<FText> InText);
     FText GetText() const { return _Text.Get(FText::GetEmpty()); }
+    FSlateFontInfo GetFont() const { return _Font.Get(FSlateFontInfo{}); }
     FSlateColor GetColorAndOpacity() const { return _ColorAndOpacity.Get(FSlateColor::UseForeground()); }
     void SetFont(TAttribute<FSlateFontInfo> InFont);
     void SetColorAndOpacity(TAttribute<FSlateColor> InColorAndOpacity);

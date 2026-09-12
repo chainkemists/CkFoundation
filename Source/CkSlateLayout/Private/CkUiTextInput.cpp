@@ -2,6 +2,7 @@
 
 #include "InputCoreTypes.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Widgets/Notifications/SErrorHint.h"
 
 namespace ck_ui_text_input
 {
@@ -45,6 +46,8 @@ namespace ck_ui_text_input
                 .RevertTextOnEscape(InArgs._RevertTextOnEscape)
                 .OnTextChanged(InArgs._OnTextChanged)
                 .OnTextCommitted(InArgs._OnTextCommitted)
+                // Validation feedback must stay inline; the default popup can throttle PIE world ticks.
+                .ErrorReporting(SNew(SErrorHint))
                 .OnKeyDownHandler(InArgs._OnKeyDownHandler));
         }
 
@@ -135,6 +138,17 @@ namespace ck_ui_text_input
             return _Widget.ToSharedRef();
         }
 
+        virtual auto GetFocusTransferTarget() const -> TSharedPtr<SWidget> override
+        {
+            return _Widget;
+        }
+
+        virtual void BeginFocusTransfer() noexcept override { ++_FocusTransferDepth; }
+        virtual void EndFocusTransfer() noexcept override
+        {
+            if (_FocusTransferDepth > 0) { --_FocusTransferDepth; }
+        }
+
         virtual auto PrepareReload(const FCkUiCustomWidgetArguments& InArguments, FString& OutFailure) const -> TUniquePtr<ICkUiPreparedWidgetUpdate> override;
 
     private:
@@ -169,7 +183,7 @@ namespace ck_ui_text_input
 
         auto OnTextChanged(const FText& InText) -> void
         {
-            if (_ApplyingInternalText || !CanDispatch()) { return; }
+            if (_FocusTransferDepth > 0 || _ApplyingInternalText || !CanDispatch()) { return; }
             const FString Text = InText.ToString();
             // Enter closes its native transaction after normalization. That model-equal echo is not a new draft.
             if (!_Editing && Text == _Configuration.Value.Get(FText::GetEmpty()).ToString()) { return; }
@@ -181,7 +195,7 @@ namespace ck_ui_text_input
 
         auto OnTextCommitted(const FText& InText, const ETextCommit::Type InReason) -> void
         {
-            if (_ApplyingInternalText || !CanDispatch()) { return; }
+            if (_FocusTransferDepth > 0 || _ApplyingInternalText || !CanDispatch()) { return; }
             // Enter is followed by native focus loss; only a new draft needs another commit.
             if (!_Editing && InReason != ETextCommit::OnEnter) { return; }
             const FOnTextCommitted Committed = _Configuration.Committed;
@@ -233,6 +247,7 @@ namespace ck_ui_text_input
         bool _ApplyingInternalText = false;
         bool _Active = true;
         FString _AppliedError;
+        int32 _FocusTransferDepth = 0;
     };
 
     auto MakeConfiguration(const FCkUiCustomWidgetArguments& InArguments, FConfiguration& OutConfiguration, FString& OutFailure) -> bool

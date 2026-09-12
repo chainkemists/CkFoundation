@@ -156,6 +156,8 @@ auto FCkUiWidgetRegistry::Register(FCkUiCustomWidgetRegistration InRegistration)
         case ECkUiCustomPropertyKind::BoolChanged:
         case ECkUiCustomPropertyKind::NumberChanged:
         case ECkUiCustomPropertyKind::NumberCommitted:
+        case ECkUiCustomPropertyKind::IntegerCommitted:
+        case ECkUiCustomPropertyKind::ColorCommitted:
         case ECkUiCustomPropertyKind::NumberInteraction:
         case ECkUiCustomPropertyKind::StringChanged:
             if (Attributes.Contains(Property.Name))
@@ -165,10 +167,12 @@ auto FCkUiWidgetRegistry::Register(FCkUiCustomWidgetRegistration InRegistration)
         case ECkUiCustomPropertyKind::TextBinding:
         case ECkUiCustomPropertyKind::ImageBinding:
         case ECkUiCustomPropertyKind::NumberBinding:
+        case ECkUiCustomPropertyKind::IntegerBinding:
         case ECkUiCustomPropertyKind::BoolBinding:
         case ECkUiCustomPropertyKind::StringBinding:
         case ECkUiCustomPropertyKind::ColorBinding:
         case ECkUiCustomPropertyKind::CollectionBinding:
+        case ECkUiCustomPropertyKind::FloatSeriesBinding:
         {
             const FString Attribute = Property.Name + TEXT("-bind");
             if (Attributes.Contains(Attribute))

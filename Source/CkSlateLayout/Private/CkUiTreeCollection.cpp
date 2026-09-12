@@ -19,7 +19,7 @@ namespace ck_ui_tree_collection
 
     auto IsValidKind(const ECkUiFieldKind InKind) -> bool
     {
-        return InKind == ECkUiFieldKind::Text || InKind == ECkUiFieldKind::Number || InKind == ECkUiFieldKind::Bool
+        return InKind == ECkUiFieldKind::Text || InKind == ECkUiFieldKind::Number || InKind == ECkUiFieldKind::Integer || InKind == ECkUiFieldKind::Bool
             || InKind == ECkUiFieldKind::Color || InKind == ECkUiFieldKind::Image;
     }
 
@@ -42,6 +42,7 @@ namespace ck_ui_tree_collection
         {
         case ECkUiFieldKind::Text: return A.Text.EqualTo(B.Text);
         case ECkUiFieldKind::Number: return A.Number == B.Number;
+        case ECkUiFieldKind::Integer: return A.Integer == B.Integer;
         case ECkUiFieldKind::Bool: return A.Bool == B.Bool;
         case ECkUiFieldKind::Color: return A.Color == B.Color;
         case ECkUiFieldKind::Image: return A.Image.Get() == B.Image.Get();
