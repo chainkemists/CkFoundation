@@ -1,3 +1,21 @@
+# CTO closeout dispositions recorded; implementation campaign remains active (2026-09-11)
+
+The CTO resolved the closeout census as follows. These are binding campaign boundaries, not evidence that the corresponding implementation is complete:
+
+1. Narrow browser-style breakpoint restacking is deferred with no medium-term requirement. Native narrow acceptance requires readable, reachable content through wrapping and scrolling; it does not require desktop columns to restack.
+2. Resource Inspector navigation `+` is excluded until a separate product contract defines what it adds. No placeholder or invented add-set is permitted.
+3. Debugger outer layout shells—including stable chrome, tabs, splitters, pane composition and inspector placement—must migrate to authored HTML/CSS. Specialized graph canvases, viewports, painted overlays and other irreducibly native controls may remain native only as explicit authored ports; native layout around them is not the endpoint.
+4. GOAP Inspector Gateway and the corresponding inspector surfaces in other debuggers are in migration scope. Their layout and presentation must be authored HTML/CSS while authoritative data, commands, selection and specialized controls remain owned by production C++.
+5. `SCkGoapDebugger_AgentListPanel` is a retirement candidate, not a safe deletion. Its surviving selection-synchronization responsibility must first move to an owned replacement and receive focused behavior/lifetime evidence.
+6. Packaged-game acceptance is deferred because this plugin development host is not packaged by the build machine. Runtime dependency declarations remain required; packaging must be proven later in a real packaged consumer.
+7. Controller scope is a real local-player gamepad navigation/confirm/back gate plus isolation for two local Slate users. Network multiplayer is not a campaign gate unless a debugger is actually exposed to network clients.
+8. Accessibility is reduced to keyboard-only traversal and deferred. No broader screen-reader/semantic certification is implied.
+9. Localization and RTL/culture-switch acceptance are deferred.
+10. Performance remains required on representative large-data debugger hosts. Exact numeric budgets and reference hardware require approval before a pass/fail claim; existing structural virtualization evidence alone is insufficient.
+11. Teardown correctness applies to every debugger. Each production debugger host must prove that window/pane removal, owner expiry, reload, world reset or EndPIE as applicable releases its authored views, native ports, subscriptions, callbacks, focus/capture and transient popups without stale dispatch.
+
+Execution order is now: inventory every remaining native layout shell and inspector; establish the reusable authored outer-shell/inspector composition contract; migrate GOAP as the first complete proving host (including Inspector Gateway and safe Agent List retirement); migrate the remaining debugger shells/inspectors in bounded slices; then run the representative performance gate and the all-debugger teardown matrix. Deferred/excluded rows remain visible but do not block this campaign's eventual closeout.
+
 # Rebased authored-debugger checkpoint published; closeout census complete (2026-09-11)
 
 Publication was revalidated from the selected `E:\Repos\CkPlugins_Other` checkout before any Git write. The editor log accepted an exclusive write-open, root and all four Ck repositories were fetched without remote-tip drift, and the changed tips remained exact descendants of `origin/dev`: CkFoundation `8f3daa93e2969553579efa8efd45e048dcbeba08` (8 ahead / 0 behind), CkGameplayDebugger `bb5fd18f5a1b16ce633bc17335a71d78ed190a01` (18 / 0), and CkTests `92587fa30d21fdc419fcd836379d87c215f4ea86` (3 / 0). Each tip was fast-forwarded explicitly to its CK `dev` branch, fetched again, and verified reachable from the resulting `origin/dev`; the rewritten feature remotes were not force-pushed.
@@ -10,7 +28,7 @@ The current-source acceptance matrix is now dispositioned rather than implicitly
 
 Fresh closeout test evidence is `Saved/Logs/Test-UiAuthoring-Closeout-R222-RealRHI.log`, SHA256 `9A1AF823C5047A9F68A1ECBFB1DFDA98DBA8DC59C0BD1F561EF0715CF18DD41F`: serial real-RHI `Ck.UiAuthoring` passed 151/151 in 1m01s with zero failed/skipped/contaminated and no fatal, ensure, AngelScript warning/error, failed-test, or full-reload diagnostics. R221's NullRHI attempt passed 91/151 and failed 60 geometry/input cases; it is retained as an incompatible-invocation result and is superseded by the identical real-RHI selector. This refreshed shared component evidence does not prove the open environment rows above.
 
-Browser-reference narrow restacking remains blocked and unwaived; Resource Inspector navigation `+` remains blocked on an approved add-set contract. Package tooling/host, affected real-controller and multiplayer scenarios, accessibility semantics, culture matrix, performance budget, broad lifetime host set, GOAP outer-shell/Inspector disposition, and Texture outer-shell/Checker acceptance require explicit bounded contracts before implementation. Unrelated root config/generated-script changes, all `scratch/` files, the generated-look asset, and the untracked continuation prompt remain preserved and unstaged.
+The CTO dispositions above supersede the previously unresolved closeout rows: narrow restacking, packaging, keyboard accessibility and localization are deferred; Resource Inspector `+` is excluded; network multiplayer is conditional; authored outer shells/inspectors, the bounded local-controller gate, representative measured performance and all-debugger teardown remain required. Texture Checker Apply/Restore/PIE remains behavior parity to preserve while its surrounding layout migrates. Unrelated root config/generated-script changes, all `scratch/` files, the generated-look asset, and the untracked continuation prompt remain preserved and unstaged.
 
 # GOAP authored specialized cohort accepted (2026-09-11)
 
