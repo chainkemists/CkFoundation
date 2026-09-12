@@ -225,6 +225,7 @@ struct FCkUiNode
     FString TabKey;
     FString TabLabelBinding;
     FString TabEnabledBinding;
+    FString TabVisibilityBinding;
     FString MenuReference;
     bool TableSelectable = true;
     /** Tree-only: unmodified left clicks on parent rows toggle native expansion. */
