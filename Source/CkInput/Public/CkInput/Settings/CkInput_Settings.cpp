@@ -13,3 +13,13 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_Input_Settings_UE::
+    Get_RequireGameplayInputOwnership()
+    -> ECk_EnableDisable
+{
+    return UCk_Utils_Object_UE::Get_ClassDefaultObject<UCk_Input_ProjectSettings_UE>()->Get_RequireGameplayInputOwnership();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
