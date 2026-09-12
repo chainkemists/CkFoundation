@@ -21,6 +21,7 @@ public:
         FString Key;
         TAttribute<FText> Label;
         TAttribute<bool> Enabled;
+        TAttribute<bool> Visible;
         TSharedPtr<SWidget> Content;
         TFunction<void()> OnDeactivate;
     };
@@ -53,6 +54,7 @@ private:
     void ActivateKey(const FString& InKey);
     void MoveHeaderFocus(const FString& InKey, int32 InDirection, bool bToBoundary, int32 InUserIndex);
     bool IsKeyEnabled(const FString& InKey) const;
+    bool IsKeyVisible(const FString& InKey) const;
     bool IsKeySelected(const FString& InKey) const;
     void UpdateHeaderAppearance();
     void Reconcile();

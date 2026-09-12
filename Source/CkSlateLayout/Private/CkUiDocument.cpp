@@ -1201,6 +1201,7 @@ namespace ck_ui_document
                     Expected.Add(TEXT("label"), EValueKind::Text);
                     Expected.Add(TEXT("label-bind"), EValueKind::TextBinding);
                     Expected.Add(TEXT("enabled-bind"), EValueKind::BoolBinding);
+                    Expected.Add(TEXT("visible-bind"), EValueKind::BoolBinding);
                 }
                 if (Schema->Kind == ECkUiNodeKind::MenuButton)
                 {
@@ -1556,6 +1557,7 @@ namespace ck_ui_document
                 if (const FValue* Label = Values.Find(TEXT("label"))) { Out.Text = Label->Data.Text.ToString(); }
                 if (const FValue* LabelBinding = Values.Find(TEXT("label-bind"))) { Out.TabLabelBinding = LabelBinding->Data.Name; }
                 if (const FValue* EnabledBinding = Values.Find(TEXT("enabled-bind"))) { Out.TabEnabledBinding = EnabledBinding->Data.Name; }
+                if (const FValue* VisibilityBinding = Values.Find(TEXT("visible-bind"))) { Out.TabVisibilityBinding = VisibilityBinding->Data.Name; }
             }
             if (Out.Kind == ECkUiNodeKind::MenuButton)
             {

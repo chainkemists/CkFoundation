@@ -832,6 +832,8 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
             { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Tab '%s' references missing label binding."), *Node.Id))); }
             if (!Node.TabEnabledBinding.IsEmpty() && !_Data.Visibility.FindRef(Node.TabEnabledBinding).IsSet())
             { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Tab '%s' references missing enabled binding."), *Node.Id))); }
+            if (!Node.TabVisibilityBinding.IsEmpty() && !_Data.Visibility.FindRef(Node.TabVisibilityBinding).IsSet())
+            { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Tab '%s' references missing visibility binding."), *Node.Id))); }
         }
         if (Node.Kind == ECkUiNodeKind::Splitter)
         {
@@ -2514,7 +2516,8 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
             InOutStaged.OwnedWidgets.Add(Content);
             Panels.Add({Tab.TabKey,
                 Tab.TabLabelBinding.IsEmpty() ? TAttribute<FText>(FText::FromString(Tab.Text)) : _Data.Text.FindRef(Tab.TabLabelBinding),
-                Tab.TabEnabledBinding.IsEmpty() ? TAttribute<bool>(true) : _Data.Visibility.FindRef(Tab.TabEnabledBinding), Content, MoveTemp(OnDeactivate)});
+                Tab.TabEnabledBinding.IsEmpty() ? TAttribute<bool>(true) : _Data.Visibility.FindRef(Tab.TabEnabledBinding),
+                Tab.TabVisibilityBinding.IsEmpty() ? TAttribute<bool>(true) : _Data.Visibility.FindRef(Tab.TabVisibilityBinding), Content, MoveTemp(OnDeactivate)});
         }
         TSharedPtr<SCkUiTabs> Tabs = GetTabs(InNode.Id);
         if (!Tabs.IsValid()) { Tabs = SNew(SCkUiTabs).Tag(FName(*InNode.Id)); }
