@@ -20,10 +20,14 @@ class SCkUiTabs;
 class SCkUiMenuButton;
 class SCkUiRepeat;
 class FCkUiCollection;
+class FCkUiFloatSeries;
 struct FSlateBrush;
 class FWidgetPath;
 
 DECLARE_DELEGATE_OneParam(FCkUiOnItemAction, FString);
+DECLARE_DELEGATE_TwoParams(FCkUiOnItemBoolChanged, FString, bool);
+DECLARE_DELEGATE_ThreeParams(FCkUiOnItemNumberCommitted, FString, float, ETextCommit::Type);
+DECLARE_DELEGATE_ThreeParams(FCkUiOnItemIntegerCommitted, FString, int32, ETextCommit::Type);
 
 /**
  * A retained native surface with named ports for document-authored subtrees.
@@ -51,15 +55,20 @@ public:
         TMap<FString, FCkUiOnBoolChanged> BoolChanged;
         TMap<FString, FCkUiOnNumberChanged> NumberChanged;
         TMap<FString, FCkUiOnNumberCommitted> NumberCommitted;
+        TMap<FString, FCkUiOnIntegerCommitted> IntegerCommitted;
+        TMap<FString, FCkUiOnColorCommitted> ColorCommitted;
         TMap<FString, FCkUiOnNumberInteraction> NumberInteraction;
         TMap<FString, FCkUiOnStringChanged> StringChanged;
         TMap<FString, TAttribute<const FSlateBrush*>> Images;
         TMap<FString, TAttribute<float>> Number;
+        TMap<FString, TAttribute<int32>> Integer;
         TMap<FString, TAttribute<FLinearColor>> Color;
         TMap<FString, TAttribute<bool>> Visibility;
         /** Optional inherited dispatch gate. Unset retains the normal enabled behavior. */
         TAttribute<bool> CanDispatchEvents;
         TMap<FString, TSharedPtr<FCkUiCollection>> Collections;
+        /** Host-owned mutable series. The view retains only weak handles and never extends their lifetime. */
+        TMap<FString, TWeakPtr<FCkUiFloatSeries>> FloatSeries;
         TMap<FString, TSharedPtr<FCkUiTreeCollection>> Trees;
         TMap<FString, FOnCkUiTreeSelectionChanged> TreeSelectionChanged;
         TMap<FString, FOnCkUiTableSelectionChanged> TableSelectionChanged;
@@ -67,6 +76,12 @@ public:
         TMap<FString, FOnCkUiContextAction> ContextActions;
         /** Repeat item actions receive the stable collection key of their active record scope. */
         TMap<FString, FCkUiOnItemAction> ItemActions;
+        /** Repeat item BoolChanged callbacks receive the stable key and proposed value. */
+        TMap<FString, FCkUiOnItemBoolChanged> ItemBoolChanged;
+        /** Repeat item NumberCommitted callbacks receive the stable key, value, and commit reason. */
+        TMap<FString, FCkUiOnItemNumberCommitted> ItemNumberCommitted;
+        /** Repeat item IntegerCommitted callbacks receive the stable key, value, and commit reason. */
+        TMap<FString, FCkUiOnItemIntegerCommitted> ItemIntegerCommitted;
         /** Host-owned focus/input context, inherited by nested views. INDEX_NONE means no explicit owner. */
         int32 SlateUserIndex = INDEX_NONE;
     };
@@ -78,6 +93,8 @@ public:
         FString Markup;
         FString Stylesheet;
         FString Source = TEXT("<memory>");
+        /** Candidate CSS token set. Unset retains the view's applied tokens. */
+        TOptional<FTokens> Tokens;
     };
 
     static auto Create(
@@ -97,6 +114,13 @@ public:
         const FString& InStylesheet,
         const FString& InSource = TEXT("<memory>")) -> FCkUiLoadResult;
 
+    /** Parses, validates and atomically applies a complete document with candidate CSS tokens. */
+    auto TryReloadWithTokens(
+        const FString& InMarkup,
+        const FString& InStylesheet,
+        FTokens InTokens,
+        const FString& InSource = TEXT("<memory>")) -> FCkUiLoadResult;
+
     /** Reloads every participant atomically. A rejected participant leaves every mounted view unchanged. */
     static auto TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkUiLoadResult;
 
@@ -107,6 +131,9 @@ public:
 
     /** Reattempts a file reload only when the complete markup/stylesheet content pair changed. */
     auto PollFiles() -> bool;
+
+    /** Reattempts a file reload when either the complete source pair or candidate token set changed. */
+    auto PollFiles(const FTokens& InTokens) -> bool;
 
     auto SetFiles(
         const FString& InMarkupPath,
@@ -150,6 +177,14 @@ private:
     struct FRepeatState;
     struct FCustomSlot;
     struct FCustomSlotSet;
+    struct FViewContext
+    {
+        FDataBindings Data;
+        FActions Actions;
+        TSet<FString> GeneratedRepeatActionAliases;
+        TSet<FString> GeneratedRepeatFieldAliases;
+        TSet<FString> GeneratedRepeatItemEventAliases;
+    };
     struct FNestedUpdate;
     auto FindRetained(const FString& InId) const -> const FRetainedRecord*;
     struct FCapturedPointer
@@ -160,7 +195,7 @@ private:
     auto ContainsMountedPath(const FWidgetPath& InPath) const -> bool;
     auto CanDispatchEvents() const -> bool;
     auto GetOwnedPointerCaptures(EVisibility InVisibility = EVisibility::Visible) const -> TArray<FCapturedPointer>;
-    auto ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot) -> void;
+    auto ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot, bool bOwnerRelease = false) -> void;
 
 
     auto ValidateDocument(const FCkUiDocument& InDocument, const FString& InSource, TArray<FString>& OutErrors) const -> bool;
@@ -170,12 +205,14 @@ private:
     auto StageDocument(const FCkUiDocument& InDocument, FStagedDocument& OutStaged, TArray<FString>& OutErrors) const -> bool;
     auto PrepareRepeat(const FCkUiNode& InNode, FStagedDocument& OutStaged, TArray<FString>& OutErrors) const -> TSharedPtr<SWidget>;
     auto MakeCustomSlotView(const FCkUiNode& InRoot, const TSharedPtr<FCustomSlot>& InSlot,
-        const TMap<FString, FCkUiMenu>& InMenus, FCkUiDocument& OutDocument, TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>;
+        const TMap<FString, FCkUiMenu>& InMenus, FCkUiDocument& OutDocument, TOptional<FViewContext>& OutReplacementContext,
+        TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>;
     auto PrepareCustomSlots(const FCkUiNode& InNode, const FCkUiCustomWidgetSchema& InSchema,
         FStagedDocument& OutStaged, FCkUiCustomWidgetArguments& OutArguments, TArray<FString>& OutErrors) const -> bool;
     auto MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCollection>& Collection,
         const TSharedPtr<const FCkUiRecord>& Record, const TSharedPtr<FRepeatScope>& Scope,
-        const TSharedPtr<FCkUiView>& Existing, FCkUiDocument& OutDocument, TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>;
+        const TSharedPtr<FCkUiView>& Existing, FCkUiDocument& OutDocument, TOptional<FViewContext>& OutReplacementContext,
+        TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>;
     auto RefreshRepeat(const FString& InId) -> bool;
     static auto MountRepeat(FRepeatState& InState) -> void;
     template <typename TRecord>
@@ -194,6 +231,12 @@ private:
 
     FNativeBindings _Bindings;
     FActions _Actions;
+    /** @item aliases generated for this item scope; nested scopes may safely replace only these. */
+    TSet<FString> _GeneratedRepeatActionAliases;
+    /** @field aliases generated for this item scope; nested schemas replace these across binding families. */
+    TSet<FString> _GeneratedRepeatFieldAliases;
+    /** Typed item-event aliases generated for this item scope; nested scopes may replace only these. */
+    TSet<FString> _GeneratedRepeatItemEventAliases;
     FTokens _Tokens;
     FSlateFontInfo _BaseFont;
     FDataBindings _Data;
@@ -208,6 +251,7 @@ private:
     FString _StylesheetPath;
     FString _LastPolledMarkup;
     FString _LastPolledStylesheet;
+    FTokens _LastPolledTokens;
     bool _HasPolledContent = false;
     bool _IsReloading = false;
     int64 _Revision = 0;

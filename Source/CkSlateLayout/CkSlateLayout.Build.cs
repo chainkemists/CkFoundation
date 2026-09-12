@@ -9,6 +9,7 @@ public class CkSlateLayout : ModuleRules
         FPSemantics = FPSemanticsMode.Precise;
         PrivateDependencyModuleNames.Add("CoreUObject"); // Slate text styles copy GC-aware brush/font references.
         PrivateDependencyModuleNames.Add("XmlParser");
+        PrivateDependencyModuleNames.Add("AppFramework"); // Native color-picker internals; authored rows remain in SlateLayout.
 
         PublicDependencyModuleNames.AddRange(new[]
         {

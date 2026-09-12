@@ -1,4 +1,5 @@
 #include "CkSlateLayout/SCkUiSurface.h"
+#include "CkSlateLayout/CkUiFloatSeries.h"
 #include "CkUiWidgetRegistry.h"
 
 #include "CkSlateLayout/CkFlexBox.h"
@@ -6,6 +7,7 @@
 #include "CkSlateLayout/SCkUiSplitter.h"
 #include "CkSlateLayout/SCkUiTabs.h"
 #include "CkSlateLayout/SCkUiMenuButton.h"
+#include "CkSlateLayout/SCkUiStyledButton.h"
 #include "CkSlateLayout/SCkUiRepeat.h"
 #include "CkSlateLayout/SCkUiScrollBox.h"
 #include "Brushes/SlateRoundedBoxBrush.h"
@@ -29,6 +31,8 @@
 #include "Widgets/SNullWidget.h"
 #include "Widgets/SOverlay.h"
 #include "Widgets/Text/STextBlock.h"
+
+#include <type_traits>
 
 namespace ck_ui_surface
 {
@@ -61,9 +65,14 @@ namespace ck_ui_surface
                 const auto Measure = ChildSlot.GetWidget()->GetMetaData<FCkFlexMeasureMetaData>();
                 if (Measure.IsValid())
                 {
-                    return Measure->Measure(FCkFlexMeasureArgs{
+                    const FVector2D Intrinsic = Measure->Measure(FCkFlexMeasureArgs{.LayoutScale = Scale});
+                    const FVector2D Wrapped = Measure->Measure(FCkFlexMeasureArgs{
                         .AvailableWidth = _Width.GetValue(), .WidthMode = YGMeasureModeExactly,
                         .LayoutScale = Scale});
+                    // AutoWidth parents need the content's intrinsic width, including after
+                    // an empty region is populated. Feeding the previous allotment back as
+                    // desired width traps those parents at zero. Only height depends on it.
+                    return FVector2D{Intrinsic.X, Wrapped.Y};
                 }
             }
             return SBox::ComputeDesiredSize(Scale);
@@ -86,13 +95,6 @@ namespace ck_ui_surface
         }
     };
 
-    auto BackgroundBrush() -> const FSlateBrush*
-    {
-        // Region widgets can outlive the view that created them.
-        static const auto Brush = FSlateRoundedBoxBrush{FLinearColor::White, 6.0f};
-        return &Brush;
-    }
-
     auto Error(const FString& InSource, const FString& InMessage) -> FString
     {
         return FString::Printf(TEXT("%s: %s"), *InSource, *InMessage);
@@ -109,9 +111,11 @@ namespace ck_ui_surface
         {
         case ECkUiCustomPropertyKind::TextBinding: return ECkUiFieldKind::Text;
         case ECkUiCustomPropertyKind::NumberBinding: return ECkUiFieldKind::Number;
+        case ECkUiCustomPropertyKind::IntegerBinding: return ECkUiFieldKind::Integer;
         case ECkUiCustomPropertyKind::BoolBinding: return ECkUiFieldKind::Bool;
         case ECkUiCustomPropertyKind::ColorBinding: return ECkUiFieldKind::Color;
         case ECkUiCustomPropertyKind::ImageBinding: return ECkUiFieldKind::Image;
+        case ECkUiCustomPropertyKind::FloatSeriesBinding: return ECkUiFieldKind::FloatSeries;
         default: return {};
         }
     }
@@ -128,7 +132,8 @@ namespace ck_ui_surface
         return FlexWrapIsValid && PaddingIsValid && IsFiniteNonNegative(InStyle.Gap) && IsFiniteNonNegative(InStyle.Grow)
             && IsFiniteNonNegative(InStyle.Shrink) && IsFiniteNonNegative(InStyle.MinWidth)
             && IsFiniteNonNegative(InStyle.MinHeight) && OptionalIsValid(InStyle.MaxWidth)
-            && OptionalIsValid(InStyle.MaxHeight) && OptionalIsValid(InStyle.FontSize) && BoundsAreValid;
+            && OptionalIsValid(InStyle.MaxHeight) && OptionalIsValid(InStyle.FontSize)
+            && OptionalIsValid(InStyle.BorderWidth) && OptionalIsValid(InStyle.BorderRadius) && BoundsAreValid;
     }
 
     auto MakeSlotArguments(const FCkUiStyle& InStyle, const TSharedRef<SWidget>& InWidget) -> SCkFlexBox::FSlot::FSlotArguments
@@ -201,6 +206,7 @@ struct FCkUiView::FRepeatState
     struct FItem
     {
         TSharedPtr<const FCkUiRecord> Record;
+        int64 RecordRevision = 0;
         TSharedPtr<FCkUiView> View;
         TSharedPtr<FRepeatScope> Scope;
     };
@@ -244,6 +250,7 @@ struct FCkUiView::FStagedDocument
     TMap<FString, TSharedPtr<FRepeatState>> Repeats;
     TMap<FString, TSharedPtr<FCustomSlotSet>> CustomSlots;
     TArray<TSharedPtr<FNestedUpdate>> Nested;
+    TOptional<FTokens> Tokens;
 };
 
 struct FCkUiView::FCommitState
@@ -270,10 +277,24 @@ struct FCkUiView::FNestedUpdate
     TSharedPtr<FCkUiView> View;
     TSharedPtr<FStagedDocument> Staged;
     FCommitState State;
+    TOptional<FViewContext> PreviousContext;
+    bool ContextPublished = false;
     ~FNestedUpdate()
     {
         Staged.Reset();
         State = {};
+        if (!ContextPublished && View.IsValid())
+        {
+            if (PreviousContext.IsSet())
+            {
+                FViewContext& Context = PreviousContext.GetValue();
+                View->_Data = MoveTemp(Context.Data);
+                View->_Actions = MoveTemp(Context.Actions);
+                View->_GeneratedRepeatActionAliases = MoveTemp(Context.GeneratedRepeatActionAliases);
+                View->_GeneratedRepeatFieldAliases = MoveTemp(Context.GeneratedRepeatFieldAliases);
+                View->_GeneratedRepeatItemEventAliases = MoveTemp(Context.GeneratedRepeatItemEventAliases);
+            }
+        }
         if (View.IsValid()) { View->_IsReloading = false; }
     }
 };
@@ -543,7 +564,8 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
             if (!Node.VisibilityBinding.IsEmpty() && !_Data.Visibility.FindRef(Node.VisibilityBinding).IsSet())
             { OutErrors.Add(ck_ui_surface::Error(InSource, TEXT("Repeat visibility requires its boolean binding."))); return; }
             FCkUiDocument ItemDocument;
-            MakeRepeatItem(Node.Children[0], Collection, {}, MakeShared<FRepeatScope>(), {}, ItemDocument, OutErrors);
+            TOptional<FViewContext> ReplacementContext;
+            MakeRepeatItem(Node.Children[0], Collection, {}, MakeShared<FRepeatScope>(), {}, ItemDocument, ReplacementContext, OutErrors);
             CandidateRetained.Add(Node.Id, FRetainedRecord{Node.Id, ERetainedKind::Repeat, Node.Binding});
             return;
         }
@@ -674,6 +696,12 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                     const FCkUiCustomPropertyValue* Value = Node.CustomProperties.Find(Property.Name);
                     if (Value == nullptr)
                     {
+                        if (Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action && !Node.ItemAction.IsEmpty())
+                        {
+                            if (!_Data.ItemActions.FindRef(Node.ItemAction).IsBound())
+                            { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing item action '%s'."), *Node.Id, *Node.ItemAction))); }
+                            continue;
+                        }
                         if (Property.bRequired) { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' is missing property '%s'."), *Node.Id, *Property.Name))); }
                         continue;
                     }
@@ -689,12 +717,16 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing string binding '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::CollectionBinding && (!_Data.Collections.Contains(Value->Name) || !_Data.Collections.FindRef(Value->Name).IsValid()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing collection binding '%s'."), *Node.Id, *Value->Name))); }
+                    else if (Property.Kind == ECkUiCustomPropertyKind::FloatSeriesBinding && (!_Data.FloatSeries.Contains(Value->Name) || !_Data.FloatSeries.FindRef(Value->Name).IsValid()))
+                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing float-series binding '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::StringChanged && (!_Data.StringChanged.Contains(Value->Name) || !_Data.StringChanged.FindRef(Value->Name).IsBound()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing string-changed callback '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::ImageBinding && (!_Data.Images.Contains(Value->Name) || !_Data.Images.FindRef(Value->Name).IsSet()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing image binding '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::NumberBinding && (!_Data.Number.Contains(Value->Name) || !_Data.Number.FindRef(Value->Name).IsSet()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing number binding '%s'."), *Node.Id, *Value->Name))); }
+                    else if (Property.Kind == ECkUiCustomPropertyKind::IntegerBinding && (!_Data.Integer.Contains(Value->Name) || !_Data.Integer.FindRef(Value->Name).IsSet()))
+                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing integer binding '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::BoolBinding && (!_Data.Visibility.Contains(Value->Name) || !_Data.Visibility.FindRef(Value->Name).IsSet()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing bool binding '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::ColorBinding && (!_Data.Color.Contains(Value->Name) || !_Data.Color.FindRef(Value->Name).IsSet()))
@@ -711,6 +743,10 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing number-changed callback '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::NumberCommitted && (!_Data.NumberCommitted.Contains(Value->Name) || !_Data.NumberCommitted.FindRef(Value->Name).IsBound()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing number-committed callback '%s'."), *Node.Id, *Value->Name))); }
+                    else if (Property.Kind == ECkUiCustomPropertyKind::IntegerCommitted && (!_Data.IntegerCommitted.Contains(Value->Name) || !_Data.IntegerCommitted.FindRef(Value->Name).IsBound()))
+                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing integer-committed callback '%s'."), *Node.Id, *Value->Name))); }
+                    else if (Property.Kind == ECkUiCustomPropertyKind::ColorCommitted && (!_Data.ColorCommitted.Contains(Value->Name) || !_Data.ColorCommitted.FindRef(Value->Name).IsBound()))
+                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing color-committed callback '%s'."), *Node.Id, *Value->Name))); }
                     else if (Property.Kind == ECkUiCustomPropertyKind::NumberInteraction && (!_Data.NumberInteraction.Contains(Value->Name) || !_Data.NumberInteraction.FindRef(Value->Name).IsBound()))
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Custom node '%s' references missing number-interaction callback '%s'."), *Node.Id, *Value->Name))); }
                 }
@@ -743,10 +779,17 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                     { OutErrors.Add(TEXT("Custom child has an unknown or duplicate slot.")); continue; }
                     SuppliedSlots.Add(Child.CustomSlotName);
                     const auto ExistingSlot = Previous.IsValid() ? Previous->Slots.FindRef(Child.CustomSlotName) : nullptr;
-                    const auto Slot = ExistingSlot.IsValid() && ExistingSlot->View.IsValid() ? ExistingSlot : MakeShared<FCustomSlot>();
+                    const auto Slot = MakeShared<FCustomSlot>();
+                    if (ExistingSlot.IsValid())
+                    {
+                        Slot->Mount = ExistingSlot->Mount;
+                        Slot->View = ExistingSlot->View;
+                        Slot->Scope = ExistingSlot->Scope;
+                    }
                     if (!Slot->Scope.IsValid()) { Slot->Scope = MakeShared<FRepeatScope>(); }
                     FCkUiDocument ChildDocument;
-                    MakeCustomSlotView(Child, Slot, InDocument.Menus, ChildDocument, OutErrors);
+                    TOptional<FViewContext> ReplacementContext;
+                    MakeCustomSlotView(Child, Slot, InDocument.Menus, ChildDocument, ReplacementContext, OutErrors);
                 }
                 for (const auto& Slot : Registration->Schema.Slots)
                 { if (Slot.bRequired && !SuppliedSlots.Contains(Slot.Name)) { OutErrors.Add(TEXT("Custom node is missing a required slot.")); } }
@@ -821,8 +864,8 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                     if (Cell.Kind != ECkUiNodeKind::Row && Cell.Kind != ECkUiNodeKind::Column && Cell.Kind != ECkUiNodeKind::Text && Cell.Kind != ECkUiNodeKind::Image && Cell.Kind != ECkUiNodeKind::Scroll && Cell.Kind != ECkUiNodeKind::Overlay && Cell.Kind != ECkUiNodeKind::Custom)
                     { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Table cell '%s' uses a non-readonly node."), *Cell.Id))); return; }
                     const FCkUiCustomWidgetRegistration* Custom = Cell.Kind == ECkUiNodeKind::Custom && _CustomRegistry.IsValid() ? _CustomRegistry->Find(Cell.CustomTag) : nullptr;
-                    if (Cell.Kind == ECkUiNodeKind::Custom && (Custom == nullptr || Custom->RetainedFactory))
-                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Table cell '%s' requires a registered stateless custom factory."), *Cell.Id))); return; }
+                    if (Cell.Kind == ECkUiNodeKind::Custom && (Custom == nullptr || (!Custom->Factory && !Custom->RetainedFactory)))
+                    { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Table cell '%s' requires a registered custom factory."), *Cell.Id))); return; }
                     bool HasEditableEvent = false;
                     if (Custom != nullptr)
                     {
@@ -830,7 +873,7 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                         {
                             const FCkUiCustomPropertySchema* Property = Custom->Schema.Properties.FindByPredicate([&Name](const FCkUiCustomPropertySchema& Candidate)
                             { return Candidate.Name == Name; });
-                            if (Property != nullptr && (Property->Kind == ECkUiCustomPropertyKind::StringChanged || Property->Kind == ECkUiCustomPropertyKind::TextChanged || Property->Kind == ECkUiCustomPropertyKind::TextCommitted || Property->Kind == ECkUiCustomPropertyKind::BoolChanged || Property->Kind == ECkUiCustomPropertyKind::NumberChanged || Property->Kind == ECkUiCustomPropertyKind::NumberCommitted || Property->Kind == ECkUiCustomPropertyKind::NumberInteraction))
+                            if (Property != nullptr && (Property->Kind == ECkUiCustomPropertyKind::StringChanged || Property->Kind == ECkUiCustomPropertyKind::TextChanged || Property->Kind == ECkUiCustomPropertyKind::TextCommitted || Property->Kind == ECkUiCustomPropertyKind::BoolChanged || Property->Kind == ECkUiCustomPropertyKind::NumberChanged || Property->Kind == ECkUiCustomPropertyKind::NumberCommitted || Property->Kind == ECkUiCustomPropertyKind::IntegerCommitted || Property->Kind == ECkUiCustomPropertyKind::ColorCommitted || Property->Kind == ECkUiCustomPropertyKind::NumberInteraction))
                             { HasEditableEvent = true; break; }
                         }
                     }
@@ -868,7 +911,7 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
                         continue;
                     }
                     if (!Column.SortField.IsEmpty())
-                    { const FCkUiFieldSchema* Sort = FindSchema(Column.SortField); if (Sort == nullptr || (Sort->Kind != ECkUiFieldKind::Text && Sort->Kind != ECkUiFieldKind::Number && Sort->Kind != ECkUiFieldKind::Bool)) { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Table column '%s' sort field '%s' must be a Text, Number, or Bool schema field."), *Column.Id, *Column.SortField))); } }
+                    { const FCkUiFieldSchema* Sort = FindSchema(Column.SortField); if (Sort == nullptr || (Sort->Kind != ECkUiFieldKind::Text && Sort->Kind != ECkUiFieldKind::Number && Sort->Kind != ECkUiFieldKind::Integer && Sort->Kind != ECkUiFieldKind::Bool)) { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Table column '%s' sort field '%s' must be a Text, Number, Integer, or Bool schema field."), *Column.Id, *Column.SortField))); } }
                     if (!Column.Children.IsEmpty())
                     {
                         const int32 PreviousErrors = OutErrors.Num();
@@ -953,6 +996,26 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
         if ((Existing.Kind == ERetainedKind::Table || Existing.Kind == ERetainedKind::Tree) && SeenIds.Contains(Id) && !CandidateRetained.Contains(Id))
         { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Committed collection id '%s' cannot change kind."), *Id))); }
     }
+    auto TrackedCustomNativePorts = TSet<const SWidget*>{};
+    const auto CollectCustomNativePorts = [&TrackedCustomNativePorts](const FCkUiView& InView, auto&& Self) -> void
+    {
+        for (const auto& [ContainerId, Container] : InView._CustomSlots)
+        {
+            if (!Container.IsValid()) { continue; }
+            for (const auto& [SlotName, Slot] : Container->Slots)
+            {
+                const TSharedPtr<FCkUiView> Child = Slot.IsValid() ? Slot->View : nullptr;
+                if (!Child.IsValid()) { continue; }
+                for (const auto& [Id, Record] : Child->_CommittedRetained)
+                {
+                    if (Record.Kind == ERetainedKind::Native && Record.Port.IsValid())
+                    { TrackedCustomNativePorts.Add(Record.Port.Get()); }
+                }
+                Self(*Child, Self);
+            }
+        }
+    };
+    CollectCustomNativePorts(*this, CollectCustomNativePorts);
     auto BindingNames = TArray<FString>{};
     _Bindings.GetKeys(BindingNames);
     for (int32 FirstIndex = 0; FirstIndex < BindingNames.Num(); ++FirstIndex)
@@ -967,7 +1030,7 @@ auto FCkUiView::ValidateDocument(const FCkUiDocument& InDocument, const FString&
             if (Record.Kind == ERetainedKind::Native && Record.Port == FirstParent)
             { FirstParentIsTracked = true; break; }
         }
-        if (FirstParent.IsValid() && !FirstParentIsTracked)
+        if (FirstParent.IsValid() && !FirstParentIsTracked && !TrackedCustomNativePorts.Contains(FirstParent.Get()))
         { OutErrors.Add(ck_ui_surface::Error(InSource, FString::Printf(TEXT("Native binding '%s' is already mounted under an unrelated parent."), *FirstName))); }
         for (int32 SecondIndex = FirstIndex + 1; SecondIndex < BindingNames.Num(); ++SecondIndex)
         {
@@ -1019,10 +1082,16 @@ auto FCkUiView::ApplyStyle(const FCkUiStyle& InStyle, const TSharedRef<SWidget>&
         const auto MaxHeight = InStyle.MaxHeight.IsSet() ? FOptionalSize(InStyle.MaxHeight.GetValue()) : FOptionalSize();
         Result = SNew(SBox).MinDesiredWidth(MinWidth).MinDesiredHeight(MinHeight).MaxDesiredWidth(MaxWidth).MaxDesiredHeight(MaxHeight)[Result];
     }
-    if (InStyle.Background.IsSet())
+    if (InStyle.Background.IsSet() || InStyle.BorderColor.IsSet())
     {
-        Result = SNew(SBorder).Tag(InContent->GetTag()).BorderImage(ck_ui_surface::BackgroundBrush())
-            .BorderBackgroundColor(InStyle.Background.GetValue()).Padding(FMargin(0.0f))[Result];
+        const FLinearColor Background = InStyle.Background.Get(FLinearColor::Transparent);
+        const FLinearColor Border = InStyle.BorderColor.Get(FLinearColor::Transparent);
+        const float Radius = InStyle.BorderRadius.Get(InStyle.Background.IsSet() ? 6.0f : 0.0f);
+        const float BorderWidth = InStyle.BorderWidth.Get(InStyle.BorderColor.IsSet() ? 1.0f : 0.0f);
+        const TSharedRef<FSlateRoundedBoxBrush> Brush = MakeShared<FSlateRoundedBoxBrush>(Background, Radius, Border, BorderWidth);
+        Result = SNew(SBorder).Tag(InContent->GetTag())
+            .BorderImage_Lambda([Brush]() { return static_cast<const FSlateBrush*>(&Brush.Get()); })
+            .BorderBackgroundColor(FLinearColor::White).Padding(FMargin(0.0f))[Result];
     }
     if (&Result.Get() != &InContent.Get())
     {
@@ -1049,7 +1118,8 @@ auto FCkUiView::ApplyStyle(const FCkUiStyle& InStyle, const TSharedRef<SWidget>&
 
 auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCollection>& Collection,
     const TSharedPtr<const FCkUiRecord>& Record, const TSharedPtr<FRepeatScope>& Scope,
-    const TSharedPtr<FCkUiView>& Existing, FCkUiDocument& OutDocument, TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>
+    const TSharedPtr<FCkUiView>& Existing, FCkUiDocument& OutDocument, TOptional<FViewContext>& OutReplacementContext,
+    TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>
 {
     auto Data = _Data;
     Data.Collections.Reset(); Data.Trees.Reset();
@@ -1058,26 +1128,96 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
     const TWeakPtr<const FCkUiRecord> WeakRecord = Record;
     const TWeakPtr<FCkUiCollection> WeakCollection = Collection;
     const TWeakPtr<FRepeatScope> WeakScope = Scope;
-    const auto Eligible = [WeakOwner, WeakRecord, WeakCollection, WeakScope]()
+    const int64 RecordRevision = Record.IsValid() ? Record->GetRevision() : 0;
+    const auto Eligible = [WeakOwner, WeakRecord, WeakCollection, WeakScope, RecordRevision]()
     {
         const auto Owner = WeakOwner.Pin(); const auto Row = WeakRecord.Pin();
         const auto Model = WeakCollection.Pin(); const auto ItemScope = WeakScope.Pin();
         return Owner.IsValid() && Owner->CanDispatchEvents() && ItemScope.IsValid() && ItemScope->Active
-            && Row.IsValid() && Model.IsValid() && Model->FindRecord(Row->GetKey()) == Row;
+            && Row.IsValid() && Row->GetRevision() == RecordRevision && Model.IsValid() && Model->FindRecord(Row->GetKey()) == Row;
     };
     Data.CanDispatchEvents = TAttribute<bool>::CreateLambda(Eligible);
+    auto GeneratedActionAliases = TSet<FString>{};
+    auto GeneratedFieldAliases = TSet<FString>{};
+    auto GeneratedItemEventAliases = TSet<FString>{};
+    const auto HasFieldAlias = [&Data](const FString& Alias)
+    {
+        return Data.Text.Contains(Alias) || Data.String.Contains(Alias) || Data.TextChanged.Contains(Alias)
+            || Data.TextCommitted.Contains(Alias) || Data.BoolChanged.Contains(Alias) || Data.NumberChanged.Contains(Alias)
+            || Data.NumberCommitted.Contains(Alias) || Data.IntegerCommitted.Contains(Alias) || Data.ColorCommitted.Contains(Alias)
+            || Data.NumberInteraction.Contains(Alias) || Data.StringChanged.Contains(Alias) || Data.Images.Contains(Alias)
+            || Data.Number.Contains(Alias) || Data.Integer.Contains(Alias) || Data.Color.Contains(Alias) || Data.Visibility.Contains(Alias)
+            || Data.FloatSeries.Contains(Alias);
+    };
+    const auto RemoveFieldAlias = [&Data](const FString& Alias)
+    {
+        Data.Text.Remove(Alias); Data.String.Remove(Alias); Data.TextChanged.Remove(Alias); Data.TextCommitted.Remove(Alias);
+        Data.BoolChanged.Remove(Alias); Data.NumberChanged.Remove(Alias); Data.NumberCommitted.Remove(Alias);
+        Data.IntegerCommitted.Remove(Alias); Data.ColorCommitted.Remove(Alias); Data.NumberInteraction.Remove(Alias);
+        Data.StringChanged.Remove(Alias); Data.Images.Remove(Alias); Data.Number.Remove(Alias); Data.Integer.Remove(Alias);
+        Data.Color.Remove(Alias); Data.Visibility.Remove(Alias); Data.FloatSeries.Remove(Alias);
+    };
+    const auto ReplaceItemBoolChanged = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
+    {
+        const FCkUiOnItemBoolChanged Callback = _Data.ItemBoolChanged.FindRef(Handler);
+        if (!Callback.IsBound()) { OutErrors.Add(TEXT("Repeat item requires its declared bool-changed handler.")); return false; }
+        const FString Alias = TEXT("@item-bool:") + Handler;
+        if (Data.BoolChanged.Contains(Alias) && !_GeneratedRepeatItemEventAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat item event alias collision.")); return false; }
+        Data.BoolChanged.Add(Alias, FCkUiOnBoolChanged::CreateLambda([Eligible, WeakRecord, Callback](const bool InValue)
+        { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey(), InValue); } } }));
+        GeneratedItemEventAliases.Add(Alias);
+        return true;
+    };
+    const auto ReplaceItemNumberCommitted = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
+    {
+        const FCkUiOnItemNumberCommitted Callback = _Data.ItemNumberCommitted.FindRef(Handler);
+        if (!Callback.IsBound()) { OutErrors.Add(TEXT("Repeat item requires its declared number-committed handler.")); return false; }
+        const FString Alias = TEXT("@item-number:") + Handler;
+        if (Data.NumberCommitted.Contains(Alias) && !_GeneratedRepeatItemEventAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat item event alias collision.")); return false; }
+        Data.NumberCommitted.Add(Alias, FCkUiOnNumberCommitted::CreateLambda([Eligible, WeakRecord, Callback](const float InValue, const ETextCommit::Type InCommitType)
+        { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey(), InValue, InCommitType); } } }));
+        GeneratedItemEventAliases.Add(Alias);
+        return true;
+    };
+    const auto ReplaceItemIntegerCommitted = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
+    {
+        const FCkUiOnItemIntegerCommitted Callback = _Data.ItemIntegerCommitted.FindRef(Handler);
+        if (!Callback.IsBound()) { OutErrors.Add(TEXT("Repeat item requires its declared integer-committed handler.")); return false; }
+        const FString Alias = TEXT("@item-integer:") + Handler;
+        if (Data.IntegerCommitted.Contains(Alias) && !_GeneratedRepeatItemEventAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat item event alias collision.")); return false; }
+        Data.IntegerCommitted.Add(Alias, FCkUiOnIntegerCommitted::CreateLambda([Eligible, WeakRecord, Callback](const int32 InValue, const ETextCommit::Type InCommitType)
+        { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey(), InValue, InCommitType); } } }));
+        GeneratedItemEventAliases.Add(Alias);
+        return true;
+    };
+    // Install every host-declared typed item-event alias before rewriting the item document. This
+    // mirrors ItemActions: nested scopes replace only generated callbacks, caller-owned reserved
+    // aliases are rejected even when the current markup does not reference that handler, and a
+    // retained item may switch A -> B -> B -> A without its candidate data looking caller-owned.
+    for (const auto& Entry : _Data.ItemBoolChanged)
+    { if (!ReplaceItemBoolChanged(Entry.Key)) { return {}; } }
+    for (const auto& Entry : _Data.ItemNumberCommitted)
+    { if (!ReplaceItemNumberCommitted(Entry.Key)) { return {}; } }
+    for (const auto& Entry : _Data.ItemIntegerCommitted)
+    { if (!ReplaceItemIntegerCommitted(Entry.Key)) { return {}; } }
     for (const auto& [Name, Callback] : _Data.ItemActions)
     {
-        if (Actions.Contains(TEXT("@item:") + Name)) { OutErrors.Add(TEXT("Reserved repeat action alias collision.")); return {}; }
-        Actions.Add(TEXT("@item:") + Name, FSimpleDelegate::CreateLambda([Eligible, WeakRecord, Callback]()
+        const FString Alias = TEXT("@item:") + Name;
+        if (Actions.Contains(Alias) && !_GeneratedRepeatActionAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat action alias collision.")); return {}; }
+        Actions.Add(Alias, FSimpleDelegate::CreateLambda([Eligible, WeakRecord, Callback]()
         { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey()); } } }));
+        GeneratedActionAliases.Add(Alias);
     }
     for (const FCkUiFieldSchema& Field : Collection->GetSchema())
     {
         const FString Alias = TEXT("@field:") + Field.Name;
-        if (Data.Text.Contains(Alias) || Data.Color.Contains(Alias) || Data.Number.Contains(Alias)
-            || Data.Visibility.Contains(Alias) || Data.Images.Contains(Alias))
+        if (HasFieldAlias(Alias) && !_GeneratedRepeatFieldAliases.Contains(Alias))
         { OutErrors.Add(TEXT("Reserved repeat field alias collision.")); return {}; }
+        if (_GeneratedRepeatFieldAliases.Contains(Alias)) { RemoveFieldAlias(Alias); }
         const auto Find = [WeakRecord, Name = Field.Name]() -> const FCkUiFieldValue*
         { const auto Row = WeakRecord.Pin(); return Row.IsValid() ? Row->FindField(Name) : nullptr; };
         switch (Field.Kind)
@@ -1085,23 +1225,81 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
         case ECkUiFieldKind::Text: Data.Text.Add(Alias, TAttribute<FText>::CreateLambda([Find]() { const auto* V = Find(); return V ? V->Text : FText::GetEmpty(); })); break;
         case ECkUiFieldKind::Bool: Data.Visibility.Add(Alias, TAttribute<bool>::CreateLambda([Find]() { const auto* V = Find(); return V && V->Bool; })); break;
         case ECkUiFieldKind::Number: Data.Number.Add(Alias, TAttribute<float>::CreateLambda([Find]() { const auto* V = Find(); return V ? V->Number : 0.0f; })); break;
+        case ECkUiFieldKind::Integer: Data.Integer.Add(Alias, TAttribute<int32>::CreateLambda([Find]() { const auto* V = Find(); return V ? V->Integer : 0; })); break;
         case ECkUiFieldKind::Color: Data.Color.Add(Alias, TAttribute<FLinearColor>::CreateLambda([Find]() { const auto* V = Find(); return V ? V->Color : FLinearColor::Transparent; })); break;
         case ECkUiFieldKind::Image: Data.Images.Add(Alias, TAttribute<const FSlateBrush*>::CreateLambda([Find]() { const auto* V = Find(); return V && V->Image.IsValid() ? V->Image.Get() : nullptr; })); break;
+        case ECkUiFieldKind::FloatSeries: Data.FloatSeries.Add(Alias, [Find]() { const auto* V = Find(); return V != nullptr ? V->FloatSeries : TWeakPtr<FCkUiFloatSeries>{}; }()); break;
         }
+        GeneratedFieldAliases.Add(Alias);
     }
     FCkUiNode Bound = InNode;
     TFunction<void(FCkUiNode&)> Rewrite;
-    Rewrite = [this, &Collection, &Rewrite, &OutErrors](FCkUiNode& Node)
+    Rewrite = [this, WeakRecord, &Data, &Collection, &Rewrite, &OutErrors](FCkUiNode& Node)
     {
-        if (Node.Kind == ECkUiNodeKind::Repeat || Node.Kind == ECkUiNodeKind::Table || Node.Kind == ECkUiNodeKind::Tree || Node.Kind == ECkUiNodeKind::Native)
-        { OutErrors.Add(TEXT("Repeat items cannot contain nested collections or native ports.")); return; }
+        if (Node.Kind == ECkUiNodeKind::Repeat)
+        {
+            // child-bind is resolved from this item's record, never from the parent view's global bindings.
+            // This keeps same-named child collections isolated for every parent item.
+            const TSharedPtr<const FCkUiRecord> Row = WeakRecord.Pin();
+            TSharedPtr<FCkUiCollection> Child;
+            if (Row.IsValid())
+            { Child = ConstCastSharedPtr<FCkUiCollection>(Row->FindChildCollection(Node.ChildBinding)); }
+            else if (const FCkUiChildCollectionSchema* ChildSchema = Collection->GetChildSchemas().FindByPredicate(
+                [&Node](const FCkUiChildCollectionSchema& Candidate) { return Candidate.Name == Node.ChildBinding; }); ChildSchema != nullptr)
+            {
+                // Validation has no record instance. Use an unmounted schema-shaped collection only to
+                // validate the nested item document; staging below still requires the record-owned model.
+                FCkUiLoadResult Created = FCkUiCollection::TryCreateHierarchical(
+                    FCkUiCollectionSchema{.Fields = ChildSchema->Fields, .Children = ChildSchema->Children}, Child);
+                if (!Created.Succeeded) { OutErrors.Append(MoveTemp(Created.Errors)); return; }
+            }
+            if (Node.ChildBinding.IsEmpty() || !Child.IsValid())
+            { OutErrors.Add(FString::Printf(TEXT("Repeat child binding '%s' is unavailable for the current item."), *Node.ChildBinding)); return; }
+            Data.Collections.Add(Node.ChildBinding, Child);
+            Node.Binding = Node.ChildBinding;
+            Node.ChildBinding.Reset();
+        }
+        else if (Node.Kind == ECkUiNodeKind::Table || Node.Kind == ECkUiNodeKind::Tree || Node.Kind == ECkUiNodeKind::Native)
+        { OutErrors.Add(TEXT("Repeat items cannot contain table, tree, or native ports.")); return; }
+        const auto* Custom = Node.Kind == ECkUiNodeKind::Custom && _CustomRegistry.IsValid() ? _CustomRegistry->Find(Node.CustomTag) : nullptr;
         if (!Node.ItemAction.IsEmpty())
         {
-            if (Node.Kind != ECkUiNodeKind::Button || !_Data.ItemActions.FindRef(Node.ItemAction).IsBound())
+            const FCkUiCustomPropertySchema* ActionProperty = Custom != nullptr
+                ? Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
+                { return Property.Name == TEXT("action") && Property.Kind == ECkUiCustomPropertyKind::Action; }) : nullptr;
+            if ((Node.Kind != ECkUiNodeKind::Button && ActionProperty == nullptr) || !_Data.ItemActions.FindRef(Node.ItemAction).IsBound())
             { OutErrors.Add(TEXT("Repeat item requires its declared item action.")); }
-            Node.Action = TEXT("@item:") + Node.ItemAction; Node.ItemAction.Reset();
+            else if (Node.Kind == ECkUiNodeKind::Button) { Node.Action = TEXT("@item:") + Node.ItemAction; }
+            else { Node.CustomProperties.Add(TEXT("action"), FCkUiCustomPropertyValue{.Kind = ECkUiCustomPropertyKind::Action, .Name = TEXT("@item:") + Node.ItemAction}); }
+            Node.ItemAction.Reset();
         }
-        const auto* Custom = Node.Kind == ECkUiNodeKind::Custom && _CustomRegistry.IsValid() ? _CustomRegistry->Find(Node.CustomTag) : nullptr;
+        for (const auto& [PropertyName, Handler] : Node.ItemEventBindings)
+        {
+            const FCkUiCustomPropertySchema* Property = Custom != nullptr
+                ? Custom->Schema.Properties.FindByPredicate([&PropertyName](const FCkUiCustomPropertySchema& Candidate) { return Candidate.Name == PropertyName; }) : nullptr;
+            if (Property == nullptr)
+            { OutErrors.Add(TEXT("Repeat item event requires its declared custom property.")); continue; }
+            if (PropertyName == TEXT("changed") && Property->Kind == ECkUiCustomPropertyKind::BoolChanged)
+            {
+                if (!_Data.ItemBoolChanged.FindRef(Handler).IsBound())
+                { OutErrors.Add(TEXT("Repeat item requires its declared bool-changed handler.")); }
+                else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-bool:") + Handler}); }
+            }
+            else if (PropertyName == TEXT("committed") && Property->Kind == ECkUiCustomPropertyKind::NumberCommitted)
+            {
+                if (!_Data.ItemNumberCommitted.FindRef(Handler).IsBound())
+                { OutErrors.Add(TEXT("Repeat item requires its declared number-committed handler.")); }
+                else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-number:") + Handler}); }
+            }
+            else if (PropertyName == TEXT("committed") && Property->Kind == ECkUiCustomPropertyKind::IntegerCommitted)
+            {
+                if (!_Data.ItemIntegerCommitted.FindRef(Handler).IsBound())
+                { OutErrors.Add(TEXT("Repeat item requires its declared integer-committed handler.")); }
+                else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-integer:") + Handler}); }
+            }
+            else { OutErrors.Add(TEXT("Repeat item event has an incompatible custom property.")); }
+        }
+        Node.ItemEventBindings.Reset();
         for (const auto& [Target, Field] : Node.FieldBindings)
         {
             TOptional<ECkUiFieldKind> Expected;
@@ -1122,12 +1320,26 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
             else if (Target == TEXT("tooltip")) { Node.TooltipBinding = Alias; }
             else if (Property) { FCkUiCustomPropertyValue Value; Value.Kind = Property->Kind; Value.Name = Alias; Node.CustomProperties.Add(Target, MoveTemp(Value)); }
         }
-        Node.FieldBindings.Reset();
-        for (auto& Child : Node.Children) { Rewrite(Child); }
+        // Keep custom field provenance through schema-only repeat preflight. A record is intentionally
+        // absent there, so a deferred FloatSeries weak handle cannot be required to be live yet.
+        if (Node.Kind != ECkUiNodeKind::Custom) { Node.FieldBindings.Reset(); }
+        // A nested repeat owns its item template. Its child view resolves any further child-bind
+        // against that nested record, rather than accidentally capturing this ancestor record.
+        if (Node.Kind != ECkUiNodeKind::Repeat)
+        { for (auto& Child : Node.Children) { Rewrite(Child); } }
     };
     Rewrite(Bound);
     if (!OutErrors.IsEmpty()) { return {}; }
-    const auto View = Existing.IsValid() ? Existing : FCkUiView::Create({}, MoveTemp(Actions), {}, _BaseFont, MoveTemp(Data), _CustomRegistry);
+    FViewContext Candidate{MoveTemp(Data), MoveTemp(Actions), MoveTemp(GeneratedActionAliases), MoveTemp(GeneratedFieldAliases),
+        MoveTemp(GeneratedItemEventAliases)};
+    const auto View = Existing.IsValid() ? Existing : FCkUiView::Create({}, MoveTemp(Candidate.Actions), {}, _BaseFont, MoveTemp(Candidate.Data), _CustomRegistry);
+    if (Existing.IsValid()) { OutReplacementContext = MoveTemp(Candidate); }
+    if (!Existing.IsValid())
+    {
+        View->_GeneratedRepeatActionAliases = MoveTemp(Candidate.GeneratedRepeatActionAliases);
+        View->_GeneratedRepeatFieldAliases = MoveTemp(Candidate.GeneratedRepeatFieldAliases);
+        View->_GeneratedRepeatItemEventAliases = MoveTemp(Candidate.GeneratedRepeatItemEventAliases);
+    }
     if (!Existing.IsValid())
     {
         const auto Mount = View->GetRegion(TEXT("item"));
@@ -1151,24 +1363,84 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
     }
     FCkUiNode Root; Root.Id = TEXT("@repeat-root"); Root.Kind = ECkUiNodeKind::Column; Root.Children.Add(MoveTemp(Bound));
     OutDocument.Regions.Add(TEXT("item"), MoveTemp(Root));
+    if (OutReplacementContext.IsSet())
+    {
+        FViewContext Previous{View->_Data, View->_Actions, View->_GeneratedRepeatActionAliases,
+            View->_GeneratedRepeatFieldAliases, View->_GeneratedRepeatItemEventAliases};
+        const FViewContext& CandidateContext = OutReplacementContext.GetValue();
+        View->_Data = CandidateContext.Data;
+        View->_Actions = CandidateContext.Actions;
+        View->_GeneratedRepeatActionAliases = CandidateContext.GeneratedRepeatActionAliases;
+        View->_GeneratedRepeatFieldAliases = CandidateContext.GeneratedRepeatFieldAliases;
+        View->_GeneratedRepeatItemEventAliases = CandidateContext.GeneratedRepeatItemEventAliases;
+        const bool Valid = View->ValidateDocument(OutDocument, TEXT("<repeat-item>"), OutErrors);
+        View->_Data = MoveTemp(Previous.Data);
+        View->_Actions = MoveTemp(Previous.Actions);
+        View->_GeneratedRepeatActionAliases = MoveTemp(Previous.GeneratedRepeatActionAliases);
+        View->_GeneratedRepeatFieldAliases = MoveTemp(Previous.GeneratedRepeatFieldAliases);
+        View->_GeneratedRepeatItemEventAliases = MoveTemp(Previous.GeneratedRepeatItemEventAliases);
+        return Valid ? View : nullptr;
+    }
     return View->ValidateDocument(OutDocument, TEXT("<repeat-item>"), OutErrors) ? View : nullptr;
 }
 
 auto FCkUiView::MakeCustomSlotView(const FCkUiNode& InRoot, const TSharedPtr<FCustomSlot>& InSlot,
-    const TMap<FString, FCkUiMenu>& InMenus, FCkUiDocument& OutDocument, TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>
+    const TMap<FString, FCkUiMenu>& InMenus, FCkUiDocument& OutDocument, TOptional<FViewContext>& OutReplacementContext,
+    TArray<FString>& OutErrors) const -> TSharedPtr<FCkUiView>
 {
+    auto BindingNames = TSet<FString>{};
+    const auto CollectBindings = [&BindingNames](const FCkUiNode& Node, auto&& Self) -> void
+    {
+        if (Node.Kind == ECkUiNodeKind::Native && !Node.Binding.IsEmpty()) { BindingNames.Add(Node.Binding); }
+        for (const FCkUiNode& Child : Node.Children) { Self(Child, Self); }
+    };
+    CollectBindings(InRoot, CollectBindings);
+    auto Bindings = FNativeBindings{};
+    for (const FString& Binding : BindingNames)
+    {
+        if (const TSharedPtr<SWidget>* Widget = _Bindings.Find(Binding); Widget != nullptr)
+        { Bindings.Add(Binding, *Widget); }
+    }
+
     auto View = InSlot->View;
+    const auto HasSameBindings = [&Bindings](const TSharedPtr<FCkUiView>& Candidate) -> bool
+    {
+        if (!Candidate.IsValid() || Candidate->_Bindings.Num() != Bindings.Num()) { return false; }
+        for (const auto& [Name, Widget] : Bindings)
+        {
+            if (Candidate->_Bindings.FindRef(Name) != Widget) { return false; }
+        }
+        return true;
+    };
+    if (View.IsValid() && !HasSameBindings(View))
+    {
+        for (const auto& [Name, Widget] : Bindings)
+        {
+            if (Widget.IsValid() && Widget->GetParentWidget().IsValid())
+            {
+                OutErrors.Add(TEXT("A native binding cannot move between custom slots during a reload."));
+                return nullptr;
+            }
+        }
+        InSlot->Scope = MakeShared<FRepeatScope>();
+        View.Reset();
+    }
+    auto Data = _Data;
+    const TWeakPtr<FCkUiView> WeakParent = const_cast<FCkUiView*>(this)->AsShared();
+    const TWeakPtr<FRepeatScope> WeakScope = InSlot->Scope;
+    Data.CanDispatchEvents = TAttribute<bool>::CreateLambda([WeakParent, WeakScope]()
+    {
+        const auto Parent = WeakParent.Pin(); const auto Scope = WeakScope.Pin();
+        return Parent.IsValid() && Scope.IsValid() && Scope->Active && Parent->CanDispatchEvents();
+    });
+    FViewContext Candidate{MoveTemp(Data), _Actions, _GeneratedRepeatActionAliases, _GeneratedRepeatFieldAliases,
+        _GeneratedRepeatItemEventAliases};
     if (!View.IsValid())
     {
-        auto Data = _Data;
-        const TWeakPtr<FCkUiView> WeakParent = const_cast<FCkUiView*>(this)->AsShared();
-        const TWeakPtr<FRepeatScope> WeakScope = InSlot->Scope;
-        Data.CanDispatchEvents = TAttribute<bool>::CreateLambda([WeakParent, WeakScope]()
-        {
-            const auto Parent = WeakParent.Pin(); const auto Scope = WeakScope.Pin();
-            return Parent.IsValid() && Scope.IsValid() && Scope->Active && Parent->CanDispatchEvents();
-        });
-        View = FCkUiView::Create(_Bindings, _Actions, _Tokens, _BaseFont, MoveTemp(Data), _CustomRegistry);
+        View = FCkUiView::Create(MoveTemp(Bindings), MoveTemp(Candidate.Actions), _Tokens, _BaseFont, MoveTemp(Candidate.Data), _CustomRegistry);
+        View->_GeneratedRepeatActionAliases = MoveTemp(Candidate.GeneratedRepeatActionAliases);
+        View->_GeneratedRepeatFieldAliases = MoveTemp(Candidate.GeneratedRepeatFieldAliases);
+        View->_GeneratedRepeatItemEventAliases = MoveTemp(Candidate.GeneratedRepeatItemEventAliases);
         const auto Mount = View->GetRegion(TEXT("slot"));
         const TWeakPtr<SWidget> WeakMount = Mount;
         Mount->AddMetadata(MakeShared<FCkFlexMeasureMetaData>(
@@ -1188,6 +1460,7 @@ auto FCkUiView::MakeCustomSlotView(const FCkUiNode& InRoot, const TSharedPtr<FCu
                 if (Measure.IsValid()) { Measure->NotifyArranged(Width, Height); }
             }));
     }
+    else { OutReplacementContext = MoveTemp(Candidate); }
     FCkUiNode Root; Root.Id = TEXT("@slot-root"); Root.Kind = ECkUiNodeKind::Column;
     TSet<FString> Ids;
     const auto CollectIds = [&Ids](const FCkUiNode& Node, auto&& Self) -> void
@@ -1196,6 +1469,24 @@ auto FCkUiView::MakeCustomSlotView(const FCkUiNode& InRoot, const TSharedPtr<FCu
     while (Ids.Contains(Root.Id)) { Root.Id += TEXT("_"); }
     auto Child = InRoot; Child.CustomSlotName.Reset(); Root.Children.Add(MoveTemp(Child));
     OutDocument.Regions.Add(TEXT("slot"), MoveTemp(Root)); OutDocument.Menus = InMenus;
+    if (OutReplacementContext.IsSet())
+    {
+        FViewContext Previous{View->_Data, View->_Actions, View->_GeneratedRepeatActionAliases,
+            View->_GeneratedRepeatFieldAliases, View->_GeneratedRepeatItemEventAliases};
+        const FViewContext& CandidateContext = OutReplacementContext.GetValue();
+        View->_Data = CandidateContext.Data;
+        View->_Actions = CandidateContext.Actions;
+        View->_GeneratedRepeatActionAliases = CandidateContext.GeneratedRepeatActionAliases;
+        View->_GeneratedRepeatFieldAliases = CandidateContext.GeneratedRepeatFieldAliases;
+        View->_GeneratedRepeatItemEventAliases = CandidateContext.GeneratedRepeatItemEventAliases;
+        const bool Valid = View->ValidateDocument(OutDocument, TEXT("<custom-slot>"), OutErrors);
+        View->_Data = MoveTemp(Previous.Data);
+        View->_Actions = MoveTemp(Previous.Actions);
+        View->_GeneratedRepeatActionAliases = MoveTemp(Previous.GeneratedRepeatActionAliases);
+        View->_GeneratedRepeatFieldAliases = MoveTemp(Previous.GeneratedRepeatFieldAliases);
+        View->_GeneratedRepeatItemEventAliases = MoveTemp(Previous.GeneratedRepeatItemEventAliases);
+        return Valid ? View : nullptr;
+    }
     return View->ValidateDocument(OutDocument, TEXT("<custom-slot>"), OutErrors) ? View : nullptr;
 }
 
@@ -1216,10 +1507,24 @@ auto FCkUiView::PrepareCustomSlots(const FCkUiNode& InNode, const FCkUiCustomWid
             Slot->View = Old.IsValid() ? Old->View : nullptr;
             Slot->Scope = Slot->View.IsValid() ? Old->Scope : MakeShared<FRepeatScope>();
             FCkUiDocument Document;
-            Slot->View = MakeCustomSlotView(*Root, Slot, OutStaged.Menus, Document, OutErrors);
+            TOptional<FViewContext> ReplacementContext;
+            Slot->View = MakeCustomSlotView(*Root, Slot, OutStaged.Menus, Document, ReplacementContext, OutErrors);
             if (!Slot->View.IsValid()) { return false; }
             if (Slot->View->_IsReloading) { OutErrors.Add(TEXT("Custom slot child is already reloading.")); return false; }
             const auto Child = MakeShared<FNestedUpdate>(); Child->View = Slot->View; Child->Staged = MakeShared<FStagedDocument>();
+            Child->Staged->Tokens = OutStaged.Tokens;
+            if (ReplacementContext.IsSet())
+            {
+                Child->PreviousContext = FViewContext{MoveTemp(Child->View->_Data), MoveTemp(Child->View->_Actions),
+                    MoveTemp(Child->View->_GeneratedRepeatActionAliases), MoveTemp(Child->View->_GeneratedRepeatFieldAliases),
+                    MoveTemp(Child->View->_GeneratedRepeatItemEventAliases)};
+                FViewContext& Candidate = ReplacementContext.GetValue();
+                Child->View->_Data = MoveTemp(Candidate.Data);
+                Child->View->_Actions = MoveTemp(Candidate.Actions);
+                Child->View->_GeneratedRepeatActionAliases = MoveTemp(Candidate.GeneratedRepeatActionAliases);
+                Child->View->_GeneratedRepeatFieldAliases = MoveTemp(Candidate.GeneratedRepeatFieldAliases);
+                Child->View->_GeneratedRepeatItemEventAliases = MoveTemp(Candidate.GeneratedRepeatItemEventAliases);
+            }
             Child->View->_IsReloading = true;
             if (!Child->View->StageDocument(Document, *Child->Staged, OutErrors)) { return false; }
             OutStaged.Nested.Add(Child);
@@ -1314,12 +1619,28 @@ auto FCkUiView::PrepareRepeat(const FCkUiNode& InNode, FStagedDocument& OutStage
     for (const auto& Record : Records)
     {
         const FRepeatState::FItem* Old = Previous.IsValid() ? Previous->Items.FindByPredicate([&Record](const auto& Item) { return Item.Record == Record; }) : nullptr;
-        FRepeatState::FItem Item; Item.Record = Record; Item.Scope = Old ? Old->Scope : MakeShared<FRepeatScope>();
+        FRepeatState::FItem Item; Item.Record = Record; Item.RecordRevision = Record.IsValid() ? Record->GetRevision() : 0;
+        Item.Scope = Old ? Old->Scope : MakeShared<FRepeatScope>();
         FCkUiDocument Document;
-        Item.View = MakeRepeatItem(InNode.Children[0], Collection, Record, Item.Scope, Old ? Old->View : nullptr, Document, OutErrors);
+        TOptional<FViewContext> ReplacementContext;
+        Item.View = MakeRepeatItem(InNode.Children[0], Collection, Record, Item.Scope, Old ? Old->View : nullptr,
+            Document, ReplacementContext, OutErrors);
         if (!Item.View.IsValid() || Item.View->_IsReloading) { OutErrors.Add(TEXT("Repeat child could not enter the transaction.")); return {}; }
         const auto Update = MakeShared<FNestedUpdate>(); Update->View = Item.View; Item.View->_IsReloading = true;
         Update->Staged = MakeShared<FStagedDocument>();
+        Update->Staged->Tokens = OutStaged.Tokens;
+        if (ReplacementContext.IsSet())
+        {
+            Update->PreviousContext = FViewContext{MoveTemp(Item.View->_Data), MoveTemp(Item.View->_Actions),
+                MoveTemp(Item.View->_GeneratedRepeatActionAliases), MoveTemp(Item.View->_GeneratedRepeatFieldAliases),
+                MoveTemp(Item.View->_GeneratedRepeatItemEventAliases)};
+            FViewContext& Candidate = ReplacementContext.GetValue();
+            Item.View->_Data = MoveTemp(Candidate.Data);
+            Item.View->_Actions = MoveTemp(Candidate.Actions);
+            Item.View->_GeneratedRepeatActionAliases = MoveTemp(Candidate.GeneratedRepeatActionAliases);
+            Item.View->_GeneratedRepeatFieldAliases = MoveTemp(Candidate.GeneratedRepeatFieldAliases);
+            Item.View->_GeneratedRepeatItemEventAliases = MoveTemp(Candidate.GeneratedRepeatItemEventAliases);
+        }
         OutStaged.Nested.Add(Update);
         if (!Item.View->StageDocument(Document, *Update->Staged, OutErrors)) { return {}; }
         Next->Items.Add(MoveTemp(Item));
@@ -1344,11 +1665,46 @@ auto FCkUiView::RefreshRepeat(const FString& InId) -> bool
     if (!Previous.IsValid()) { return false; }
     const auto& Records = Previous->Collection->GetRecords();
     bool Same = Records.Num() == Previous->Items.Num();
-    for (int32 Index = 0; Same && Index < Records.Num(); ++Index) { Same = Records[Index] == Previous->Items[Index].Record; }
-    if (Same) { Previous->Widget->SetLastFailure({}); return true; }
+    for (int32 Index = 0; Same && Index < Records.Num(); ++Index)
+    {
+        Same = Records[Index] == Previous->Items[Index].Record && Records[Index].IsValid()
+            && Records[Index]->GetRevision() == Previous->Items[Index].RecordRevision;
+    }
+    if (Same)
+    {
+        // A hierarchical collection transaction can retain every parent record while changing a child
+        // collection. The parent presenter has no topology work, but dirty descendant presenters must
+        // still reconcile their own keyed records within the same UI refresh opportunity.
+        // Refreshing a child publishes its replacement state into the owning item view. Snapshot the
+        // presenters before invoking callbacks so that publication cannot invalidate this traversal.
+        TArray<TSharedPtr<SCkUiRepeat>> DescendantPresenters;
+        for (const FRepeatState::FItem& Item : Previous->Items)
+        {
+            if (!Item.View.IsValid()) { continue; }
+            for (const auto& [ChildId, ChildState] : Item.View->_RepeatStates)
+            { if (ChildState.IsValid() && ChildState->Widget.IsValid()) { DescendantPresenters.Add(ChildState->Widget); } }
+        }
+        TArray<FString> DescendantFailures;
+        for (const TSharedPtr<SCkUiRepeat>& ChildPresenter : DescendantPresenters)
+        {
+            // A clean presenter also returns false; only a populated failure represents a rejected
+            // descendant transaction that must keep this parent dirty for a retry.
+            if (!ChildPresenter->TryRefresh() && !ChildPresenter->GetLastFailure().IsEmpty())
+            { DescendantFailures.Add(ChildPresenter->GetLastFailure()); }
+        }
+        if (!DescendantFailures.IsEmpty())
+        {
+            Previous->Widget->SetLastFailure(FString::Printf(TEXT("Nested repeat refresh failed:\n%s"),
+                *FString::Join(DescendantFailures, TEXT("\n"))));
+            return false;
+        }
+        Previous->Widget->SetLastFailure({});
+        return true;
+    }
     const auto KeepAlive = AsShared();
     TGuardValue<bool> Guard(_IsReloading, true);
     FStagedDocument Staged;
+    Staged.Tokens = _Tokens;
     TArray<FString> Errors;
     if (!PrepareRepeat(Previous->Definition, Staged, Errors).IsValid())
     { Previous->Widget->SetLastFailure(FString::Join(Errors, TEXT("\n"))); return false; }
@@ -1392,7 +1748,11 @@ auto FCkUiView::RefreshRepeat(const FString& InId) -> bool
         }
     }
     _RepeatStates.Add(InId, Next);
-    for (const auto& Child : Staged.Nested) { Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State); }
+    for (const auto& Child : Staged.Nested)
+    {
+        Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State);
+        Child->ContextPublished = true;
+    }
     MountRepeat(*Next);
     for (const auto& Child : Staged.Nested) { Child->View->MountChildren(); }
     for (const auto& Child : Staged.Nested) { Child->View->ReconcileInteractions(Child->State); }
@@ -1423,7 +1783,49 @@ auto FCkUiView::MakeCellView(const FCkUiNode& InCell, TWeakPtr<const TRecord> We
     Data.TableSelectionChanged.Reset();
     Data.TableContextMenus.Reset();
     Data.ContextActions.Reset();
+    auto Actions = _Actions;
+    // Item-action delegates are installed while the cell view is staged, before its table owner
+    // supplies the row/configuration gate. Keep only a weak back-reference so each delegate asks
+    // the fully configured cell view whether dispatch is still permitted at invocation time.
+    const TSharedRef<TWeakPtr<FCkUiView>> WeakCellView = MakeShared<TWeakPtr<FCkUiView>>();
     auto BoundCell = InCell;
+    if constexpr (std::is_same_v<TRecord, FCkUiRecord>)
+    {
+        TSet<FString> ItemActionHandlers;
+        TFunction<void(const FCkUiNode&)> CollectItemActions;
+        CollectItemActions = [&ItemActionHandlers, &CollectItemActions](const FCkUiNode& Node)
+        {
+            if (!Node.ItemAction.IsEmpty()) { ItemActionHandlers.Add(Node.ItemAction); }
+            for (const FCkUiNode& Child : Node.Children) { CollectItemActions(Child); }
+        };
+        CollectItemActions(BoundCell);
+        for (const FString& Handler : ItemActionHandlers)
+        {
+            const FCkUiOnItemAction Callback = _Data.ItemActions.FindRef(Handler);
+            if (!Callback.IsBound()) { OutErrors.Add(TEXT("Table cell requires its declared item action.")); return nullptr; }
+            const FString Alias = TEXT("@item:") + Handler;
+            if (Actions.Contains(Alias)) { OutErrors.Add(TEXT("Reserved table item action alias collision.")); return nullptr; }
+            Actions.Add(Alias, FSimpleDelegate::CreateLambda([WeakCellView, WeakRecord, Callback]()
+            {
+                const TSharedPtr<FCkUiView> CellView = WeakCellView->Pin();
+                const TSharedPtr<const TRecord> Row = WeakRecord.Pin();
+                if (CellView.IsValid() && CellView->CanDispatchEvents() && Row.IsValid())
+                { Callback.ExecuteIfBound(Row->GetKey()); }
+            }));
+        }
+        TFunction<void(FCkUiNode&)> RewriteItemActions;
+        RewriteItemActions = [&RewriteItemActions](FCkUiNode& Node)
+        {
+            if (!Node.ItemAction.IsEmpty())
+            {
+                Node.CustomProperties.Add(TEXT("action"), FCkUiCustomPropertyValue{
+                    .Kind = ECkUiCustomPropertyKind::Action, .Name = TEXT("@item:") + Node.ItemAction});
+                Node.ItemAction.Reset();
+            }
+            for (FCkUiNode& Child : Node.Children) { RewriteItemActions(Child); }
+        };
+        RewriteItemActions(BoundCell);
+    }
     int32 AliasIndex = 0;
     TFunction<void(FCkUiNode&)> BindFields;
     BindFields = [this, WeakRecord, &Data, &BindFields, &AliasIndex](FCkUiNode& Node)
@@ -1433,7 +1835,7 @@ auto FCkUiView::MakeCellView(const FCkUiNode& InCell, TWeakPtr<const TRecord> We
             FString Alias;
             do { Alias = FString::Printf(TEXT("_row_field_%d"), AliasIndex++); }
             while (Data.Text.Contains(Alias) || Data.Images.Contains(Alias) || Data.Visibility.Contains(Alias)
-                || Data.String.Contains(Alias) || Data.StringChanged.Contains(Alias) || Data.Number.Contains(Alias) || Data.Color.Contains(Alias) || Data.TextChanged.Contains(Alias) || Data.BoolChanged.Contains(Alias) || Data.NumberChanged.Contains(Alias) || Data.NumberCommitted.Contains(Alias) || Data.NumberInteraction.Contains(Alias));
+                || Data.String.Contains(Alias) || Data.StringChanged.Contains(Alias) || Data.Number.Contains(Alias) || Data.Integer.Contains(Alias) || Data.Color.Contains(Alias) || Data.TextChanged.Contains(Alias) || Data.BoolChanged.Contains(Alias) || Data.NumberChanged.Contains(Alias) || Data.NumberCommitted.Contains(Alias) || Data.IntegerCommitted.Contains(Alias) || Data.ColorCommitted.Contains(Alias) || Data.NumberInteraction.Contains(Alias));
             if (Target == TEXT("bind") && (Node.Kind == ECkUiNodeKind::Text || Node.Kind == ECkUiNodeKind::Button))
             {
                 Data.Text.Add(Alias, TAttribute<FText>::CreateLambda([WeakRecord, Field]() { const auto Row = WeakRecord.Pin(); const FCkUiFieldValue* Value = Row.IsValid() ? Row->FindField(Field) : nullptr; return Value != nullptr ? Value->Text : FText::GetEmpty(); }));
@@ -1478,6 +1880,14 @@ auto FCkUiView::MakeCellView(const FCkUiNode& InCell, TWeakPtr<const TRecord> We
                     Data.Number.Add(Alias, TAttribute<float>::CreateLambda([WeakRecord, Field]()
                     { const auto Row = WeakRecord.Pin(); const auto* Value = Row.IsValid() ? Row->FindField(Field) : nullptr; return Value != nullptr ? Value->Number : 0.0f; }));
                     break;
+                case ECkUiCustomPropertyKind::IntegerBinding:
+                    Data.Integer.Add(Alias, TAttribute<int32>::CreateLambda([WeakRecord, Field]()
+                    {
+                        const auto Row = WeakRecord.Pin();
+                        const auto* Value = Row.IsValid() ? Row->FindField(Field) : nullptr;
+                        return Value != nullptr ? Value->Integer : 0;
+                    }));
+                    break;
                 case ECkUiCustomPropertyKind::BoolBinding:
                     Data.Visibility.Add(Alias, TAttribute<bool>::CreateLambda([WeakRecord, Field]()
                     { const auto Row = WeakRecord.Pin(); const auto* Value = Row.IsValid() ? Row->FindField(Field) : nullptr; return Value != nullptr && Value->Bool; }));
@@ -1502,7 +1912,8 @@ auto FCkUiView::MakeCellView(const FCkUiNode& InCell, TWeakPtr<const TRecord> We
         for (FCkUiNode& Child : Node.Children) { BindFields(Child); }
     };
     BindFields(BoundCell);
-    const TSharedRef<FCkUiView> CellView = FCkUiView::Create({}, {}, {}, _BaseFont, MoveTemp(Data), _CustomRegistry);
+    const TSharedRef<FCkUiView> CellView = FCkUiView::Create({}, MoveTemp(Actions), {}, _BaseFont, MoveTemp(Data), _CustomRegistry);
+    *WeakCellView = CellView;
     CellView->GetRegion(TEXT("cell"));
     auto Document = FCkUiDocument{};
     auto Root = FCkUiNode{};
@@ -1518,6 +1929,7 @@ auto FCkUiView::MakeCellView(const FCkUiNode& InCell, TWeakPtr<const TRecord> We
     if (!CellView->ValidateDocument(Document, TEXT("<table-cell>"), OutErrors)) { return nullptr; }
     if (InValidateOnly) { return CellView; }
     FStagedDocument Staged;
+    Staged.Tokens = _Tokens;
     if (!CellView->StageDocument(Document, Staged, OutErrors)) { return nullptr; }
     if (!CellView->Commit(MoveTemp(Staged), OutErrors)) { return nullptr; }
     return CellView;
@@ -1572,6 +1984,8 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
     {
         auto Font = _BaseFont;
         if (InNode.Style.FontSize.IsSet()) { Font.Size = FMath::RoundToInt(InNode.Style.FontSize.GetValue()); }
+        if (InNode.Style.LetterSpacing.IsSet()) { Font.LetterSpacing = InNode.Style.LetterSpacing.GetValue(); }
+        if (InNode.Style.Monospace.IsSet()) { Font.TypefaceFontName = InNode.Style.Monospace.GetValue() ? TEXT("Mono") : TEXT("Regular"); }
         if (InNode.Style.Bold) { Font.TypefaceFontName = TEXT("Bold"); }
         return Font;
     };
@@ -1618,8 +2032,9 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
         const TAttribute<bool> CanDispatch = TAttribute<bool>::CreateLambda([WeakOwner]()
         { const TSharedPtr<FCkUiView> Owner = WeakOwner.Pin(); return Owner.IsValid() && Owner->CanDispatchEvents(); });
         const FSlateFontInfo Font = MakeFont();
-        InOutStaged.MenuUpdates.Add([Menu, Entries = MoveTemp(Entries), Label, Enabled, CanDispatch, Font]() mutable
-        { Menu->SetConfiguration(MoveTemp(Entries), Label, Enabled, CanDispatch, Font); });
+        const FCkUiMenuButtonVisualStyle VisualStyle = InNode.MenuButtonVisualStyle;
+        InOutStaged.MenuUpdates.Add([Menu, Entries = MoveTemp(Entries), Label, Enabled, CanDispatch, Font, VisualStyle]() mutable
+        { Menu->SetConfiguration(MoveTemp(Entries), Label, Enabled, CanDispatch, Font, VisualStyle); });
         const TSharedRef<SBox> Port = ck_ui_surface::MakeMeasuredPort(Menu.ToSharedRef(), InNode.Id);
         InOutStaged.Retained.Add(FRetainedRecord{InNode.Id, ERetainedKind::MenuButton, TEXT("menu-button"), FString{}, Menu, nullptr, Port});
         return ApplyVisibility(ApplyStyle(InNode.Style, Port));
@@ -1638,21 +2053,29 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
         };
         const TAttribute<bool> Enabled = TAttribute<bool>::CreateLambda(IsEnabled);
         const FButtonStyle* ButtonStyle = &FCoreStyle::Get().GetWidgetStyle<FButtonStyle>(TEXT("Button"));
-        const FMargin ContentPadding(4.0f, 2.0f);
+        const bool bUsesAuthoredStyle = InNode.ButtonVisualStyle.Enabled;
+        const FMargin ContentPadding = bUsesAuthoredStyle
+            ? InNode.ButtonVisualStyle.ContentPadding
+            : FMargin(4.0f, 2.0f);
         const auto Label = SNew(SCkFlexText).Text(MakeTextAttribute()).Font(MakeFont())
             .AllowWrapping(InNode.Style.AllowWrapping).OverflowPolicy(InNode.Style.OverflowPolicy).WrappingPolicy(InNode.Style.WrappingPolicy)
             .Clipping(InNode.Style.AllowWrapping ? EWidgetClipping::Inherit : EWidgetClipping::ClipToBounds)
             .ColorAndOpacity(TextColor(InNode));
-        const auto Button = SNew(SButton).Tag(FName(*InNode.Id)).ButtonStyle(ButtonStyle).ContentPadding(ContentPadding).ToolTipText(TooltipText(InNode))
-            .IsEnabled(Enabled).OnClicked_Lambda([Action, IsEnabled]() mutable
-            { if (IsEnabled()) { Action.ExecuteIfBound(); } return FReply::Handled(); })[Label];
+        const FOnClicked Clicked = FOnClicked::CreateLambda([Action, IsEnabled]() mutable
+        { if (IsEnabled()) { Action.ExecuteIfBound(); } return FReply::Handled(); });
+        const TSharedRef<SButton> Button = bUsesAuthoredStyle
+            ? StaticCastSharedRef<SButton>(SNew(SCkUiStyledButton).Tag(FName(*InNode.Id)).VisualStyle(InNode.ButtonVisualStyle)
+                .ToolTipText(TooltipText(InNode)).IsEnabled(Enabled).OnClicked(Clicked)[Label])
+            : SNew(SButton).Tag(FName(*InNode.Id)).ButtonStyle(ButtonStyle).ContentPadding(ContentPadding).ToolTipText(TooltipText(InNode))
+                .IsEnabled(Enabled).OnClicked(Clicked)[Label];
         const TWeakPtr<SButton> WeakButton = Button;
         const TWeakPtr<SCkFlexText> WeakLabel = Label;
-        const auto PaddingSize = [WeakButton, ButtonStyle, ContentPadding]() -> FVector2D
+        const auto PaddingSize = [WeakButton, ButtonStyle, ContentPadding, bUsesAuthoredStyle]() -> FVector2D
         {
             const auto Current = WeakButton.Pin();
-            return (ContentPadding + (Current.IsValid() && Current->IsPressed()
-                ? ButtonStyle->PressedPadding : ButtonStyle->NormalPadding)).GetDesiredSize();
+            const FMargin StatePadding = bUsesAuthoredStyle ? FMargin(0.0f)
+                : (Current.IsValid() && Current->IsPressed() ? ButtonStyle->PressedPadding : ButtonStyle->NormalPadding);
+            return (ContentPadding + StatePadding).GetDesiredSize();
         };
         Button->AddMetadata(MakeShared<FCkFlexMeasureMetaData>(
             [WeakLabel, PaddingSize](const FCkFlexMeasureArgs& Args) -> FVector2D
@@ -1720,13 +2143,20 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
         if (!Table.IsValid()) { OutErrors.Add(FString::Printf(TEXT("Table node '%s' could not be created."), *InNode.Id)); return nullptr; }
 
         const TWeakPtr<FCkUiView> WeakOwner = const_cast<FCkUiView*>(this)->AsShared();
-        const auto CellFactory = [WeakOwner](const FCkUiNode& Cell, const TWeakPtr<const FCkUiRecord> WeakRecord, FString& Failure) -> TSharedPtr<FCkUiView>
+        const auto CellFactory = [WeakOwner](const FCkUiNode& Cell, const TWeakPtr<const FCkUiRecord> WeakRecord,
+            const TAttribute<bool> InTableCellDispatch, FString& Failure) -> TSharedPtr<FCkUiView>
         {
             const TSharedPtr<FCkUiView> Owner = WeakOwner.Pin();
             if (!Owner.IsValid() || !WeakRecord.IsValid()) { Failure = TEXT("The table cell owner or record expired."); return nullptr; }
             TArray<FString> Errors;
             TSharedPtr<FCkUiView> Result = Owner->MakeCellView(Cell, WeakRecord, false, Errors);
             if (!Result.IsValid()) { Failure = Errors.IsEmpty() ? TEXT("Table cell staging failed.") : Errors[0]; }
+            if (!Result.IsValid()) { return nullptr; }
+            Result->_Data.CanDispatchEvents = TAttribute<bool>::CreateLambda([WeakOwner, InTableCellDispatch]()
+            {
+                const TSharedPtr<FCkUiView> Parent = WeakOwner.Pin();
+                return Parent.IsValid() && Parent->CanDispatchEvents() && InTableCellDispatch.Get(false);
+            });
             return Result;
         };
         FString Failure;
@@ -1816,6 +2246,12 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
             case ECkUiCustomPropertyKind::TextBinding: Arguments.TextBindings.Add(Name, _Data.Text.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::StringBinding: Arguments.StringBindings.Add(Name, _Data.String.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::CollectionBinding: Arguments.Collections.Add(Name, _Data.Collections.FindRef(Value.Name)); break;
+            case ECkUiCustomPropertyKind::FloatSeriesBinding:
+            {
+                const TSharedPtr<FCkUiFloatSeries> Series = _Data.FloatSeries.FindRef(Value.Name).Pin();
+                Arguments.FloatSeriesBindings.Add(Name, Series);
+                break;
+            }
             case ECkUiCustomPropertyKind::StringChanged:
             {
                 const FCkUiOnStringChanged Callback = _Data.StringChanged.FindRef(Value.Name);
@@ -1828,6 +2264,7 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
             }
             case ECkUiCustomPropertyKind::ImageBinding: Arguments.ImageBindings.Add(Name, _Data.Images.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::NumberBinding: Arguments.NumberBindings.Add(Name, _Data.Number.FindRef(Value.Name)); break;
+            case ECkUiCustomPropertyKind::IntegerBinding: Arguments.IntegerBindings.Add(Name, _Data.Integer.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::BoolBinding: Arguments.BoolBindings.Add(Name, _Data.Visibility.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::ColorBinding: Arguments.ColorBindings.Add(Name, _Data.Color.FindRef(Value.Name)); break;
             case ECkUiCustomPropertyKind::Action:
@@ -1887,6 +2324,28 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
                 }));
                 break;
             }
+            case ECkUiCustomPropertyKind::IntegerCommitted:
+            {
+                const FCkUiOnIntegerCommitted Callback = _Data.IntegerCommitted.FindRef(Value.Name);
+                Arguments.IntegerCommitted.Add(Name, FCkUiOnIntegerCommitted::CreateLambda([WeakOwner, Callback](const int32 InValue, const ETextCommit::Type InCommitType)
+                {
+                    const TSharedPtr<FCkUiView> Owner = WeakOwner.Pin();
+                    if (Owner.IsValid() && Owner->CanDispatchEvents()) { Callback.ExecuteIfBound(InValue, InCommitType); }
+                }));
+                break;
+            }
+            case ECkUiCustomPropertyKind::ColorCommitted:
+            {
+                const FCkUiOnColorCommitted Callback = _Data.ColorCommitted.FindRef(Value.Name);
+                Arguments.ColorCommitted.Add(Name, FCkUiOnColorCommitted::CreateLambda([WeakOwner, Callback](const FLinearColor InValue)
+                {
+                    const TSharedPtr<FCkUiView> Owner = WeakOwner.Pin();
+                    const bool Finite = FMath::IsFinite(InValue.R) && FMath::IsFinite(InValue.G)
+                        && FMath::IsFinite(InValue.B) && FMath::IsFinite(InValue.A);
+                    if (Finite && Owner.IsValid() && Owner->CanDispatchEvents()) { Callback.ExecuteIfBound(InValue); }
+                }));
+                break;
+            }
             case ECkUiCustomPropertyKind::NumberInteraction:
             {
                 const FCkUiOnNumberInteraction Callback = _Data.NumberInteraction.FindRef(Value.Name);
@@ -1905,10 +2364,10 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
             default: OutErrors.Add(FString::Printf(TEXT("Custom node '%s' has an invalid property."), *InNode.Id)); return nullptr;
             }
             if (Value.Kind == ECkUiCustomPropertyKind::StringBinding || Value.Kind == ECkUiCustomPropertyKind::StringChanged
-                || Value.Kind == ECkUiCustomPropertyKind::CollectionBinding || Value.Kind == ECkUiCustomPropertyKind::TextBinding || Value.Kind == ECkUiCustomPropertyKind::ImageBinding
-                || Value.Kind == ECkUiCustomPropertyKind::NumberBinding || Value.Kind == ECkUiCustomPropertyKind::BoolBinding
+                || Value.Kind == ECkUiCustomPropertyKind::CollectionBinding || Value.Kind == ECkUiCustomPropertyKind::FloatSeriesBinding || Value.Kind == ECkUiCustomPropertyKind::TextBinding || Value.Kind == ECkUiCustomPropertyKind::ImageBinding
+                || Value.Kind == ECkUiCustomPropertyKind::NumberBinding || Value.Kind == ECkUiCustomPropertyKind::IntegerBinding || Value.Kind == ECkUiCustomPropertyKind::BoolBinding
                 || Value.Kind == ECkUiCustomPropertyKind::ColorBinding || Value.Kind == ECkUiCustomPropertyKind::Action
-                || Value.Kind == ECkUiCustomPropertyKind::TextChanged || Value.Kind == ECkUiCustomPropertyKind::TextCommitted || Value.Kind == ECkUiCustomPropertyKind::BoolChanged || Value.Kind == ECkUiCustomPropertyKind::NumberChanged || Value.Kind == ECkUiCustomPropertyKind::NumberCommitted || Value.Kind == ECkUiCustomPropertyKind::NumberInteraction)
+                || Value.Kind == ECkUiCustomPropertyKind::TextChanged || Value.Kind == ECkUiCustomPropertyKind::TextCommitted || Value.Kind == ECkUiCustomPropertyKind::BoolChanged || Value.Kind == ECkUiCustomPropertyKind::NumberChanged || Value.Kind == ECkUiCustomPropertyKind::NumberCommitted || Value.Kind == ECkUiCustomPropertyKind::IntegerCommitted || Value.Kind == ECkUiCustomPropertyKind::ColorCommitted || Value.Kind == ECkUiCustomPropertyKind::NumberInteraction)
             { Arguments.BindingNames.Add(Name, Value.Name); }
         }
         if (!PrepareCustomSlots(InNode, Registration->Schema, InOutStaged, Arguments, OutErrors)) { return nullptr; }
@@ -2072,9 +2531,12 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
             return View.IsValid() && View->CanDispatchEvents();
         });
         const TAttribute<FString> Value = _Data.String.FindRef(InNode.Binding);
-        const FSlateFontInfo Font = MakeFont();
-        InOutStaged.TabsUpdates.Add([Tabs, Panels = MoveTemp(Panels), Value, Changed, CanDispatch, Font]() mutable
-        { Tabs->SetConfiguration(MoveTemp(Panels), Value, Changed, CanDispatch, Font); });
+        FSlateFontInfo Font = MakeFont();
+        if (InNode.TabsVisualStyle.FontSize.IsSet()) { Font.Size = InNode.TabsVisualStyle.FontSize.GetValue(); }
+        if (InNode.TabsVisualStyle.Bold.IsSet()) { Font.TypefaceFontName = InNode.TabsVisualStyle.Bold.GetValue() ? TEXT("Bold") : TEXT("Regular"); }
+        const FCkUiTabsVisualStyle VisualStyle = InNode.TabsVisualStyle;
+        InOutStaged.TabsUpdates.Add([Tabs, Panels = MoveTemp(Panels), Value, Changed, CanDispatch, Font, VisualStyle]() mutable
+        { Tabs->SetConfiguration(MoveTemp(Panels), Value, Changed, CanDispatch, Font, VisualStyle); });
         const TSharedRef<SBox> Port = ck_ui_surface::MakeMeasuredPort(Tabs.ToSharedRef(), InNode.Id);
         InOutStaged.Retained.Add(FRetainedRecord{InNode.Id, ERetainedKind::Tabs, InNode.Binding, FString{}, Tabs, nullptr, Port});
         return ApplyVisibility(ApplyStyle(InNode.Style, Port));
@@ -2233,7 +2695,7 @@ auto FCkUiView::GetOwnedPointerCaptures(EVisibility InVisibility) const -> TArra
     return CapturedPointers;
 }
 
-auto FCkUiView::ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot) -> void
+auto FCkUiView::ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot, const bool bOwnerRelease) -> void
 {
     if (!FSlateApplication::IsInitialized()) { return; }
     FSlateApplication& Slate = FSlateApplication::Get();
@@ -2267,7 +2729,11 @@ auto FCkUiView::ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot) 
         if (User.IsValid() && Widget.IsValid() && User->GetPointerCaptor(Capture.PointerIndex) == Widget)
         { User->ReleaseCapture(Capture.PointerIndex); }
     }
-    for (const TSharedPtr<ICkUiRetainedWidget>& Component : Components) { Component->ReleaseTransientInteraction(); }
+    for (const TSharedPtr<ICkUiRetainedWidget>& Component : Components)
+    {
+        if (bOwnerRelease) { Component->ReleaseOwnerInteraction(); }
+        else { Component->ReleaseTransientInteraction(); }
+    }
     for (const TSharedPtr<SCkUiMenuButton>& Menu : Menus) { Menu->ReleasePopup(); }
     for (const TSharedPtr<SCkUiTable>& Table : Tables) { Table->ReleaseContextMenu(); }
     for (const TSharedPtr<SCkUiTree>& Tree : Trees) { Tree->ReleaseContextMenu(); }
@@ -2276,6 +2742,37 @@ auto FCkUiView::ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot) 
 FCkUiView::~FCkUiView()
 {
     if (!FSlateApplication::IsInitialized() || !IsInGameThread()) { return; }
+    FSlateApplication& Slate = FSlateApplication::Get();
+
+    struct FFocusedUser final
+    {
+        int32 UserIndex = INDEX_NONE;
+        TSharedPtr<SWidget> Widget;
+    };
+    TArray<FFocusedUser> FocusedUsers;
+    Slate.ForEachUser([this, &Slate, &FocusedUsers](FSlateUser& InUser)
+    {
+        const TSharedPtr<SWidget> Focused = Slate.GetUserFocusedWidget(InUser.GetUserIndex());
+        if (!Focused.IsValid()) { return; }
+
+        FWidgetPath Path;
+        if (!Slate.GeneratePathToWidgetUnchecked(Focused.ToSharedRef(), Path, EVisibility::All)) { return; }
+        for (const auto& [Name, Mount] : _RegionMounts)
+        {
+            if (Mount.IsValid() && ck_ui_surface::HasWidget(Path, Mount))
+            {
+                FocusedUsers.Add({InUser.GetUserIndex(), Focused});
+                return;
+            }
+        }
+    }, true);
+
+    // Let retained controls release owned transient state before removing focus that still belongs
+    // to a window-held region after this view is released.
+    for (const auto& [Name, Mount] : _RegionMounts)
+    {
+        if (Mount.IsValid()) { ReleaseTransientInteractions(Mount.ToSharedRef(), true); }
+    }
     for (const auto& [Id, Record] : _CommittedRetained)
     {
         if (Record.Kind == ERetainedKind::Tabs) { StaticCastSharedPtr<SCkUiTabs>(Record.Widget)->Deactivate(); }
@@ -2290,6 +2787,23 @@ FCkUiView::~FCkUiView()
         const TSharedPtr<SWidget> Widget = Item.Capture.Widget.Pin();
         if (User.IsValid() && Widget.IsValid() && User->GetPointerCaptor(Item.Capture.PointerIndex) == Widget)
         { User->ReleaseCapture(Item.Capture.PointerIndex); }
+    }
+    for (const FFocusedUser& Focused : FocusedUsers)
+    {
+        if (Slate.GetUserFocusedWidget(Focused.UserIndex) != Focused.Widget) { continue; }
+
+        FWidgetPath Path;
+        if (!Slate.GeneratePathToWidgetUnchecked(Focused.Widget.ToSharedRef(), Path, EVisibility::All)) { continue; }
+        bool StillInReleasedRoot = false;
+        for (const auto& [Name, Mount] : _RegionMounts)
+        {
+            if (Mount.IsValid() && ck_ui_surface::HasWidget(Path, Mount))
+            {
+                StillInReleasedRoot = true;
+                break;
+            }
+        }
+        if (StillInReleasedRoot) { Slate.ClearUserFocus(Focused.UserIndex, EFocusCause::SetDirectly); }
     }
 }
 
@@ -2378,6 +2892,7 @@ auto FCkUiView::CaptureCommit(FStagedDocument& InStaged) -> FCommitState
 
 void FCkUiView::PublishConfiguration(FStagedDocument&& InStaged, FCommitState& InOutState)
 {
+    if (InStaged.Tokens.IsSet()) { _Tokens = MoveTemp(InStaged.Tokens.GetValue()); }
     auto& PreviousRetained = InOutState.PreviousRetained;
     auto& NextRetained = InOutState.NextRetained;
     PreviousRetained = MoveTemp(_CommittedRetained);
@@ -2511,6 +3026,8 @@ void FCkUiView::ReconcileInteractions(FCommitState& InOutState)
             if (Slate.GetUserFocusedWidget(Focused.UserIndex) != Focused.Widget) { continue; }
             if (Focused.RetainedSurvives && Focused.Component.IsValid())
             {
+                Focused.Component->BeginFocusTransfer();
+                ON_SCOPE_EXIT { Focused.Component->EndFocusTransfer(); };
                 const TSharedPtr<SWidget> Target = Focused.Component->GetFocusTransferTarget();
                 FWidgetPath CurrentPath;
                 if (Target.IsValid() && Slate.GeneratePathToWidgetUnchecked(Focused.Widget.ToSharedRef(), CurrentPath))
@@ -2531,6 +3048,12 @@ void FCkUiView::ReconcileInteractions(FCommitState& InOutState)
                     }
                     if (Transferred) { continue; }
                 }
+                // A pointer-identical retained leaf keeps Slate's old weak ancestry after the region swap.
+                // Refresh it through normal focus callbacks; a callback redirect wins over reacquiring this leaf.
+                Slate.ClearUserFocus(Focused.UserIndex, EFocusCause::SetDirectly);
+                if (FSlateApplication::IsInitialized() && !Slate.GetUserFocusedWidget(Focused.UserIndex).IsValid())
+                { Slate.SetUserFocus(Focused.UserIndex, Focused.Widget, EFocusCause::SetDirectly); }
+                continue;
             }
             // A pointer-identical retained leaf keeps Slate's old weak ancestry after the region swap.
             // Refresh it through normal focus callbacks; a callback redirect wins over reacquiring this leaf.
@@ -2596,7 +3119,11 @@ auto FCkUiView::Commit(FStagedDocument&& InStaged, TArray<FString>& OutErrors) -
     FCommitState State = CaptureCommit(InStaged);
     for (const auto& Child : InStaged.Nested) { Child->State = Child->View->CaptureCommit(*Child->Staged); }
     PublishConfiguration(MoveTemp(InStaged), State);
-    for (const auto& Child : InStaged.Nested) { Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State); }
+    for (const auto& Child : InStaged.Nested)
+    {
+        Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State);
+        Child->ContextPublished = true;
+    }
     MountChildren();
     for (const auto& Child : InStaged.Nested) { Child->View->MountChildren(); }
     ReconcileInteractions(State);
@@ -2610,6 +3137,17 @@ auto FCkUiView::TryReload(const FString& InMarkup, const FString& InStylesheet, 
     return TryReloadBatch({FReloadRequest{AsShared(), InMarkup, InStylesheet, InSource}});
 }
 
+auto FCkUiView::TryReloadWithTokens(const FString& InMarkup, const FString& InStylesheet,
+    FTokens InTokens, const FString& InSource) -> FCkUiLoadResult
+{
+    if (!IsInGameThread())
+    { return FCkUiLoadResult{false, {TEXT("UI document reload must run on the game thread.")}}; }
+
+    FReloadRequest Request{AsShared(), InMarkup, InStylesheet, InSource};
+    Request.Tokens = MoveTemp(InTokens);
+    return TryReloadBatch({MoveTemp(Request)});
+}
+
 auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkUiLoadResult
 {
     struct FBatchItem
@@ -2618,6 +3156,7 @@ auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkU
         FString Markup;
         FString Stylesheet;
         FString Source;
+        FTokens Tokens;
         FCkUiDocument Document;
         FStagedDocument Staged;
         FCommitState CommitState;
@@ -2651,7 +3190,8 @@ auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkU
             return Result;
         }
         SeenViews.Add(Request.View.Get());
-        Items.Add({Request.View, Request.Markup, Request.Stylesheet, Request.Source});
+        Items.Add({Request.View, Request.Markup, Request.Stylesheet, Request.Source,
+            Request.Tokens.IsSet() ? Request.Tokens.GetValue() : Request.View->_Tokens});
     }
 
     const auto Fail = [&Items](FCkUiLoadResult InFailure) -> FCkUiLoadResult
@@ -2686,7 +3226,7 @@ auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkU
 
     for (FBatchItem& Item : Items)
     {
-        Result = FCkUiDocumentParser::TryParse(Item.Markup, Item.Stylesheet, Item.View->_Tokens,
+        Result = FCkUiDocumentParser::TryParse(Item.Markup, Item.Stylesheet, Item.Tokens,
             Item.Document, Item.Source, Item.View->_CustomRegistry);
         if (!Result.Succeeded) { return Fail(MoveTemp(Result)); }
     }
@@ -2728,6 +3268,7 @@ auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkU
 
     for (FBatchItem& Item : Items)
     {
+        Item.Staged.Tokens = Item.Tokens;
         if (!Item.View->StageDocument(Item.Document, Item.Staged, Result.Errors))
         {
             for (FString& Error : Result.Errors) { Error = ck_ui_surface::Error(Item.Source, Error); }
@@ -2803,7 +3344,13 @@ auto FCkUiView::TryReloadBatch(const TArray<FReloadRequest>& InRequests) -> FCkU
     }
     for (FBatchItem& Item : Items) { Item.View->PublishConfiguration(MoveTemp(Item.Staged), Item.CommitState); }
     for (FBatchItem& Item : Items)
-    { for (const auto& Child : Item.Staged.Nested) { Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State); } }
+    {
+        for (const auto& Child : Item.Staged.Nested)
+        {
+            Child->View->PublishConfiguration(MoveTemp(*Child->Staged), Child->State);
+            Child->ContextPublished = true;
+        }
+    }
     for (FBatchItem& Item : Items)
     {
         Item.View->MountChildren();
@@ -2825,6 +3372,7 @@ auto FCkUiView::SetFiles(const FString& InMarkupPath, const FString& InStyleshee
     _StylesheetPath = InStylesheetPath;
     _LastPolledMarkup.Reset();
     _LastPolledStylesheet.Reset();
+    _LastPolledTokens.Reset();
     _HasPolledContent = false;
 }
 
@@ -2866,12 +3414,28 @@ auto FCkUiView::ReloadFiles(const FString& InMarkupPath, const FString& InStyles
     }
     _LastPolledMarkup = Markup;
     _LastPolledStylesheet = Stylesheet;
+    _LastPolledTokens = _Tokens;
     _HasPolledContent = true;
     return TryReload(Markup, Stylesheet, Source);
 }
 
 auto FCkUiView::PollFiles() -> bool
 {
+    return PollFiles(_Tokens);
+}
+
+auto FCkUiView::PollFiles(const FTokens& InTokens) -> bool
+{
+    const auto TokensMatch = [&InTokens, this]()
+    {
+        if (_LastPolledTokens.Num() != InTokens.Num()) { return false; }
+        for (const auto& [Name, Value] : InTokens)
+        {
+            const FString* Previous = _LastPolledTokens.Find(Name);
+            if (Previous == nullptr || *Previous != Value) { return false; }
+        }
+        return true;
+    };
     auto Markup = FString{};
     auto Stylesheet = FString{};
     auto Source = FString{};
@@ -2880,17 +3444,19 @@ auto FCkUiView::PollFiles() -> bool
     {
         const FString FailureMarkup = FString::Printf(TEXT("<unreadable:%s>"), *_MarkupPath);
         const FString FailureStylesheet = FString::Printf(TEXT("<unreadable:%s>"), *_StylesheetPath);
-        if (_HasPolledContent && _LastPolledMarkup == FailureMarkup && _LastPolledStylesheet == FailureStylesheet) { return false; }
+        if (_HasPolledContent && _LastPolledMarkup == FailureMarkup && _LastPolledStylesheet == FailureStylesheet && TokensMatch()) { return false; }
         _LastPolledMarkup = FailureMarkup;
         _LastPolledStylesheet = FailureStylesheet;
+        _LastPolledTokens = InTokens;
         _HasPolledContent = true;
         _LastResult = MoveTemp(ReadResult);
         return true;
     }
-    if (_HasPolledContent && _LastPolledMarkup == Markup && _LastPolledStylesheet == Stylesheet) { return false; }
+    if (_HasPolledContent && _LastPolledMarkup == Markup && _LastPolledStylesheet == Stylesheet && TokensMatch()) { return false; }
     _LastPolledMarkup = Markup;
     _LastPolledStylesheet = Stylesheet;
+    _LastPolledTokens = InTokens;
     _HasPolledContent = true;
-    TryReload(Markup, Stylesheet, Source);
+    TryReloadWithTokens(Markup, Stylesheet, InTokens, Source);
     return true;
 }

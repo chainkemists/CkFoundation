@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "CkSlateLayout/CkUiDocument.h"
 #include "CkSlateLayout/CkUiMenuSession.h"
 #include "Widgets/Input/SComboButton.h"
 
@@ -21,7 +22,13 @@ public:
         TAttribute<FText> InLabel,
         TAttribute<bool> InEnabled,
         TAttribute<bool> InCanDispatchEvents,
-        FSlateFontInfo InFont);
+        FSlateFontInfo InFont,
+        FCkUiMenuButtonVisualStyle InVisualStyle);
+
+    /** Current authored visual configuration after the last successful publication. */
+    auto GetAppliedVisualStyle() const -> const FCkUiMenuButtonVisualStyle& { return _VisualStyle; }
+    auto HasDownArrow() const -> bool { return _HasDownArrow; }
+    auto GetButtonContentPadding() const -> FMargin { return _ComboButtonStyle.ContentPadding; }
 
     /** Closes the owned popup after clearing only focus paths within its menu content. */
     void ReleasePopup();
@@ -34,5 +41,8 @@ private:
     TSharedPtr<FCkUiMenuSession> _Session;
     TAttribute<FText> _Label;
     FSlateFontInfo _Font;
+    FCkUiMenuButtonVisualStyle _VisualStyle;
+    FComboButtonStyle _ComboButtonStyle;
+    bool _HasDownArrow = true;
     bool _PendingPopupRelease = false;
 };

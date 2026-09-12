@@ -108,6 +108,7 @@ namespace ck_ui_dialog
         virtual auto GetWidget() const -> TSharedRef<SWidget> override { return _Widget.ToSharedRef(); }
         virtual auto GetFocusTransferTarget() const -> TSharedPtr<SWidget> override { return _Configuration.Body; }
         virtual void ReleaseTransientInteraction() override { _Suppressed = true; ReleaseLocalFocus(true); }
+        virtual void ReleaseOwnerInteraction() override { _Suppressed = true; ReleaseLocalFocus(false); }
         virtual auto PrepareReload(const FCkUiCustomWidgetArguments& InArguments, FString& OutFailure) const -> TUniquePtr<ICkUiPreparedWidgetUpdate> override;
 
         auto IsOwner(const uint32 InUserIndex) const -> bool { return _Configuration.SlateUserIndex == static_cast<int32>(InUserIndex); }
