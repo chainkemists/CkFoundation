@@ -141,7 +141,6 @@ auto
     { return; }
 
     Layer->ClearAllWidgets();
-    OnLayerCleared.Broadcast(InLayerTag);
 }
 
 auto
