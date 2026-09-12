@@ -514,10 +514,8 @@ auto
 #if WITH_ANGELSCRIPT_CK
     // AngelScript members declared WITHOUT UPROPERTY() exist only as script-object properties, so the
     // reflected sweep above cannot see them and a recycled instance would resume its previous life's
-    // state. The engine registers UObject::CopyScriptPropertiesFrom for exactly this copy, but a
-    // packaged build booting from a precompiled script cache deletes that registration as unused (no
-    // .as bytecode calls it), so it must not be resolved by name here. Its entire native body is
-    // asCScriptObject::PerformCopy — exported from AngelscriptCode — so call that directly instead.
+    // state. Do NOT reach the equivalent UObject::CopyScriptPropertiesFrom by name: a packaged build
+    // booting from a precompiled script cache deletes that registration as unused, no .as calls it.
     if (Cast<UASClass>(InObject->GetClass()) != nullptr)
     {
         auto* ScriptType = static_cast<asCObjectType*>(InObject->GetClass()->ScriptTypePtr);
