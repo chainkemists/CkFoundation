@@ -55,6 +55,12 @@ public:
     TFunction<ECk_NavSurface_ProviderHealth(UWorld*)>
         _ProviderHealth;
 
+    // Whether this provider has a published surface that query capabilities can answer from now.
+    // This is deliberately independent of health/settledness: a provider may keep serving its last
+    // published surface while a replacement is building.
+    TFunction<bool(UWorld*)>
+        _IsSurfaceQueryable;
+
     TFunction<bool(UWorld*)>
         _IsBuildInProgress;
 

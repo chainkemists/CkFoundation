@@ -849,6 +849,17 @@ namespace ck::nav_surface_recast
     // ----------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_IsSurfaceQueryable(
+            UWorld* InWorld)
+        -> bool
+    {
+        const auto* NavData = TryGet_NavData(InWorld);
+        return NavData != nullptr && NavData->HasValidNavmesh();
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------
+
+    auto
         Get_IsBuildInProgress(
             UWorld* InWorld)
         -> bool
