@@ -1,14 +1,14 @@
-# Current closeout status after Texture shell migration (2026-09-12)
+# Current closeout status after AI shell migration (2026-09-12)
 
 | Required row | Current evidence | Status |
 | --- | --- | --- |
-| Authored stable outer shells | GOAP and Texture own stable tabs/splitters/pane composition in authored resources; shared window chrome is authored for its consumers | 2/27 complete; 10 partial; 15 without a full authored shell |
+| Authored stable outer shells | GOAP, Texture and AI own stable tabs/splitters/pane composition in authored resources; shared window chrome is authored for its consumers | 3/27 complete; 9 partial; 15 without a full authored shell |
 | Inspector migration | GOAP specialized inspector panes are authored/hybrid ports; GOAP Inspector Gateway and other debugger inspector surfaces remain to migrate | Open |
 | Local controller and two users | Synthetic native controller and virtual-user evidence exists, but no real local-player gamepad navigation/confirm/back gate | Open |
 | Representative performance | Structural virtualization evidence exists; no approved budget/reference machine or representative measured-host result | Open, approval needed before pass/fail |
-| Every-debugger teardown | GOAP and Texture shell teardown are focused green examples; the production-host matrix remains incomplete | Open |
+| Every-debugger teardown | GOAP, Texture and AI shell teardown are focused green examples; the production-host matrix remains incomplete | Open |
 
-Texture evidence: `scratch/yoga-texture-shell-build-final-20260912.log` succeeded; fresh real-RHI `scratch/yoga-texture-shell-test-final-20260912.log` passed `Ck.TextureDebugger.AuthoredWindow` 1/1 with compatible/rejected reload, six authored page tabs, Refresh retention, narrow reachability and authored-view teardown. The inspected narrow capture establishes scroll reachability, not deferred browser breakpoint restacking. Packaged proof, keyboard-only accessibility and localization remain deferred, and Resource Inspector `+` remains excluded.
+AI evidence: `scratch/yoga-ai-shell-build-20260912.log` succeeded; after fresh discovery, real-RHI `scratch/yoga-ai-shell-test-final-20260912.log` passed `Ck.AiDebugger.AuthoredWindow` 1/1 with seven authored splitter boundaries, compatible/rejected reload, narrow reachability and authored-view teardown. Texture evidence remains `scratch/yoga-texture-shell-build-final-20260912.log` plus the 1/1 `scratch/yoga-texture-shell-test-final-20260912.log`. The inspected narrow captures establish scroll reachability, not deferred browser breakpoint restacking. Packaged proof, keyboard-only accessibility and localization remain deferred, and Resource Inspector `+` remains excluded.
 
 # CTO-dispositioned closeout matrix (2026-09-11)
 
@@ -32,7 +32,7 @@ This matrix supersedes the unresolved wording in the publication census below. T
 
 Published runtime-checkpoint tips: CkFoundation `8f3daa93e2969553579efa8efd45e048dcbeba08`, CkGameplayDebugger `bb5fd18f5a1b16ce633bc17335a71d78ed190a01`, and CkTests `92587fa30d21fdc419fcd836379d87c215f4ea86`; CkPlugins root `8e60f187428c550eaa29d791039f014dbd387837` is open and unmerged in PR #39. Fresh serial real-RHI `Ck.UiAuthoring` evidence passes 151/151 in `Saved/Logs/Test-UiAuthoring-Closeout-R222-RealRHI.log`; the earlier NullRHI attempt is not acceptance evidence.
 
-Current source does not support a completed P9 retirement claim: GOAP Agent List is un-slotted but still constructed/refreshed for selection synchronization. GOAP outer chrome/splitters and its distinct registered native ECS Inspector gateway remain; Texture retains native outer shell and Checker Apply/Restore; AI remains a roster-only authored slice. Apply the CTO matrix above: the native shells/inspectors and all-debugger teardown are required work, controller and performance retain bounded gates, while packaging, keyboard accessibility, localization and narrow restacking are deferred and Resource Inspector `+` is excluded.
+Current source supports the completed P9 GOAP Agent List retirement and authored GOAP, Texture and AI outer shells. GOAP's distinct registered native ECS Inspector Gateway and the other debugger inspector surfaces still require migration; Texture Checker Apply/Restore remains native behavior inside its authored page port. Apply the CTO matrix above: remaining shells/inspectors and all-debugger teardown are required work, controller and performance retain bounded gates, while packaging, keyboard accessibility, localization and narrow restacking are deferred and Resource Inspector `+` is excluded.
 
 # GOAP authored specialized cohort checkpoint (2026-09-11)
 
