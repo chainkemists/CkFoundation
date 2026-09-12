@@ -1,6 +1,6 @@
 ﻿# Gate 05: Conventional debugger migrations
 
-**Status:** Gate 04 native focused evidence is complete. The first Intent Debugger InputHud native-plus-PIE slice is verified. This does not complete the conventional migration workstream: broader conventional migration, browser/environment acceptance, and the full campaign remain open; browser-reference parity remains blocked and unwaived.
+**Status:** Gate 04 and the bounded Intent InputHud, Aggro, AI roster, Dialog, Texture page/window-navigation, Save, Object Pool, Style Lab, CkUIDebugger, GOAP, and Visual LOD authored slices recorded in `PROGRESS.md` are verified at their stated boundaries. The current source census does not close the conventional workstream: GOAP/Texture/AI outer-shell scope, the GOAP Inspector gateway, Texture Checker Apply/Restore/PIE, broader consumers, and cross-environment acceptance remain open. Browser-reference parity remains blocked and unwaived.
 
 ## First slice: Intent Debugger InputHud controls
 

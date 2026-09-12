@@ -1,3 +1,9 @@
+# Published closeout census and acceptance boundary (2026-09-11)
+
+Published runtime-checkpoint tips: CkFoundation `8f3daa93e2969553579efa8efd45e048dcbeba08`, CkGameplayDebugger `bb5fd18f5a1b16ce633bc17335a71d78ed190a01`, and CkTests `92587fa30d21fdc419fcd836379d87c215f4ea86`; CkPlugins root `8e60f187428c550eaa29d791039f014dbd387837` is open and unmerged in PR #39. Fresh serial real-RHI `Ck.UiAuthoring` evidence passes 151/151 in `Saved/Logs/Test-UiAuthoring-Closeout-R222-RealRHI.log`; the earlier NullRHI attempt is not acceptance evidence.
+
+Current source does not support a completed P9 retirement claim: GOAP Agent List is un-slotted but still constructed/refreshed for selection synchronization. GOAP outer chrome/splitters and its distinct registered native ECS Inspector gateway remain; Texture retains native outer shell and Checker Apply/Restore; AI remains a roster-only authored slice. Package runtime, full local-player/controller and relevant multiplayer lifecycle, accessibility, culture-switch/RTL, measured performance, and broad cross-surface lifetime remain open. Browser-reference narrow restacking is blocked and unwaived, and Resource Inspector `+` remains blocked on an approved add-set contract.
+
 # GOAP authored specialized cohort checkpoint (2026-09-11)
 
 R218 built successfully and final serialized real-RHI R219 passed the selected authored GOAP cohort 10/10 with zero failed/skipped/contaminated tests. Production-path coverage now includes Agent Column, Agent List, Catalog, Decision, Graph, Search Trace, Squad, Timeline, World State, and the Squad-table empty fixture. Graph reset coverage proves subscription detachment across the ViewModel reset broadcast, deferred authored-view/native-port release, explicit resume, remount, and final teardown. The older GOAP module-matrix row is superseded for those surfaces; bounded outer-shell/Inspector integration and the P9 retirement sweep remain subject to a final source census.

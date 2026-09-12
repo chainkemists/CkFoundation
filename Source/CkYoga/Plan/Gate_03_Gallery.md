@@ -1,8 +1,8 @@
 # Gate 03: capability gallery and reusable tool templates
-Status: active, 2026-09-08. Approved order: gallery/templates, representative complex migration, conventional migration batches, specialized adapters and cross-environment acceptance. This gate does not narrow the full campaign objective.
+Status: native scope complete, campaign gate still active, 2026-09-11. Browser-reference parity remains blocked and unwaived; cross-environment acceptance remains open. This gate does not narrow the full campaign objective.
 
 ## Entry evidence
-Host b3b0a13; Foundation cf6633552; Debugger a9f5fb60; Tests71e4cf9c. Post-rebase authoring114/114 and ResourceInspector10/10 archived under Saved/Logs/UiWorkbench-PostRebase-*; inspect actual logs rather than rerunning an identical baseline. Historical menu reopen remains unexplained.
+Published host `8e60f187`; Foundation `8f3daa93`; Debugger `bb5fd18f`; Tests `92587fa3`. Fresh serial real-RHI `Ck.UiAuthoring` passes 151/151 in `Saved/Logs/Test-UiAuthoring-Closeout-R222-RealRHI.log`; the earlier NullRHI attempt is not acceptance evidence. Historical menu reopen remains unexplained.
 
 ## Decisions
 [G3-D1] Independent FCkCapabilityGalleryModel in CkTests; reuse the existing per-player ResourceInspector host with exclusive mode and explicit owner. No native recreation of gallery layout, new framework globals, or debugger module dependency.
@@ -25,7 +25,7 @@ Supported native GalleryCoverage rows 1–12 have inspectable production example
 Terra: model/host. Terra: authored resource pair. Luna: schema/state ledger and static inventory. Lead: decisions, Build.cs staging, integration, final gates and evidence review. No Git publication in this implementation increment unless requested again.
 [G3-D5] Nested navigation lab: the model owns selection. Native SCkUiTabs hides a disabled requested panel but does not publish a fallback key. The gallery disable-Details action explicitly selects Overview when Details was active; native reconciliation then handles presentation and owned focus. Arrow/Home/End move header focus; Space activates. Do not attribute model fallback to a native callback.
 
-## Current exit audit (2026-09-08)
+## Current exit audit (2026-09-11)
 The installed gallery, copyable GalleryStarter resource pair, NonUFS staging declarations, public per-player open/close path, exclusive Resource Inspector handoff, explicit Slate-user rejection, and focused owner-context evidence are verified by the current source and archived focused gates. Representative wide, narrow, and scaled native captures establish the stated samples; they do not imply every state at every scale.
 
 Gate 03 native scope is **COMPLETE**. Native GalleryCoverage rows 1–12 have current focused evidence, including GalleryStyledSlider, GalleryContextMenus-R2, and the current-binary `ResourceInspector-Row12-R1` gate:10/10 in42s, one editor start, exit0 and zero relevant diagnostics. Row 12 verifies installed Resource Inspector loading/error/pins/dialog evidence plus exact `NSLOCTEXT` long search-hint and Name-header identity/default restoration, retained selected/query/note state, and separate narrow horizontal access; four fresh current-binary captures were inspected. Nested repeats remain an explicitly unsupported shared-runtime boundary; the historical nested-reopen uncertainty remains unresolved and needs no new gallery lab solely from history. Browser-reference visual parity is **BLOCKED** pending the policy-denied preview and is neither waived nor complete. Gate 03 therefore remains active at the campaign level, not closed. Controller, multi-user, full culture/localization, package, and performance acceptance remain later work. Gate04 native focused evidence, the first Intent conventional slice, static VisualLOD arbiter tuners and the scoped Dialog migration are now verified; the next bounded conventional candidate is CkAggroDebugger after its entry review.
