@@ -19,6 +19,7 @@ struct SCkUiTabs::FEntry
     FString Key;
     TAttribute<FText> Label;
     TAttribute<bool> Enabled;
+    TAttribute<bool> Visible;
     TSharedPtr<SWidget> Content;
     TFunction<void()> OnDeactivate;
     TSharedPtr<SButton> Header;
@@ -187,7 +188,13 @@ FReply SCkUiTabs::OnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InEven
 bool SCkUiTabs::IsKeyEnabled(const FString& InKey) const
 {
     const FEntry* Entry = _Entries.FindByPredicate([&InKey](const FEntry& Candidate) { return Candidate.Key.Equals(InKey, ESearchCase::CaseSensitive); });
-    return Entry != nullptr && Entry->Enabled.Get(true);
+    return Entry != nullptr && Entry->Visible.Get(true) && Entry->Enabled.Get(true);
+}
+
+bool SCkUiTabs::IsKeyVisible(const FString& InKey) const
+{
+    const FEntry* Entry = _Entries.FindByPredicate([&InKey](const FEntry& Candidate) { return Candidate.Key.Equals(InKey, ESearchCase::CaseSensitive); });
+    return Entry != nullptr && Entry->Visible.Get(true);
 }
 
 bool SCkUiTabs::IsKeySelected(const FString& InKey) const
@@ -242,7 +249,7 @@ void SCkUiTabs::MoveHeaderFocus(const FString& InKey, const int32 InDirection, c
     TArray<const FEntry*> Enabled;
     for (const FEntry& Entry : _Entries)
     {
-        if (Entry.Enabled.Get(true) && Entry.Header.IsValid()) { Enabled.Add(&Entry); }
+        if (Entry.Visible.Get(true) && Entry.Enabled.Get(true) && Entry.Header.IsValid()) { Enabled.Add(&Entry); }
     }
     if (Enabled.IsEmpty()) { return; }
     int32 Current = Enabled.IndexOfByPredicate([&InKey](const FEntry* Entry) { return Entry->Key.Equals(InKey, ESearchCase::CaseSensitive); });
@@ -273,6 +280,7 @@ void SCkUiTabs::Reconcile()
         Entry.Key = Panel.Key;
         Entry.Label = Panel.Label;
         Entry.Enabled = Panel.Enabled;
+        Entry.Visible = Panel.Visible;
         Entry.OnDeactivate = Panel.OnDeactivate;
         if (!Entry.Header.IsValid())
         {
@@ -316,6 +324,8 @@ void SCkUiTabs::Reconcile()
                     })
                 ];
             SAssignNew(Entry.HeaderPresentation, SBox)
+                .Visibility_Lambda([WeakTabs = TWeakPtr<SCkUiTabs>(SharedThis(this)), Key = Entry.Key]()
+                { const TSharedPtr<SCkUiTabs> Owner = WeakTabs.Pin(); return Owner.IsValid() && Owner->IsKeyVisible(Key) ? EVisibility::Visible : EVisibility::Collapsed; })
                 [
                     SNew(SVerticalBox)
                     + SVerticalBox::Slot().AutoHeight()[Entry.Header.ToSharedRef()]
@@ -399,7 +409,7 @@ void SCkUiTabs::ReconcileDisabledHeaderFocus()
     TSharedPtr<SWidget> Target;
     for (const FEntry& Entry : _Entries)
     {
-        if (!Entry.Enabled.Get(true)) { continue; }
+        if (!Entry.Visible.Get(true) || !Entry.Enabled.Get(true)) { continue; }
         if (!Target.IsValid() || Entry.Key.Equals(_AppliedSelectedKey, ESearchCase::CaseSensitive)) { Target = Entry.Header; }
         if (Entry.Key.Equals(_AppliedSelectedKey, ESearchCase::CaseSensitive)) { break; }
     }
@@ -411,7 +421,7 @@ void SCkUiTabs::ReconcileDisabledHeaderFocus()
         const TSharedPtr<SWidget> Focused = User.GetFocusedWidget();
         for (const FEntry& Entry : _Entries)
         {
-            if (Entry.Header == Focused && !Entry.Enabled.Get(true))
+            if (Entry.Header == Focused && (!Entry.Visible.Get(true) || !Entry.Enabled.Get(true)))
             { DisabledHeaders.Add({User.GetUserIndex(), Focused}); break; }
         }
     }, true);
