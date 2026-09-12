@@ -1,3 +1,15 @@
+# Current closeout status after Texture shell migration (2026-09-12)
+
+| Required row | Current evidence | Status |
+| --- | --- | --- |
+| Authored stable outer shells | GOAP and Texture own stable tabs/splitters/pane composition in authored resources; shared window chrome is authored for its consumers | 2/27 complete; 10 partial; 15 without a full authored shell |
+| Inspector migration | GOAP specialized inspector panes are authored/hybrid ports; GOAP Inspector Gateway and other debugger inspector surfaces remain to migrate | Open |
+| Local controller and two users | Synthetic native controller and virtual-user evidence exists, but no real local-player gamepad navigation/confirm/back gate | Open |
+| Representative performance | Structural virtualization evidence exists; no approved budget/reference machine or representative measured-host result | Open, approval needed before pass/fail |
+| Every-debugger teardown | GOAP and Texture shell teardown are focused green examples; the production-host matrix remains incomplete | Open |
+
+Texture evidence: `scratch/yoga-texture-shell-build-final-20260912.log` succeeded; fresh real-RHI `scratch/yoga-texture-shell-test-final-20260912.log` passed `Ck.TextureDebugger.AuthoredWindow` 1/1 with compatible/rejected reload, six authored page tabs, Refresh retention, narrow reachability and authored-view teardown. The inspected narrow capture establishes scroll reachability, not deferred browser breakpoint restacking. Packaged proof, keyboard-only accessibility and localization remain deferred, and Resource Inspector `+` remains excluded.
+
 # CTO-dispositioned closeout matrix (2026-09-11)
 
 | Census row | CTO disposition | Campaign consequence |
