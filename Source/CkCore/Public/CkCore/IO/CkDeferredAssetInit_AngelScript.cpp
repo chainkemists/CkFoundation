@@ -131,9 +131,7 @@ namespace ck_deferred_asset_init_angelscript
         if (Result == asEXECUTION_FINISHED)
         { return true; }
 
-        // The engine's own exception callback (LogAngelscriptException, AngelscriptManager.cpp) prints the
-        // AngelScript callstack; this adds the C++-side identity of what we were driving, which that
-        // callback cannot know.
+        // The engine's own callback prints the AngelScript callstack but cannot know which C++ driver ran it.
         const auto* ExceptionString = Result == asEXECUTION_EXCEPTION ? InContext->GetExceptionString() : nullptr;
 
         ck::core::Error(TEXT("[DeferredAssetInit] {} failed: asExecutionResult=[{}]{}"),
@@ -276,64 +274,31 @@ namespace ck_deferred_asset_init_angelscript
         });
     }
 
-    // ----------------------------------------------------------------------------------------------------------------
-    // Phase 1 RESETS each CDO to its constructed state and then re-applies its defaults: script destructor
-    // -> ConstructFunction -> the DefaultsFunction chain (collected child->parent, executed in reverse,
-    // each in its own context so one failure does not skip siblings). Same three steps, same order, as the
-    // engine's own UASClass::ReconstructScriptObject (ASClass.cpp) — spelled out here so every step's
-    // result is checked; see WHICH DOOR below.
-    //
-    // THE RESET IS NOT OPTIONAL. A DefaultsFunction is an INITIALISER, not an idempotent apply:
-    // `default _Arr.Add(x)` appends again on every re-run. An earlier revision skipped it on the grounds
-    // that AS defaults are "almost" all scalar/object-ref assignments — and the exception cost a real
-    // behaviour defect. A script class seeded a fixed-length work list with three
-    // `default _List.Add(...)` statements; the doubled CDO list became six entries, and
-    // UCk_ObjectPooling_Subsystem_UE::Request_ResetToArchetype copies script-only members from a CDO onto
-    // every RECYCLED pooled instance, so every recycled instance ran its whole sequence twice. A consuming
-    // project had 54 such sites across 23 files. Reproducible with StaticJIT off via
-    // `ck.DeferredAssetInit.ForceFullHeal 1` — the JIT is not the cause, it just makes the full sweep
-    // unconditional (attribution needs an AS callstack, and jitted frames push none). The SURGICAL path
-    // double-applies too, so the reset is required in both modes.
-    //
-    // Phase 2 already guards its half of exactly this (ResetInstanceFromCDO, above). A CDO has no archetype
-    // to copy from, so its pristine state has to be re-made — which is what the script constructor is for.
-    //
-    // WHICH DOOR TO THE DESTRUCTOR: `asIScriptObject::CallDestructor` is declared on the fork's
-    // devirtualized, UNEXPORTED interface class — calling it from CkCore links in a monolithic Game build
-    // and fails the modular editor DLL outright ("unresolved external symbol"). Use
-    // `UASClass::RuntimeDestroyObject`, a public member of the exported UASClass whose entire body is the
-    // null-check plus that same CallDestructor (ASClass.cpp). `UASClass::ReconstructScriptObject` also
-    // links, but it runs the defaults chain itself AND discards every Execute() result — which would make
-    // the boot line "Phase 1: re-initialized N CDO(s)" unable to distinguish a heal from a failure, and
-    // would leave the abort hazard below undetectable. Same module-boundary constraint the ObjectPooling
-    // reset hit from the other side, where the exported symbol it could reach was
-    // asCScriptObject::PerformCopy.
-    //
-    // THE RESET IS DELIBERATELY PARTIAL, and that is load-bearing: the generated destructor skips
-    // primitives, references and handles, and the generated constructor touches those only where they carry
-    // an explicit initialiser. Containers, structs and strings come back pristine while handles KEEP their
-    // prior value — which is why an actor CDO's DefaultComponents (written at their script VariableOffset
-    // BEFORE the constructor runs) survive. Do not "improve" this into a full zeroing reset.
-    //
-    // The other thing a reset like this would wipe is a CDO value written after construction by something
-    // other than defaults — LoadConfig is the canonical case. There are currently ZERO AngelScript
-    // `UPROPERTY(Config)` / `UCLASS(Config=...)` declarations under any Script root, so that is latent
-    // rather than live; if it ever changes, this needs to become a config-property-preserving reset.
-    // ----------------------------------------------------------------------------------------------------------------
 
     // True when the CDO was reset and its defaults re-applied.
+    // Resets each CDO to its constructed state, then re-applies its defaults: script destructor ->
+    // ConstructFunction -> the DefaultsFunction chain (collected child->parent, executed in reverse, each
+    // in its own context so one failure does not skip its siblings).
+    //
+    // THE RESET IS NOT OPTIONAL. A DefaultsFunction is an INITIALISER, not an idempotent apply:
+    // 'default _Arr.Add(x)' appends again on every re-run, and Request_ResetToArchetype then copies the
+    // doubled CDO onto every recycled pooled instance. The surgical path double-applies too, so the reset
+    // is required in both modes.
+    //
+    // THE RESET IS DELIBERATELY PARTIAL: the generated destructor skips primitives, references and
+    // handles, so containers, structs and strings come back pristine while handles keep their value -
+    // which is why an actor CDO's DefaultComponents survive. Do not turn this into a full zeroing reset.
+    // It would also wipe a CDO value written after construction by something other than defaults;
+    // LoadConfig is the canonical case, latent only because no AngelScript UPROPERTY(Config) exists
+    // under any Script root today.
     auto ReRunClassDefaultsFor(UASClass* InASClass) -> bool
     {
         if (ck::Is_NOT_Valid(InASClass))
         { return false; }
 
-        // Ask the whole AS chain, not just the leaf. __InitDefaults is emitted only for a class that
-        // declares its OWN default statements (as_builder.cpp:750-752) and the generator takes it only
-        // when DefaultsFunction->objectType == ObjType (AngelscriptClassGenerator.cpp:5648-5650), so a
-        // child class with no default block of its own - whose PARENT's defaults deferred a load - is
-        // recorded in GDeferredLoadCDOs by attribution and would be skipped here. That is an
-        // under-heal, and this file's contract is that we never under-heal. The chain walk further down
-        // already executes the parent's function correctly once we get that far.
+        // Ask the whole chain, not just the leaf: __InitDefaults is emitted only for a class declaring its own
+        // default statements, so a child whose PARENT's defaults deferred a load would be skipped here. This
+        // file's contract is that it never under-heals.
         const auto ChainHasDefaults = [&]
         {
             for (auto* WalkClass = InASClass; ck::IsValid(WalkClass); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
@@ -350,10 +315,8 @@ namespace ck_deferred_asset_init_angelscript
         if (InASClass->HasAnyClassFlags(CLASS_Abstract | CLASS_NewerVersionExists))
         { return false; }
 
-        // A UASClass with a null script type is a hot-reload corpse: nothing to destroy, nothing to
-        // reconstruct. This used to be unreachable - the sites that null ScriptTypePtr null
-        // DefaultsFunction too, and the guard above tested the leaf's. Now that the guard asks the whole
-        // chain, a corpse LEAF under a live parent reaches here, so this check is load-bearing.
+        // A null script type is a hot-reload corpse - nothing to destroy, nothing to reconstruct. Reachable now
+        // that the guard asks the whole chain, since a corpse leaf can sit under a live parent.
         if (InASClass->ScriptTypePtr == nullptr)
         { return false; }
 
@@ -365,27 +328,21 @@ namespace ck_deferred_asset_init_angelscript
         if (ck::Is_NOT_Valid(CDO))
         { return false; }
 
-        // Names the classes the sweep actually touches. The COUNT alone cannot answer "could this sweep
-        // have changed subsystem X's behaviour", which is the question every regression triage against
-        // this code asks; the surgical set is small enough that the answer is a grep.
+        // Names them, because the count alone cannot answer whether the sweep could have changed a given subsystem.
         ck::core::Verbose(TEXT("[DeferredAssetInit] Phase 1 re-init: '{}'"), InASClass->GetName());
 
-        // ---- reset ------------------------------------------------------------------------------------
-        // RuntimeDestroyObject is the destructor-only door CkCore can reach: its whole body is the
-        // null-check plus asCScriptObject::CallDestructor (ASClass.cpp), and it is a public member of the
-        // exported UASClass. Calling CallDestructor directly does NOT link the modular editor DLL.
+        // RuntimeDestroyObject is the only destructor door CkCore can reach: asIScriptObject::CallDestructor is
+        // declared on the fork's devirtualized, UNEXPORTED interface, so calling it links a monolithic Game build
+        // and fails the modular editor DLL. UASClass::ReconstructScriptObject links, but discards every Execute()
+        // result, which would make a failed heal indistinguishable from a healed class.
+        //
+        // From here to the end of the constructor the CDO's script members are destroyed: there is no safe bail
+        // inside that window, which is why the failure below is an ensure and not a quiet return.
         InASClass->RuntimeDestroyObject(CDO);
 
-        // From here to the end of the constructor the CDO's script members are destroyed. There is no safe
-        // bail inside that window - which is why the failure below is an ensure, not a quiet return.
-        //
-        // What the ensure does in each configuration, since it is easy to assume wrongly: CkBuildConfig
-        // pins BuildConfigurationOverride to MatchWithUnreal, so Shipping sets CK_DISABLE_ENSURE_CHECKS=0
-        // and CK_DISABLE_ENSURE_DEBUGGING=1 - the macro expands to a plain `if (NOT expr)`, the body runs,
-        // the class is skipped, and the diagnostic comes from Execute_Logging's ck::core::Error rather than
-        // from the ensure. It does NOT proceed and crash. True compile-out (`if constexpr(false)`) needs the
-        // unreachable Profile branch, and THERE this would run the defaults chain over destroyed members and
-        // report success - if Profile is ever enabled, this pair of ensures must become checkf first.
+        // Shipping keeps the ensure's body (CkBuildConfig pins MatchWithUnreal): the class is skipped and
+        // Execute_Logging reports it, rather than proceeding over destroyed members. Only the unreachable
+        // Profile branch compiles it out, where this pair would have to become checkf first.
         const auto ConstructSucceeded = [&]
         {
             auto Context = FAngelscriptContext{CDO};
@@ -401,7 +358,6 @@ namespace ck_deferred_asset_init_angelscript
                  "PerformCopy, every GetDefaultObject reader - now reads destroyed state"), InASClass->GetName())
         { return false; }
 
-        // ---- re-apply defaults ------------------------------------------------------------------------
         auto DefaultsFunctions = TArray<asIScriptFunction*, TFixedAllocator<32>>{};
         for (auto* WalkClass = InASClass; ck::IsValid(WalkClass); WalkClass = Cast<UASClass>(WalkClass->GetSuperClass()))
         {
@@ -424,9 +380,8 @@ namespace ck_deferred_asset_init_angelscript
             { AllOk = false; }
         }
 
-        // Newly load-bearing because of the reset above: before it, an aborting statement left every LATER
-        // target holding its previous, already-initialised value. Now it leaves them at constructed
-        // defaults, so a partial chain is a half-initialised CDO rather than a mostly-correct one.
+        // Load-bearing since the reset: an aborting statement now leaves later targets at constructed defaults,
+        // so a partial chain is a half-initialised CDO rather than a mostly-correct one.
         CK_ENSURE_IF_NOT(AllOk,
             TEXT("[DeferredAssetInit] A DefaultsFunction in class '{}'s chain FAILED after its CDO was reset. "
                  "The CDO now holds the statements that ran and constructed defaults for the rest"),
