@@ -1,14 +1,14 @@
-# Current closeout status after GOAP Inspector Gateway composition (2026-09-12)
+# Current closeout status after GOAP Inspector Gateway content migration (2026-09-12)
 
 | Required row | Current evidence | Status |
 | --- | --- | --- |
 | Authored stable outer shells | GOAP, Texture and AI own stable tabs/splitters/pane composition in authored resources; shared window chrome is authored for its consumers | 3/27 complete; 9 partial; 15 without a full authored shell |
-| Inspector migration | GOAP Inspector Gateway now has authored scroll/section composition around native production sections; its internal row/card presentation and other debugger inspectors remain to migrate | Open; GOAP Gateway composition partial |
+| Inspector migration | GOAP Inspector Gateway successful-path layout and presentation are fully authored; its production data/actions remain in C++ and its native builder is startup fallback only. Other debugger inspectors remain to migrate | Open; GOAP Gateway content complete |
 | Local controller and two users | Synthetic native controller and virtual-user evidence exists, but no real local-player gamepad navigation/confirm/back gate | Open |
 | Representative performance | Structural virtualization evidence exists; no approved budget/reference machine or representative measured-host result | Open, approval needed before pass/fail |
 | Every-debugger teardown | GOAP, Texture and AI shell teardown are focused green examples; the production-host matrix remains incomplete | Open |
 
-GOAP Inspector Gateway evidence: `scratch/yoga-goap-gateway-build-final2-20260912.log` succeeded and fresh-discovery real-RHI `scratch/yoga-goap-gateway-test-final-20260912.log` passed 1/1, covering authored admission, scroll and empty-state port composition, compatible/rejected reload, and authored-view/native-port release. This does not close Inspector presentation: the production section internals remain native.
+GOAP Inspector Gateway evidence: after freshly fetched `origin/dev` and explicit no-op rebases, `scratch/yoga-goap-gateway-content-build-postrebase-20260912.log` succeeded (SHA256 `C04E6A031B05E3BD06C066EEB7F480DD0E4F4FB00B7FCBCFF3C963C42F81DF97`) and real-RHI `scratch/yoga-goap-gateway-content-test-postrebase-20260912.log` passed 1/1 in 32 seconds (SHA256 `1A2842CB4B0DC569BB2A6AB8EA50CEEA4AF87A542F9EF444997ACB43352170D9`). It covers complete typed projection for planners, statuses, chain, leaf, preview and empty state; exact order/text/color/cap behavior; compatible and rejected reload; and release of the authored view plus retained collections. The successful authored path has no native section ports; native cards are startup fallback only. Other debugger inspector migrations remain open.
 
 AI evidence: `scratch/yoga-ai-shell-build-20260912.log` succeeded; after fresh discovery, real-RHI `scratch/yoga-ai-shell-test-final-20260912.log` passed `Ck.AiDebugger.AuthoredWindow` 1/1 with seven authored splitter boundaries, compatible/rejected reload, narrow reachability and authored-view teardown. Texture evidence remains `scratch/yoga-texture-shell-build-final-20260912.log` plus the 1/1 `scratch/yoga-texture-shell-test-final-20260912.log`. The inspected narrow captures establish scroll reachability, not deferred browser breakpoint restacking. Packaged proof, keyboard-only accessibility and localization remain deferred, and Resource Inspector `+` remains excluded.
 
