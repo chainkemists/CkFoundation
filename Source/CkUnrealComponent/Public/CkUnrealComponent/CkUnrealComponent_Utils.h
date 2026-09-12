@@ -118,9 +118,6 @@ public:
         UPARAM(ref) FCk_Handle_UnrealComponent& InUnrealComponent,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
-    // Stops the per-tick push of the owning entity's world transform onto this component — use when
-    // it is about to be Unreal-physics-driven instead. Request_EnableTransformPush restores the
-    // normal ownership contract when the external owner releases the component.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Request Disable Transform Push",
@@ -133,8 +130,10 @@ public:
     // Restores transform pushing and synchronously snaps the scene component to its owning entity's
     // current authoritative transform before succeeding. This is safe to call immediately before a
     // spatial consumer (for example audio playback); it does not wait for PostTransform. Components
-    // that are pending setup, non-scene, non-movable, invalid, or baked into the Jolt static world
-    // are rejected without removing the disabled tag.
+    // that are pending setup, non-scene, non-movable, invalid, baked into the Jolt static world, or
+    // whose owner carries no push memory (LastPushedTransform) are rejected without removing the
+    // disabled tag — the last of those would otherwise succeed into a component that is synchronized
+    // once here and then never pushed to again.
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|UnrealComponent",
               DisplayName = "[Ck][UnrealComponent] Request Enable Transform Push",

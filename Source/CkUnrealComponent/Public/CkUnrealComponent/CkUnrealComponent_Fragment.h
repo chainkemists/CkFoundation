@@ -62,6 +62,29 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Lives on the component-owning TRANSFORM entity, and is the PushTransform view's membership ticket.
+    // Change detection compares the owner's fragment against this, never FTag_Transform_Updated (cleared
+    // before the next push slot, losing pump-drained one-shots) and never the live component (whose
+    // external drift must survive an idle owner).
+    struct CKUNREALCOMPONENT_API FFragment_UnrealComponent_LastPushedTransform
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_UnrealComponent_LastPushedTransform);
+
+        friend class FProcessor_UnrealComponent_Setup;
+        friend class FProcessor_UnrealComponent_PushTransform;
+
+    private:
+        FTransform _Transform = FTransform::Identity;
+
+    public:
+        CK_PROPERTY_GET(_Transform);
+
+        CK_DEFINE_CONSTRUCTORS(FFragment_UnrealComponent_LastPushedTransform, _Transform);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     CK_DEFINE_RECORD_OF_ENTITIES_AND_UTILS_TRANSIENT(
         RecordOfUnrealComponents_Utils,
         FFragment_RecordOfUnrealComponents,

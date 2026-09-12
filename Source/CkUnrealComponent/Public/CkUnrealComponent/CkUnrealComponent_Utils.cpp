@@ -234,6 +234,20 @@ auto
     }
 
     const auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(OwningEntity);
+
+    // No push memory means this owner is outside PushTransform's view: enabling would synchronize once and
+    // then never push again, freezing the component at this pose. Refuse and name it.
+    const auto OwnerIsPushTracked = OwnerTransform.Has<ck::FFragment_UnrealComponent_LastPushedTransform>();
+    CK_ENSURE_IF_NOT(OwnerIsPushTracked,
+        TEXT("Cannot enable transform-push on UnrealComponent [{}] because its owning entity [{}] carries no "
+             "LastPushedTransform — UnrealComponent Setup never seeded it, so the push processor's view will "
+             "never visit this owner and no future move would reach the component"),
+        InUnrealComponent, OwningEntity)
+    {
+        InDelegate.ExecuteIfBound(InUnrealComponent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InUnrealComponent;
+    }
+
     const auto TargetTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
     SceneComponent->SetWorldTransform(TargetTransform);
 
@@ -278,7 +292,12 @@ auto
     { return false; }
 
     const auto OwningEntity = Current.Get_OwningEntity();
-    return ck::IsValid(OwningEntity) && UCk_Utils_Transform_UE::Has(OwningEntity);
+    if (NOT ck::IsValid(OwningEntity) || NOT UCk_Utils_Transform_UE::Has(OwningEntity))
+    { return false; }
+
+    // A check the request enforces and this predicate omits would be a lie that callers gate on.
+    return UCk_Utils_Transform_UE::CastChecked(OwningEntity)
+        .Has<ck::FFragment_UnrealComponent_LastPushedTransform>();
 }
 
 auto
