@@ -1,6 +1,7 @@
 # Progress
 
-Status: Implementation complete; automated gates green; manual PIE visual acceptance pending.
+Status: Implementation published; automated gates green; BusterBlock PR open; manual PIE visual
+acceptance pending.
 
 ## Completed
 
@@ -33,8 +34,15 @@ Status: Implementation complete; automated gates green; manual PIE visual accept
   `E:\Repos\BusterBlock_Other\Saved\Logs\Codex-OutlineClaims-BusterBlock-ContractTests.log`.
   The first discovery instance requested the expected full reload after generated script discovery;
   UnrealToolbox restarted it internally and the resulting run completed green.
+- Post-rebase CkPlugins `Ck.Usf.Outline` run: 9 passed, 0 failed, 0 skipped, 0 contaminated:
+  `D:\Repos\CkPlugins\Saved\Logs\Test-OutlineClaims-PostRebase-Serial.log`.
+- Post-rebase CkPlugins `Ck.DebugOverlay.Selection` run: 10 passed, 0 failed, 0 skipped,
+  0 contaminated:
+  `D:\Repos\CkPlugins\Saved\Logs\Test-DebugOverlaySelection-PostRebase.log`.
 - Final `git diff --check` was clean across the touched CkPlugins and BusterBlock_Other repositories.
 - No references to the removed legacy public physical-outline API remain.
+- CkFoundation, CkGameplayDebugger, and CkTests were fast-forwarded on `dev`; CkPlugins published
+  `feature/outline-claims`; BusterBlock PR #3058 targets `dev`.
 
 ## Current ownership
 
@@ -49,4 +57,3 @@ Status: Implementation complete; automated gates green; manual PIE visual accept
 
 - In manual PIE, visually verify Selection outlines for static meshes, skeletal meshes, ISMs, and
   ISKMs, plus BusterBlock debugger/emphasis/interaction/guidance arbitration and restoration.
-- No commits or pushes have been made.
