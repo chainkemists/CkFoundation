@@ -1,6 +1,7 @@
 #include "CkUsf/Stylize/CkUsf_CelPattern_Utils.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Utils.h"
 #include "CkUsf/Stylize/CkUsf_CelPattern_Fragment.h"
 #include "CkUsf_Log.h"
 
@@ -46,7 +47,7 @@ namespace ck_usf_cel_pattern_utils
             // the caller asked about the ROOT, and failing a whole cascade because one leaf happens to be
             // outlined would be worse than covering the rest. Logged so it is discoverable — the direct
             // request on such an entity is still rejected loudly.
-            if (Dependent.Has<ck::FFragment_Usf_OutlineTarget>())
+            if (UCk_Utils_Usf_Outline_UE::Has_Outline(Dependent))
             {
                 ck::usf::Verbose(TEXT("Cel pattern cascade skipped dependent [{}]: it carries an outline "
                                       "target, which owns its Custom Stencil value"), Dependent);
@@ -102,7 +103,7 @@ auto
 
     // Both features write the SAME Custom-Stencil byte on the entity's primitives, so accepting this would
     // silently replace the outline the caller asked for earlier.
-    const auto StencilIsFree = NOT InHandle.Has<ck::FFragment_Usf_OutlineTarget>();
+    const auto StencilIsFree = NOT UCk_Utils_Usf_Outline_UE::Has_Outline(InHandle);
     CK_ENSURE_IF_NOT(StencilIsFree,
         TEXT("Request_SetCelPattern on [{}]: entity already carries an OUTLINE target, which owns its "
              "Custom Stencil value; cel pattern NOT applied"), InHandle)

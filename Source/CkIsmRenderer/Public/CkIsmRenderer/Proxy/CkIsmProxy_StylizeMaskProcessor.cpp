@@ -194,7 +194,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget)
+            const FFragment_Usf_OutlineResolved& InOutlineResolved)
         -> void
     {
         ck_ism_stylize_mask_processor::DoTeardownAppliedStylizeMask(InApplied);

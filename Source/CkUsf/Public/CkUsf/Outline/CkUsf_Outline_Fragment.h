@@ -1,54 +1,85 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
-
-// --------------------------------------------------------------------------------------------------------------------
+#include "CkEcs/Handle/CkHandle.h"
+#include "CkUsf/Outline/CkUsf_Outline_Types.h"
+#include "GameplayTagContainer.h"
 
 class UCkUsf_OutlinePreset;
 class AActor;
-
-// --------------------------------------------------------------------------------------------------------------------
+class UPrimitiveComponent;
 
 namespace ck
 {
-    // Declarative "outline this entity" marker, written by UCk_Utils_Usf_Outline_UE; each renderer module
-    // owns a sync processor that applies it via its own mechanism (see CkUsf/CLAUDE.md). Cascade-derived
-    // targets are removed by Request_RemoveOutline on the parent; explicit targets never are.
-    struct CKUSF_API FFragment_Usf_OutlineTarget
+    struct CKUSF_API FUsf_OutlineClaim
     {
-    public:
-        CK_GENERATED_BODY(FFragment_Usf_OutlineTarget);
-
-    private:
-        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
-        bool _IsCascadeDerived = false;
-
-    public:
-        CK_PROPERTY_GET(_Preset);
-        CK_PROPERTY_GET_BY_COPY(_IsCascadeDerived);
-
-        CK_DEFINE_CONSTRUCTORS(FFragment_Usf_OutlineTarget, _Preset, _IsCascadeDerived);
+        FCk_Handle Source;
+        FGameplayTag OutlineTag;
+        ECk_Usf_OutlineScope Scope = ECk_Usf_OutlineScope::EntityOnly;
     };
 
-    // --------------------------------------------------------------------------------------------------------------------
+    struct CKUSF_API FFragment_Usf_OutlineClaims
+    {
+        CK_GENERATED_BODY(FFragment_Usf_OutlineClaims);
+        TArray<FUsf_OutlineClaim> _Claims;
+    };
 
-    // Applied-state for the actor-backed path (entities with FFragment_OwningActor_Current): records the
-    // preset + actor the outline was applied to so removal/EndPlay can undo without the Target fragment.
+    struct CKUSF_API FFragment_Usf_OutlineResolved
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Usf_OutlineResolved);
+
+    private:
+        FCk_Handle _Source;
+        FGameplayTag _OutlineTag;
+        FGameplayTag _LayerTag;
+        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
+        int32 _LayerIndex = INDEX_NONE;
+        int32 _OwnershipDistance = MAX_int32;
+
+    public:
+        CK_PROPERTY_GET(_Source);
+        CK_PROPERTY_GET(_OutlineTag);
+        CK_PROPERTY_GET(_LayerTag);
+        CK_PROPERTY_GET(_Preset);
+        CK_PROPERTY_GET(_LayerIndex);
+        CK_PROPERTY_GET(_OwnershipDistance);
+
+        CK_DEFINE_CONSTRUCTORS(
+            FFragment_Usf_OutlineResolved,
+            _Source,
+            _OutlineTag,
+            _LayerTag,
+            _Preset,
+            _LayerIndex,
+            _OwnershipDistance);
+    };
+
     struct CKUSF_API FFragment_Usf_OutlineApplied_Actor
     {
     public:
         CK_GENERATED_BODY(FFragment_Usf_OutlineApplied_Actor);
 
     private:
-        TWeakObjectPtr<UCkUsf_OutlinePreset> _Preset;
         TWeakObjectPtr<AActor> _Actor;
+        TArray<TWeakObjectPtr<UPrimitiveComponent>> _Components;
 
     public:
-        CK_PROPERTY_GET(_Preset);
         CK_PROPERTY_GET(_Actor);
+        CK_PROPERTY_GET(_Components);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Usf_OutlineApplied_Actor, _Actor, _Components);
+    };
 
-        CK_DEFINE_CONSTRUCTORS(FFragment_Usf_OutlineApplied_Actor, _Preset, _Actor);
+    struct CKUSF_API FFragment_Usf_OutlineApplied_Component
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Usf_OutlineApplied_Component);
+
+    private:
+        TWeakObjectPtr<UPrimitiveComponent> _Component;
+
+    public:
+        CK_PROPERTY_GET(_Component);
+        CK_DEFINE_CONSTRUCTORS(FFragment_Usf_OutlineApplied_Component, _Component);
     };
 }
-
-// --------------------------------------------------------------------------------------------------------------------

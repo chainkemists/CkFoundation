@@ -82,13 +82,13 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Usf_OutlineTarget& InTarget,
+            const FFragment_Usf_OutlineResolved& InResolved,
             const FFragment_IskmProxy_Current& InCurrent) const
         -> void
     {
         using namespace ck_iskm_outline_processor;
 
-        auto* Preset = InTarget.Get_Preset().Get();
+        auto* Preset = InResolved.Get_Preset().Get();
 
         if (ck::Is_NOT_Valid(Preset))
         { return; }

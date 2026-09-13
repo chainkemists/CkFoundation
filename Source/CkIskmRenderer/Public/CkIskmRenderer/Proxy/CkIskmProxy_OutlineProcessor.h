@@ -9,6 +9,7 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Processor.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Entity outlines for ISKM Plan-1 proxies (see CkUsf/Claude.md § Entity outlines). Flags are re-asserted per
@@ -20,7 +21,7 @@ namespace ck
     class CKISKMRENDERER_API FProcessor_IskmProxy_Outline_Sync : public ck_exp::TProcessor<
         FProcessor_IskmProxy_Outline_Sync,
         FCk_Handle_IskmProxy,
-        TReadOnly<FFragment_Usf_OutlineTarget>,
+        TReadOnly<FFragment_Usf_OutlineResolved>,
         TReadOnly<FFragment_IskmProxy_Current>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -28,7 +29,7 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Rendering;
         // Submeshes attach in HandleRequests — run after it so a same-frame attach gets flagged same-frame.
-        using RunAfter = TDepList<FProcessor_IskmProxy_HandleRequests>;
+        using RunAfter = TDepList<FProcessor_IskmProxy_HandleRequests, FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -43,7 +44,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Usf_OutlineTarget& InTarget,
+            const FFragment_Usf_OutlineResolved& InResolved,
             const FFragment_IskmProxy_Current& InCurrent) const -> void;
 
     private:
@@ -57,11 +58,12 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_OutlineApplied>,
         TReadOnly<FFragment_IskmProxy_Current>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:

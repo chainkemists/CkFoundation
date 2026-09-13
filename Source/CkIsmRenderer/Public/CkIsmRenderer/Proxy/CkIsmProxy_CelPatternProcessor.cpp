@@ -195,7 +195,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_CelPatternApplied& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget)
+            const FFragment_Usf_OutlineResolved& InOutlineResolved)
         -> void
     {
         ck_ism_cel_pattern_processor::DoTeardownAppliedCelPattern(InApplied);

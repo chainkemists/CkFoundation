@@ -10,6 +10,7 @@
 #include "CkIsmRenderer/Proxy/CkIsmProxy_Processor.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Processor.h"
 
 // --------------------------------------------------------------------------------------------------------------------
 // Entity outlines for ISM proxies — see CkIsmRenderer/CLAUDE.md and CkUsf/Claude.md § Entity outlines.
@@ -21,7 +22,7 @@ namespace ck
     class CKISMRENDERER_API FProcessor_IsmProxy_Outline_Sync : public ck_exp::TProcessor<
         FProcessor_IsmProxy_Outline_Sync,
         FCk_Handle_IsmProxy,
-        TReadOnly<FFragment_Usf_OutlineTarget>,
+        TReadOnly<FFragment_Usf_OutlineResolved>,
         TReadOnly<FFragment_IsmProxy_Params>,
         TReadOnly<FFragment_IsmProxy_Current>,
         TReadOnly<FFragment_Transform>,
@@ -32,7 +33,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
-        using RunAfter = TDepList<FProcessor_IsmProxy_AddInstance>;
+        using RunAfter = TDepList<FProcessor_IsmProxy_AddInstance, FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -47,7 +48,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Usf_OutlineTarget& InTarget,
+            const FFragment_Usf_OutlineResolved& InResolved,
             const FFragment_IsmProxy_Params& InParams,
             const FFragment_IsmProxy_Current& InCurrent,
             const FFragment_Transform& InTransform) const -> void;
@@ -128,11 +129,12 @@ namespace ck
         FProcessor_IsmProxy_Outline_Remove,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_OutlineApplied>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:

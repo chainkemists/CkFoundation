@@ -48,7 +48,7 @@ namespace ck_ism_outline_processor
 
         // An expired preset must not release: an invalid weak ptr compares equal to every other
         // invalid weak ptr, so a nullptr Find inside Release_StencilFor can match an unrelated
-        // expired entry (same guard as UCkUsf_OutlineSubsystem::Remove_Outline_From_Component).
+        // expired entry (same guard as the outline subsystem's physical undo).
         if (auto* OutlineSubsystem = World->GetSubsystem<UCkUsf_OutlineSubsystem>();
             ck::IsValid(OutlineSubsystem) && InApplied.Get_Preset().IsValid())
         {
@@ -77,7 +77,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Usf_OutlineTarget& InTarget,
+            const FFragment_Usf_OutlineResolved& InResolved,
             const FFragment_IsmProxy_Params& InParams,
             const FFragment_IsmProxy_Current& InCurrent,
             const FFragment_Transform& InTransform) const
@@ -85,7 +85,7 @@ namespace ck
     {
         using namespace ck_ism_outline_processor;
 
-        auto* Preset = InTarget.Get_Preset().Get();
+        auto* Preset = InResolved.Get_Preset().Get();
 
         if (ck::Is_NOT_Valid(Preset))
         { return; }
@@ -94,7 +94,7 @@ namespace ck
         {
             const auto& Applied = InHandle.Get<FFragment_IsmProxy_OutlineApplied>();
 
-            const auto& StillValid = Applied.Get_Preset() == InTarget.Get_Preset() &&
+            const auto& StillValid = Applied.Get_Preset() == InResolved.Get_Preset() &&
                 ck::IsValid(Applied.Get_ShadowIsm().Get()) &&
                 Applied.Get_ShadowIsm()->IsValidId(Applied.Get_ShadowInstanceId());
 

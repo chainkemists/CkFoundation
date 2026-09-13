@@ -7,6 +7,7 @@
 #include "CkEcs/Scheduler/CkProcessorGroups.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Processor.h"
 #include "CkUsf/Stylize/CkUsf_CelPattern_Fragment.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -24,11 +25,12 @@ namespace ck
         FProcessor_Usf_CelPatternActor_Sync,
         TReadOnly<FFragment_Usf_CelPatternTarget>,
         TReadOnly<FFragment_OwningActor_Current>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -53,11 +55,12 @@ namespace ck
     class CKUSF_API FProcessor_Usf_CelPatternActor_DropAppliedOnOutline : public TProcessor<
         FProcessor_Usf_CelPatternActor_DropAppliedOnOutline,
         TReadOnly<FFragment_Usf_CelPatternApplied_Actor>,
-        TReadOnly<FFragment_Usf_OutlineTarget>,
+        TReadOnly<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -69,7 +72,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_CelPatternApplied_Actor& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget) -> void;
+            const FFragment_Usf_OutlineResolved& InOutlineResolved) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -81,11 +84,12 @@ namespace ck
         FProcessor_Usf_CelPatternActor_Remove,
         TReadOnly<FFragment_Usf_CelPatternApplied_Actor>,
         TExclude<FFragment_Usf_CelPatternTarget>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
