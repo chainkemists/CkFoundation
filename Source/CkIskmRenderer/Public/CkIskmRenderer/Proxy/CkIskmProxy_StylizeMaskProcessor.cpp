@@ -131,7 +131,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget,
+            const FFragment_Usf_OutlineResolved& InOutlineResolved,
             const FFragment_IskmProxy_Current& InCurrent)
         -> void
     {
