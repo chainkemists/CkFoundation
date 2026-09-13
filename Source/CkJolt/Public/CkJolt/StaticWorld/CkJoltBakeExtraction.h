@@ -34,6 +34,9 @@ class UBodySetup;
 
 namespace ck::jolt::bake
 {
+    CKJOLT_API auto Get_CanonicalDataLayerNames(
+        const AActor& InActor) -> TArray<FName>;
+
     /// LevelSweep (streaming/cook path) skips Movable-mobility components — kinematic/dynamic territory.
     /// ExplicitActor (Request_BakeActor) bakes them: the caller declared the actor static-in-intent, and
     /// runtime-spawned actors are necessarily Movable.
