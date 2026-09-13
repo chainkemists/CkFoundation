@@ -10,6 +10,7 @@ namespace ck_ui_number_input
     {
         TAttribute<float> Value;
         TAttribute<FText> Placeholder;
+        TAttribute<FText> Tooltip;
         TAttribute<FText> Error;
         TAttribute<bool> Enabled;
         TAttribute<bool> ReadOnly;
@@ -35,6 +36,7 @@ namespace ck_ui_number_input
         {
             const FCkUiCustomWidgetArguments TextInputArguments = MakeTextInputArguments(_Configuration, InArguments.Id, InArguments.BaseFont);
             _Inner = FCkUiTextInput::Create(TextInputArguments, OutFailure);
+            if (_Inner.IsValid()) { _Inner->GetWidget()->SetToolTipText(_Configuration.Tooltip); }
             return _Inner.IsValid();
         }
 
@@ -80,6 +82,7 @@ namespace ck_ui_number_input
             {
                 _Input->_Configuration = MoveTemp(_Configuration);
                 _ChildUpdate->Commit();
+                _Input->_Inner->GetWidget()->SetToolTipText(_Input->_Configuration.Tooltip);
             }
 
         private:
@@ -246,6 +249,7 @@ namespace ck_ui_number_input
 
         OutConfiguration.Value = *Value;
         OutConfiguration.Placeholder = InArguments.TextProperties.FindRef(TEXT("placeholder"));
+        OutConfiguration.Tooltip = InArguments.TextBindings.FindRef(TEXT("tooltip"));
         OutConfiguration.Error = InArguments.TextBindings.FindRef(TEXT("error"));
         OutConfiguration.Enabled = InArguments.BoolBindings.FindRef(TEXT("enabled"));
         OutConfiguration.ReadOnly = InArguments.BoolBindings.FindRef(TEXT("read-only"));
@@ -326,6 +330,7 @@ auto FCkUiNumberInput::Register(FCkUiWidgetRegistry& InRegistry) -> FCkUiLoadRes
         {TEXT("max"), ECkUiCustomPropertyKind::Number, false},
         {TEXT("fractional-digits"), ECkUiCustomPropertyKind::Number, false},
         {TEXT("placeholder"), ECkUiCustomPropertyKind::Text, false},
+        {TEXT("tooltip"), ECkUiCustomPropertyKind::TextBinding, false},
         {TEXT("enabled"), ECkUiCustomPropertyKind::BoolBinding, false},
         {TEXT("read-only"), ECkUiCustomPropertyKind::BoolBinding, false},
         {TEXT("error"), ECkUiCustomPropertyKind::TextBinding, false},
