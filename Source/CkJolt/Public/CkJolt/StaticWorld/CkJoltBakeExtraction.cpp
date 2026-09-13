@@ -18,6 +18,7 @@
 #include <Hash/xxhash.h>
 #include <PhysicsEngine/BodySetup.h>
 #include <Renderers/Text3DRendererBase.h>
+#include <WorldPartition/DataLayer/DataLayerInstance.h>
 
 #include <Chaos/TriangleMeshImplicitObject.h>
 
@@ -553,6 +554,27 @@ namespace ck_jolt_bake_extraction
 
 namespace ck::jolt::bake
 {
+    auto Get_CanonicalDataLayerNames(const AActor& InActor) -> TArray<FName>
+    {
+        auto Names = TArray<FName>{};
+        for (const auto* DataLayerInstance : InActor.GetDataLayerInstances())
+        {
+            if (ck::Is_NOT_Valid(DataLayerInstance))
+            { continue; }
+
+            Names.Add(DataLayerInstance->GetDataLayerFName());
+        }
+
+        Names.Remove(NAME_None);
+        Names.Sort(FNameLexicalLess{});
+        for (auto Index = Names.Num() - 1; Index > 0; --Index)
+        {
+            if (Names[Index] == Names[Index - 1])
+            { Names.RemoveAt(Index); }
+        }
+        return Names;
+    }
+
     using namespace ck_jolt_bake_extraction;
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1721,14 +1743,7 @@ namespace ck::jolt::bake
 
     static auto DoHash_DataLayerNames(FXxHash64Builder& InOutBuilder, const AActor& InActor) -> void
     {
-        auto Names = InActor.GetDataLayerInstanceNames();
-        Names.Remove(NAME_None);
-        Names.Sort(FNameLexicalLess{});
-        for (auto Index = Names.Num() - 1; Index > 0; --Index)
-        {
-            if (Names[Index] == Names[Index - 1])
-            { Names.RemoveAt(Index); }
-        }
+        const auto Names = Get_CanonicalDataLayerNames(InActor);
         const int32 NumNames = Names.Num();
         InOutBuilder.Update(&NumNames, sizeof(NumNames));
         for (const auto& Name : Names)

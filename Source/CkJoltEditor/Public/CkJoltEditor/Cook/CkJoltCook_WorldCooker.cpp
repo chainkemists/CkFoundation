@@ -78,19 +78,6 @@ namespace ck_jolt_cook_world_cooker
         return Get_CellIdForPosition(InActorData._Bodies[0]._Position, InCellSize);
     }
 
-    static auto Get_CanonicalDataLayerNames(const AActor& InActor) -> TArray<FName>
-    {
-        auto Names = InActor.GetDataLayerInstanceNames();
-        Names.Remove(NAME_None);
-        Names.Sort(FNameLexicalLess{});
-        for (auto Index = Names.Num() - 1; Index > 0; --Index)
-        {
-            if (Names[Index] == Names[Index - 1])
-            { Names.RemoveAt(Index); }
-        }
-        return Names;
-    }
-
     /// The level an actor belongs to, normalized to the form the runtime will look it up under.
     /// Taken from the actor's LEVEL, never from its own package: under One-File-Per-Actor the actor
     /// lives in an external package while its level still belongs to the map.

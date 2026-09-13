@@ -71,14 +71,7 @@ namespace ck_jolt_cook_geometry_snapshot
         OutBody._Kind = Leaf != nullptr && Leaf->GetSubType() == JPH::EShapeSubType::HeightField
             ? ECk_Jolt_StaticBodyKind::Surface : ECk_Jolt_StaticBodyKind::Solid;
         OutBody._Description = InActor.GetPathName();
-        OutBody._DataLayerNames = InActor.GetDataLayerInstanceNames();
-        OutBody._DataLayerNames.Remove(NAME_None);
-        OutBody._DataLayerNames.Sort(FNameLexicalLess{});
-        for (auto Index = OutBody._DataLayerNames.Num() - 1; Index > 0; --Index)
-        {
-            if (OutBody._DataLayerNames[Index] == OutBody._DataLayerNames[Index - 1])
-            { OutBody._DataLayerNames.RemoveAt(Index); }
-        }
+        OutBody._DataLayerNames = Get_CanonicalDataLayerNames(InActor);
         return true;
     }
 }
