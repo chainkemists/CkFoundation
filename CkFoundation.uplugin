@@ -537,6 +537,16 @@
       ]
     },
     {
+      "Name": "CkUsfRenderer",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit",
+      "WhitelistPlatforms": [
+        "Win64",
+        "Mac",
+        "Linux"
+      ]
+    },
+    {
       "Name": "CkUsf",
       "Type": "Runtime",
       "LoadingPhase": "Default",
