@@ -26,6 +26,8 @@ class FWidgetPath;
 
 DECLARE_DELEGATE_OneParam(FCkUiOnItemAction, FString);
 DECLARE_DELEGATE_TwoParams(FCkUiOnItemBoolChanged, FString, bool);
+DECLARE_DELEGATE_TwoParams(FCkUiOnItemTextChanged, FString, FText);
+DECLARE_DELEGATE_ThreeParams(FCkUiOnItemTextCommitted, FString, FText, ETextCommit::Type);
 DECLARE_DELEGATE_ThreeParams(FCkUiOnItemNumberCommitted, FString, float, ETextCommit::Type);
 DECLARE_DELEGATE_ThreeParams(FCkUiOnItemIntegerCommitted, FString, int32, ETextCommit::Type);
 
@@ -78,6 +80,10 @@ public:
         TMap<FString, FCkUiOnItemAction> ItemActions;
         /** Repeat item BoolChanged callbacks receive the stable key and proposed value. */
         TMap<FString, FCkUiOnItemBoolChanged> ItemBoolChanged;
+        /** Repeat item TextChanged callbacks receive the stable key and proposed value. */
+        TMap<FString, FCkUiOnItemTextChanged> ItemTextChanged;
+        /** Repeat item TextCommitted callbacks receive the stable key, value, and commit reason. */
+        TMap<FString, FCkUiOnItemTextCommitted> ItemTextCommitted;
         /** Repeat item NumberCommitted callbacks receive the stable key, value, and commit reason. */
         TMap<FString, FCkUiOnItemNumberCommitted> ItemNumberCommitted;
         /** Repeat item IntegerCommitted callbacks receive the stable key, value, and commit reason. */
