@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
 
 #include <Subsystems/WorldSubsystem.h>
 
@@ -38,33 +39,32 @@ public:
     Get_OutlineSubsystem(
         const UObject* InWorldContextObject);
 
-    // Enable an outline on every primitive component of InActor using InPreset.
-    UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
-              DisplayName = "[Ck][Usf] Apply Outline To Actor")
+    // Register one resolved ECS entity as an owner of the physical component's outline. Multiple entities
+    // may legitimately resolve to the same primitive (for example an actor entity and one of its managed
+    // component dependents); the subsystem arbitrates those owners using the same deterministic ordering as
+    // semantic outline claims and reveals the next owner when the winner clears.
     void
-    Apply_Outline_To_Actor(
-        AActor* InActor,
-        UCkUsf_OutlinePreset* InPreset);
-
-    // Enable an outline on a single primitive component using InPreset.
-    UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
-              DisplayName = "[Ck][Usf] Apply Outline To Component")
-    void
-    Apply_Outline_To_Component(
+    Set_ResolvedOutline(
         UPrimitiveComponent* InComponent,
-        UCkUsf_OutlinePreset* InPreset);
+        const FCk_Handle& InRenderOwner,
+        const ck::FFragment_Usf_OutlineResolved& InResolved);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
-              DisplayName = "[Ck][Usf] Remove Outline From Actor")
     void
-    Remove_Outline_From_Actor(
-        AActor* InActor);
+    Clear_ResolvedOutline(
+        UPrimitiveComponent* InComponent,
+        const FCk_Handle& InRenderOwner);
 
-    UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
-              DisplayName = "[Ck][Usf] Remove Outline From Component")
-    void
-    Remove_Outline_From_Component(
-        UPrimitiveComponent* InComponent);
+    UFUNCTION(BlueprintPure, Category = "Ck|Usf|Outline",
+              DisplayName = "[Ck][Usf] Get Current Outline Preset")
+    UCkUsf_OutlinePreset*
+    Get_CurrentOutlinePreset(
+        UPrimitiveComponent* InComponent) const;
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Usf|Outline",
+              DisplayName = "[Ck][Usf] Get Outline Owner Count")
+    int32
+    Get_OutlineOwnerCount(
+        UPrimitiveComponent* InComponent) const;
 
     // Global outline thickness (pixels) applied to all presets, scaled per-preset by _ThicknessScale.
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
@@ -99,6 +99,16 @@ public:
     uint8 Get_StencilMax() const { return _StencilMax; }
 
 private:
+    struct FResolvedOwner
+    {
+        FCk_Handle RenderOwner;
+        ck::FFragment_Usf_OutlineResolved Resolved;
+    };
+
+    auto DoFind_WinningResolvedOwner(const TArray<FResolvedOwner>& InOwners) const -> const FResolvedOwner*;
+    auto DoReconcile_ResolvedOutline(UPrimitiveComponent* InComponent) -> void;
+    auto DoApply_PhysicalOutline(UPrimitiveComponent* InComponent, UCkUsf_OutlinePreset* InPreset) -> void;
+    auto DoRemove_PhysicalOutline(UPrimitiveComponent* InComponent) -> void;
     auto DoEnsure_ViewEffect() -> bool;
     auto DoWrite_PresetRow(int32 InSlot, const UCkUsf_OutlinePreset* InPreset) -> void;
     auto DoUpload_Lut() -> void;
@@ -135,8 +145,15 @@ private:
     // is unconditional and blanks whichever feature claimed the component next — the cel pattern and the
     // effect mask both guard their undos this way, and all three must agree or the last one to write
     // loses its silhouette when an unrelated feature is removed.
-    struct FAppliedOutline { TWeakObjectPtr<UCkUsf_OutlinePreset> Preset; int32 StencilValue = 0; };
+    struct FAppliedOutline
+    {
+        TWeakObjectPtr<UCkUsf_OutlinePreset> Preset;
+        int32 StencilValue = 0;
+        bool PreviousRenderCustomDepth = false;
+        int32 PreviousStencilValue = 0;
+    };
     TMap<TWeakObjectPtr<UPrimitiveComponent>, FAppliedOutline> _AppliedComponents;
+    TMap<TWeakObjectPtr<UPrimitiveComponent>, TArray<FResolvedOwner>> _ResolvedOwners;
 
     TArray<FFloat16Color> _LutData;
 };

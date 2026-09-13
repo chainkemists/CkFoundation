@@ -75,7 +75,7 @@ namespace ck
 
     // ---- entity outline (see CkUsf/Claude.md § Entity outlines) ----
     //
-    // Applied-state for ck::FFragment_Usf_OutlineTarget on Plan-1 proxies: the Sync processor set Custom
+    // Applied-state for a resolved outline on Plan-1 proxies: the Sync processor set Custom
     // Depth + the preset's stencil on the BaseSKMC and its submeshes; removing the fragment undoes both.
     struct CKISKMRENDERER_API FFragment_IskmProxy_OutlineApplied
     {

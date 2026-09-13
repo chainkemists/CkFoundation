@@ -26,6 +26,7 @@ public class CkUnrealComponent : CkModuleRules
             "CkLog",
             "CkRecord",
             "CkSettings",
+            "CkUsf",
         });
     }
 }

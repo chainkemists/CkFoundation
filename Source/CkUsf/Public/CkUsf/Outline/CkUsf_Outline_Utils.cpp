@@ -1,162 +1,123 @@
 #include "CkUsf/Outline/CkUsf_Outline_Utils.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
-#include "CkUsf/Outline/CkUsf_OutlinePreset.h"
-
+#include "CkUsf/Outline/CkUsf_Outline_ProjectSettings.h"
 #include "CkCore/Validation/CkIsValid.h"
-
-#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
-
-// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_usf_outline_utils
 {
-    auto
-        DoStampTarget(
-            FCk_Handle& InHandle,
-            UCkUsf_OutlinePreset* InPreset,
-            bool InIsCascadeDerived)
-        -> void
+    auto Complete(FCk_Handle& InTarget, const FCk_Delegate_Request_OnCompleted& InDelegate,
+                  ECk_Request_OperationResult InResult) -> FCk_Handle
     {
-        if (InHandle.Has<ck::FFragment_Usf_OutlineTarget>())
-        {
-            // A cascade never downgrades an explicitly-outlined dependent.
-            if (InIsCascadeDerived &&
-                NOT InHandle.Get<ck::FFragment_Usf_OutlineTarget>().Get_IsCascadeDerived())
-            { return; }
-        }
-
-        InHandle.AddOrGet<ck::FFragment_Usf_OutlineTarget>() =
-            ck::FFragment_Usf_OutlineTarget{InPreset, InIsCascadeDerived};
+        InDelegate.ExecuteIfBound(InTarget, InResult);
+        return InTarget;
     }
 
-    auto
-        DoStampDependents_Recursive(
-            const FCk_Handle& InHandle,
-            UCkUsf_OutlinePreset* InPreset)
-        -> void
+    auto TryValidateRequest(const FCk_Handle& InTarget, const FCk_Handle& InSource,
+                            const FGameplayTag& InOutlineTag,
+                            TOptional<ECk_Usf_OutlineScope> InScope) -> bool
     {
-        for (auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle))
+        const auto TargetIsValid = ck::IsValid(InTarget);
+        CK_ENSURE_IF_NOT(TargetIsValid, TEXT("Outline claim target is INVALID")) {}
+        if (NOT TargetIsValid) { return false; }
+
+        const auto SourceIsValid = ck::IsValid(InSource);
+        CK_ENSURE_IF_NOT(SourceIsValid, TEXT("Outline claim source is INVALID for target [{}]"), InTarget) {}
+        if (NOT SourceIsValid) { return false; }
+
+        auto RuntimeConfig = FCk_Usf_OutlineRuntimeConfig{};
+        const auto ConfigIsValid = UCk_Utils_Usf_Outline_Settings_UE::TryGet_RuntimeConfig(RuntimeConfig);
+        if (NOT ConfigIsValid) { return false; }
+
+        const auto OutlineTagIsConfigured = RuntimeConfig.TryGet(InOutlineTag) != nullptr;
+        CK_ENSURE_IF_NOT(OutlineTagIsConfigured,
+            TEXT("Outline claim tag [{}] is invalid or unconfigured"), InOutlineTag) {}
+        if (NOT OutlineTagIsConfigured) { return false; }
+
+        if (InScope.IsSet())
         {
-            if (ck::Is_NOT_Valid(Dependent))
-            { continue; }
-
-            DoStampTarget(Dependent, InPreset, true);
-            DoStampDependents_Recursive(Dependent, InPreset);
+            const auto Scope = InScope.GetValue();
+            const auto ScopeIsValid = Scope == ECk_Usf_OutlineScope::EntityOnly ||
+                                      Scope == ECk_Usf_OutlineScope::EntityAndDependents;
+            CK_ENSURE_IF_NOT(ScopeIsValid,
+                TEXT("Outline claim scope [{}] is invalid for target [{}]"), Scope, InTarget) {}
+            if (NOT ScopeIsValid) { return false; }
         }
-    }
-
-    auto
-        DoRemoveDerivedTargets_Recursive(
-            const FCk_Handle& InHandle)
-        -> void
-    {
-        for (auto& Dependent : UCk_Utils_EntityLifetime_UE::Get_LifetimeDependents(InHandle))
-        {
-            if (ck::Is_NOT_Valid(Dependent))
-            { continue; }
-
-            if (Dependent.Has<ck::FFragment_Usf_OutlineTarget>() &&
-                Dependent.Get<ck::FFragment_Usf_OutlineTarget>().Get_IsCascadeDerived())
-            {
-                Dependent.Remove<ck::FFragment_Usf_OutlineTarget>();
-            }
-
-            DoRemoveDerivedTargets_Recursive(Dependent);
-        }
+        return true;
     }
 }
 
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_Usf_Outline_UE::
-    Request_ApplyOutline(
-        FCk_Handle& InHandle,
-        UCkUsf_OutlinePreset* InPreset,
-        ECk_Usf_OutlineScope InScope,
-        const FCk_Delegate_Request_OnCompleted& InDelegate)
-    -> FCk_Handle
+auto UCk_Utils_Usf_Outline_UE::Set_OutlineClaim(
+    FCk_Handle& InTarget, const FCk_Handle& InSource, FGameplayTag InOutlineTag,
+    ECk_Usf_OutlineScope InScope, const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle
 {
-    const auto HandleIsValid = ck::IsValid(InHandle);
-    CK_ENSURE_IF_NOT(HandleIsValid,
-        TEXT("Request_ApplyOutline: INVALID handle"))
+    if (NOT ck_usf_outline_utils::TryValidateRequest(InTarget, InSource, InOutlineTag, InScope))
     {
-        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
-        return InHandle;
+        return ck_usf_outline_utils::Complete(
+            InTarget, InDelegate, ECk_Request_OperationResult::Failed_NotEnqueued);
     }
 
-    const auto PresetIsValid = ck::IsValid(InPreset);
-    CK_ENSURE_IF_NOT(PresetIsValid,
-        TEXT("Request_ApplyOutline on [{}]: null preset"), InHandle)
-    {
-        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
-        return InHandle;
-    }
+    auto& Claims = InTarget.AddOrGet<ck::FFragment_Usf_OutlineClaims>()._Claims;
+    auto* Existing = Claims.FindByPredicate(
+        [&InSource, &InOutlineTag](const auto& InClaim)
+        { return InClaim.Source == InSource && InClaim.OutlineTag.MatchesTagExact(InOutlineTag); });
 
-    ck_usf_outline_utils::DoStampTarget(InHandle, InPreset, false);
+    if (Existing != nullptr) { Existing->Scope = InScope; }
+    else { Claims.Add(ck::FUsf_OutlineClaim{InSource, InOutlineTag, InScope}); }
 
-    if (InScope == ECk_Usf_OutlineScope::EntityAndDependents)
-    { ck_usf_outline_utils::DoStampDependents_Recursive(InHandle, InPreset); }
-
-    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
-    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
-
-    return InHandle;
+    return ck_usf_outline_utils::Complete(InTarget, InDelegate, ECk_Request_OperationResult::Succeeded);
 }
 
-auto
-    UCk_Utils_Usf_Outline_UE::
-    Request_RemoveOutline(
-        FCk_Handle& InHandle,
-        const FCk_Delegate_Request_OnCompleted& InDelegate)
-    -> FCk_Handle
+auto UCk_Utils_Usf_Outline_UE::Clear_OutlineClaim(
+    FCk_Handle& InTarget, const FCk_Handle& InSource, FGameplayTag InOutlineTag,
+    const FCk_Delegate_Request_OnCompleted& InDelegate) -> FCk_Handle
 {
-    const auto HandleIsValid = ck::IsValid(InHandle);
-    CK_ENSURE_IF_NOT(HandleIsValid,
-        TEXT("Request_RemoveOutline: INVALID handle"))
+    if (NOT ck_usf_outline_utils::TryValidateRequest(InTarget, InSource, InOutlineTag, {}))
     {
-        InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Failed_NotEnqueued);
-        return InHandle;
+        return ck_usf_outline_utils::Complete(
+            InTarget, InDelegate, ECk_Request_OperationResult::Failed_NotEnqueued);
     }
 
-    InHandle.Try_Remove<ck::FFragment_Usf_OutlineTarget>();
+    const auto HasClaims = InTarget.Has<ck::FFragment_Usf_OutlineClaims>();
+    auto* Claims = HasClaims ? &InTarget.Get<ck::FFragment_Usf_OutlineClaims>()._Claims : nullptr;
+    const auto ClaimIndex = Claims == nullptr ? INDEX_NONE : Claims->IndexOfByPredicate(
+        [&InSource, &InOutlineTag](const auto& InClaim)
+        { return InClaim.Source == InSource && InClaim.OutlineTag.MatchesTagExact(InOutlineTag); });
+    const auto ClaimExists = ClaimIndex != INDEX_NONE;
+    CK_ENSURE_IF_NOT(ClaimExists,
+        TEXT("Cannot clear unowned outline claim [{}] from source [{}] on target [{}]"),
+        InOutlineTag, InSource, InTarget) {}
+    if (NOT ClaimExists)
+    {
+        return ck_usf_outline_utils::Complete(
+            InTarget, InDelegate, ECk_Request_OperationResult::Failed_NotEnqueued);
+    }
 
-    // Derived targets only ever come from a cascade rooted here (or above) — stripping them is always safe;
-    // explicitly-outlined dependents keep theirs.
-    ck_usf_outline_utils::DoRemoveDerivedTargets_Recursive(InHandle);
-
-    // Immediate mutation — nothing is enqueued, so completion is synchronous on this stack.
-    InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
-
-    return InHandle;
+    Claims->RemoveAt(ClaimIndex);
+    if (Claims->IsEmpty()) { InTarget.Remove<ck::FFragment_Usf_OutlineClaims>(); }
+    return ck_usf_outline_utils::Complete(InTarget, InDelegate, ECk_Request_OperationResult::Succeeded);
 }
 
-auto
-    UCk_Utils_Usf_Outline_UE::
-    Has_Outline(
-        const FCk_Handle& InHandle)
-    -> bool
+auto UCk_Utils_Usf_Outline_UE::Has_Outline(const FCk_Handle& InHandle) -> bool
 {
-    if (ck::Is_NOT_Valid(InHandle))
+    return ck::IsValid(InHandle) &&
+           (InHandle.Has<ck::FFragment_Usf_OutlineClaims>() ||
+            InHandle.Has<ck::FFragment_Usf_OutlineResolved>());
+}
+
+auto UCk_Utils_Usf_Outline_UE::Has_OutlineClaim(
+    const FCk_Handle& InTarget, const FCk_Handle& InSource, FGameplayTag InOutlineTag) -> bool
+{
+    if (ck::Is_NOT_Valid(InTarget) || NOT InTarget.Has<ck::FFragment_Usf_OutlineClaims>())
     { return false; }
-
-    return InHandle.Has<ck::FFragment_Usf_OutlineTarget>();
+    return InTarget.Get<ck::FFragment_Usf_OutlineClaims>()._Claims.ContainsByPredicate(
+        [&InSource, &InOutlineTag](const auto& InClaim)
+        { return InClaim.Source == InSource && InClaim.OutlineTag.MatchesTagExact(InOutlineTag); });
 }
 
-auto
-    UCk_Utils_Usf_Outline_UE::
-    TryGet_OutlinePreset(
-        const FCk_Handle& InHandle)
-    -> UCkUsf_OutlinePreset*
+auto UCk_Utils_Usf_Outline_UE::TryGet_OutlinePreset(const FCk_Handle& InHandle) -> UCkUsf_OutlinePreset*
 {
-    if (ck::Is_NOT_Valid(InHandle))
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_Usf_OutlineResolved>())
     { return nullptr; }
-
-    if (NOT InHandle.Has<ck::FFragment_Usf_OutlineTarget>())
-    { return nullptr; }
-
-    return InHandle.Get<ck::FFragment_Usf_OutlineTarget>().Get_Preset().Get();
+    return InHandle.Get<ck::FFragment_Usf_OutlineResolved>().Get_Preset().Get();
 }
-
-// --------------------------------------------------------------------------------------------------------------------

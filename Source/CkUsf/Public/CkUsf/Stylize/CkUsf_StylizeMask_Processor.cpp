@@ -41,7 +41,7 @@ namespace ck_usf_stylize_mask_processor
     }
 
     // DISABLES custom depth; it does not restore whatever the primitive had before this feature wrote to
-    // it. UCkUsf_OutlineSubsystem::Remove_Outline_From_Component's precedent verbatim, shared with the cel
+    // it. The outline subsystem's physical undo precedent verbatim, shared with the cel
     // pattern — all three features must agree, and a primitive already rendering custom depth for a third
     // reason is outside what any of them can see.
     auto
@@ -152,7 +152,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_StylizeMaskApplied_Actor& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget)
+            const FFragment_Usf_OutlineResolved& InOutlineResolved)
         -> void
     {
         // UNDO before dropping the state that records what to undo. Dropping alone assumes the higher

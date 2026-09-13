@@ -1,6 +1,7 @@
 #include "CkUsf/Stylize/CkUsf_StylizeMask_Utils.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Utils.h"
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 #include "CkUsf/Stylize/CkUsf_CelPattern_Fragment.h"
 #include "CkUsf/Stylize/CkUsf_CelShadeSubsystem.h"
@@ -45,7 +46,7 @@ namespace ck_usf_stylize_mask_utils
             const FCk_Handle& InHandle)
         -> bool
     {
-        return InHandle.Has<ck::FFragment_Usf_OutlineTarget>()
+        return UCk_Utils_Usf_Outline_UE::Has_Outline(InHandle)
             || InHandle.Has<ck::FFragment_Usf_CelPatternTarget>();
     }
 

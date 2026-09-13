@@ -1,6 +1,6 @@
 // --------------------------------------------------------------------------------------------------------------------
-// Sample solid-outline presets for the CkUsf SolidOutline look. Apply via the outline subsystem:
-//   UCkUsf_OutlineSubsystem::Get_OutlineSubsystem().Apply_Outline_To_Actor(SomeActor, CkUsf::DA_Outline_Interactable);
+// Sample solid-outline presets for the CkUsf SolidOutline look. Projects map Outline.* tags to these
+// (or project-specific presets) in the Usf Outline project settings.
 // Needs the project's Custom Depth-Stencil pass enabled with stencil (Config/DefaultEngine.ini r.CustomDepth=3).
 // --------------------------------------------------------------------------------------------------------------------
 

@@ -125,7 +125,7 @@ public:
     static bool
     Get_IsRagdollSettled(const FCk_Handle_IskmProxy& InHandle);
 
-    // True once the entity outline (ck::FFragment_Usf_OutlineTarget) is applied to this proxy's SKMCs —
+    // True once the resolved entity outline is applied to this proxy's SKMCs —
     // see CkUsf/Claude.md § Entity outlines. Used by autotests/gyms.
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|IskmProxy",
         DisplayName = "[Ck][IskmProxy] Get Is Outline Applied")

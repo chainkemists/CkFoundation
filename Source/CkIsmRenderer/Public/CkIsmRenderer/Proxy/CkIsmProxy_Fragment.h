@@ -57,7 +57,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Applied-state for the entity outline (ck::FFragment_Usf_OutlineTarget from CkUsf): records the shadow
+    // Applied-state for the resolved entity outline from CkUsf: records the shadow
     // ISM (the custom-depth-only twin of the renderer's ISM, one per renderer+preset) and this proxy's
     // instance inside it, so the outline processors can undo/move it without re-deriving anything.
     struct CKISMRENDERER_API FFragment_IsmProxy_OutlineApplied

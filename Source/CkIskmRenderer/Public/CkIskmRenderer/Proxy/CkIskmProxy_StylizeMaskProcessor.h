@@ -9,6 +9,7 @@
 #include "CkIskmRenderer/Proxy/CkIskmProxy_Processor.h"
 
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_Processor.h"
 #include "CkUsf/Stylize/CkUsf_CelPattern_Fragment.h"
 #include "CkUsf/Stylize/CkUsf_StylizeMask_Fragment.h"
 
@@ -32,7 +33,7 @@ namespace ck
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_Usf_StylizeMaskTarget>,
         TReadOnly<FFragment_IskmProxy_Current>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FFragment_Usf_CelPatternTarget>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -40,7 +41,7 @@ namespace ck
     public:
         using Group = FGroup_Gameplay_Rendering;
         // Submeshes attach in HandleRequests — run after it so a same-frame attach gets flagged same-frame.
-        using RunAfter = TDepList<FProcessor_IskmProxy_HandleRequests>;
+        using RunAfter = TDepList<FProcessor_IskmProxy_HandleRequests, FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -67,12 +68,13 @@ namespace ck
         FProcessor_IskmProxy_StylizeMask_DropAppliedOnOutline,
         FCk_Handle_IskmProxy,
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
-        TReadOnly<FFragment_Usf_OutlineTarget>,
+        TReadOnly<FFragment_Usf_OutlineResolved>,
         TReadOnly<FFragment_IskmProxy_Current>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:
@@ -84,7 +86,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IskmProxy_StylizeMaskApplied& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget,
+            const FFragment_Usf_OutlineResolved& InOutlineResolved,
             const FFragment_IskmProxy_Current& InCurrent) -> void;
     };
 
@@ -125,12 +127,13 @@ namespace ck
         TReadOnly<FFragment_IskmProxy_StylizeMaskApplied>,
         TReadOnly<FFragment_IskmProxy_Current>,
         TExclude<FFragment_Usf_StylizeMaskTarget>,
-        TExclude<FFragment_Usf_OutlineTarget>,
+        TExclude<FFragment_Usf_OutlineResolved>,
         TExclude<FFragment_Usf_CelPatternTarget>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Gameplay_Rendering;
+        using RunAfter = TDepList<FProcessor_Usf_OutlineClaims_Resolve>;
         static constexpr auto NetModeRequirement = ECk_ProcessorNetModeRequirement::CosmeticOnly;
 
     public:

@@ -1,6 +1,7 @@
 #include "CkUsf/Outline/CkUsf_OutlineSubsystem.h"
 
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
+#include "CkUsf/Outline/CkUsf_Outline_ProjectSettings.h"
 #include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
 #include "CkUsf_Log.h"
 
@@ -53,31 +54,206 @@ auto
 
 auto
     UCkUsf_OutlineSubsystem::
-    Apply_Outline_To_Actor(
-        AActor* InActor,
-        UCkUsf_OutlinePreset* InPreset)
+    Set_ResolvedOutline(
+        UPrimitiveComponent* InComponent,
+        const FCk_Handle& InRenderOwner,
+        const ck::FFragment_Usf_OutlineResolved& InResolved)
     -> void
 {
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
-        TEXT("Apply_Outline_To_Actor: null actor"))
-    { return; }
+    const auto IsComponentValid = ck::IsValid(InComponent);
+    CK_ENSURE_IF_NOT(IsComponentValid, TEXT("Set_ResolvedOutline: component is INVALID")) {}
+    if (NOT IsComponentValid) { return; }
 
-    TArray<UPrimitiveComponent*> Primitives;
-    InActor->GetComponents(Primitives);
-    for (auto* Primitive : Primitives)
-    { Apply_Outline_To_Component(Primitive, InPreset); }
+    const auto IsOwnerValid = ck::IsValid(InRenderOwner);
+    CK_ENSURE_IF_NOT(IsOwnerValid,
+        TEXT("Set_ResolvedOutline: render owner is INVALID for component [{}]"), InComponent) {}
+    if (NOT IsOwnerValid) { return; }
+
+    const auto IsPresetValid = ck::IsValid(InResolved.Get_Preset().Get());
+    CK_ENSURE_IF_NOT(IsPresetValid,
+        TEXT("Set_ResolvedOutline: resolved preset is INVALID for owner [{}]"), InRenderOwner) {}
+    if (NOT IsPresetValid) { return; }
+
+    const auto IsSourceValid = ck::IsValid(InResolved.Get_Source());
+    CK_ENSURE_IF_NOT(IsSourceValid,
+        TEXT("Set_ResolvedOutline: resolved source is INVALID for owner [{}]"), InRenderOwner) {}
+    if (NOT IsSourceValid) { return; }
+
+    const auto IsLayerIndexValid = InResolved.Get_LayerIndex() >= 0;
+    CK_ENSURE_IF_NOT(IsLayerIndexValid,
+        TEXT("Set_ResolvedOutline: resolved layer index [{}] is INVALID for owner [{}]"),
+        InResolved.Get_LayerIndex(), InRenderOwner) {}
+    if (NOT IsLayerIndexValid) { return; }
+
+    const auto IsOwnershipDistanceValid = InResolved.Get_OwnershipDistance() >= 0;
+    CK_ENSURE_IF_NOT(IsOwnershipDistanceValid,
+        TEXT("Set_ResolvedOutline: resolved ownership distance [{}] is INVALID for owner [{}]"),
+        InResolved.Get_OwnershipDistance(), InRenderOwner) {}
+    if (NOT IsOwnershipDistanceValid) { return; }
+
+    auto RuntimeConfig = FCk_Usf_OutlineRuntimeConfig{};
+    if (NOT UCk_Utils_Usf_Outline_Settings_UE::TryGet_RuntimeConfig(RuntimeConfig)) { return; }
+
+    const auto* Definition = RuntimeConfig.TryGet(InResolved.Get_OutlineTag());
+    const auto IsOutlineConfigured = Definition != nullptr;
+    CK_ENSURE_IF_NOT(IsOutlineConfigured,
+        TEXT("Set_ResolvedOutline: outline tag [{}] is invalid or unconfigured for owner [{}]"),
+        InResolved.Get_OutlineTag(), InRenderOwner) {}
+    if (NOT IsOutlineConfigured) { return; }
+
+    const auto DoesLayerMatch = Definition->LayerTag.MatchesTagExact(InResolved.Get_LayerTag());
+    CK_ENSURE_IF_NOT(DoesLayerMatch,
+        TEXT("Set_ResolvedOutline: layer [{}] does not match configured layer [{}] for outline [{}]"),
+        InResolved.Get_LayerTag(), Definition->LayerTag, InResolved.Get_OutlineTag()) {}
+    if (NOT DoesLayerMatch) { return; }
+
+    const auto DoesLayerIndexMatch = Definition->LayerIndex == InResolved.Get_LayerIndex();
+    CK_ENSURE_IF_NOT(DoesLayerIndexMatch,
+        TEXT("Set_ResolvedOutline: layer index [{}] does not match configured index [{}] for outline [{}]"),
+        InResolved.Get_LayerIndex(), Definition->LayerIndex, InResolved.Get_OutlineTag()) {}
+    if (NOT DoesLayerIndexMatch) { return; }
+
+    const auto DoesPresetMatch = Definition->Preset == InResolved.Get_Preset().Get();
+    CK_ENSURE_IF_NOT(DoesPresetMatch,
+        TEXT("Set_ResolvedOutline: preset does not match configured preset for outline [{}]"),
+        InResolved.Get_OutlineTag()) {}
+    if (NOT DoesPresetMatch) { return; }
+
+    auto& Owners = _ResolvedOwners.FindOrAdd(InComponent);
+    auto* Existing = Owners.FindByPredicate([&InRenderOwner](const FResolvedOwner& InOwner)
+    { return InOwner.RenderOwner == InRenderOwner; });
+    if (Existing != nullptr)
+    { Existing->Resolved = InResolved; }
+    else
+    { Owners.Add(FResolvedOwner{InRenderOwner, InResolved}); }
+
+    DoReconcile_ResolvedOutline(InComponent);
 }
 
 auto
     UCkUsf_OutlineSubsystem::
-    Apply_Outline_To_Component(
+    Clear_ResolvedOutline(
+        UPrimitiveComponent* InComponent,
+        const FCk_Handle& InRenderOwner)
+    -> void
+{
+    const auto IsComponentValid = ck::IsValid(InComponent);
+    CK_ENSURE_IF_NOT(IsComponentValid, TEXT("Clear_ResolvedOutline: component is INVALID")) {}
+    if (NOT IsComponentValid) { return; }
+
+    const auto IsOwnerValid = ck::IsValid(InRenderOwner);
+    CK_ENSURE_IF_NOT(IsOwnerValid,
+        TEXT("Clear_ResolvedOutline: render owner is INVALID for component [{}]"), InComponent) {}
+    if (NOT IsOwnerValid) { return; }
+
+    auto* Owners = _ResolvedOwners.Find(InComponent);
+    if (Owners == nullptr) { return; }
+
+    Owners->RemoveAll([&InRenderOwner](const FResolvedOwner& InOwner)
+    { return InOwner.RenderOwner == InRenderOwner; });
+    if (Owners->IsEmpty())
+    {
+        _ResolvedOwners.Remove(InComponent);
+        DoRemove_PhysicalOutline(InComponent);
+        return;
+    }
+
+    DoReconcile_ResolvedOutline(InComponent);
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
+    Get_CurrentOutlinePreset(
+        UPrimitiveComponent* InComponent) const
+    -> UCkUsf_OutlinePreset*
+{
+    const auto* Applied = _AppliedComponents.Find(InComponent);
+    return Applied != nullptr ? Applied->Preset.Get() : nullptr;
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
+    Get_OutlineOwnerCount(
+        UPrimitiveComponent* InComponent) const
+    -> int32
+{
+    const auto* Owners = _ResolvedOwners.Find(InComponent);
+    return Owners != nullptr ? Owners->Num() : 0;
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
+    DoFind_WinningResolvedOwner(
+        const TArray<FResolvedOwner>& InOwners) const
+    -> const FResolvedOwner*
+{
+    const FResolvedOwner* Winner = nullptr;
+    for (const auto& Candidate : InOwners)
+    {
+        if (Winner == nullptr)
+        {
+            Winner = &Candidate;
+            continue;
+        }
+
+        const auto& Current = Winner->Resolved;
+        const auto& Proposed = Candidate.Resolved;
+        auto ProposedWins = Proposed.Get_LayerIndex() < Current.Get_LayerIndex();
+        if (Proposed.Get_LayerIndex() == Current.Get_LayerIndex())
+        {
+            ProposedWins = Proposed.Get_OwnershipDistance() < Current.Get_OwnershipDistance();
+            if (Proposed.Get_OwnershipDistance() == Current.Get_OwnershipDistance())
+            {
+                ProposedWins = Proposed.Get_Source() < Current.Get_Source();
+                if (Proposed.Get_Source() == Current.Get_Source())
+                {
+                    const auto ProposedTag = Proposed.Get_OutlineTag().ToString();
+                    const auto CurrentTag = Current.Get_OutlineTag().ToString();
+                    ProposedWins = ProposedTag < CurrentTag ||
+                                   (ProposedTag == CurrentTag && Candidate.RenderOwner < Winner->RenderOwner);
+                }
+            }
+        }
+        if (ProposedWins) { Winner = &Candidate; }
+    }
+    return Winner;
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
+    DoReconcile_ResolvedOutline(
+        UPrimitiveComponent* InComponent)
+    -> void
+{
+    auto* Owners = _ResolvedOwners.Find(InComponent);
+    if (Owners == nullptr || Owners->IsEmpty())
+    {
+        DoRemove_PhysicalOutline(InComponent);
+        return;
+    }
+
+    const auto* Winner = DoFind_WinningResolvedOwner(*Owners);
+    check(Winner != nullptr);
+    auto* WinnerPreset = Winner->Resolved.Get_Preset().Get();
+    const auto* Applied = _AppliedComponents.Find(InComponent);
+    const auto IsAlreadyApplied = Applied != nullptr && Applied->Preset == WinnerPreset &&
+                                  InComponent->bRenderCustomDepth &&
+                                  InComponent->CustomDepthStencilValue == Applied->StencilValue;
+    if (IsAlreadyApplied) { return; }
+
+    DoApply_PhysicalOutline(InComponent, WinnerPreset);
+}
+
+auto
+    UCkUsf_OutlineSubsystem::
+    DoApply_PhysicalOutline(
         UPrimitiveComponent* InComponent,
         UCkUsf_OutlinePreset* InPreset)
     -> void
 {
     CK_ENSURE_IF_NOT(ck::IsValid(InComponent) &&
                      ck::IsValid(InPreset),
-        TEXT("Apply_Outline_To_Component: null component or preset"))
+        TEXT("DoApply_PhysicalOutline: null component or preset"))
     { return; }
 
     if (DoEnsure_ViewEffect() == false)
@@ -87,36 +263,26 @@ auto
     }
 
     if (_AppliedComponents.Contains(InComponent))
-    { Remove_Outline_From_Component(InComponent); }
+    { DoRemove_PhysicalOutline(InComponent); }
 
     const auto Stencil = Get_OrAllocate_StencilFor(InPreset);
     if (Stencil == 0)
     { return; } // range exhausted — already warned
 
+    const auto PreviousRenderCustomDepth = InComponent->bRenderCustomDepth;
+    const auto PreviousStencilValue = InComponent->CustomDepthStencilValue;
     InComponent->SetRenderCustomDepth(true);
     InComponent->SetCustomDepthStencilValue(static_cast<int32>(Stencil));
-    _AppliedComponents.Add(InComponent, FAppliedOutline{InPreset, static_cast<int32>(Stencil)});
+    _AppliedComponents.Add(InComponent, FAppliedOutline{
+        InPreset,
+        static_cast<int32>(Stencil),
+        PreviousRenderCustomDepth != 0,
+        PreviousStencilValue});
 }
 
 auto
     UCkUsf_OutlineSubsystem::
-    Remove_Outline_From_Actor(
-        AActor* InActor)
-    -> void
-{
-    CK_ENSURE_IF_NOT(ck::IsValid(InActor),
-        TEXT("Remove_Outline_From_Actor: null actor"))
-    { return; }
-
-    TArray<UPrimitiveComponent*> Primitives;
-    InActor->GetComponents(Primitives);
-    for (auto* Primitive : Primitives)
-    { Remove_Outline_From_Component(Primitive); }
-}
-
-auto
-    UCkUsf_OutlineSubsystem::
-    Remove_Outline_From_Component(
+    DoRemove_PhysicalOutline(
         UPrimitiveComponent* InComponent)
     -> void
 {
@@ -132,8 +298,13 @@ auto
     // clear this map. Disabling custom depth unconditionally would then blank that claim permanently:
     // its own applied-state still says "written", so its sync early-outs forever and nothing re-asserts.
     // The two sibling features guard their undos identically.
-    if (InComponent->CustomDepthStencilValue == Applied->StencilValue)
-    { InComponent->SetRenderCustomDepth(false); }
+    const auto StillOwnsComponentState = InComponent->bRenderCustomDepth &&
+                                        InComponent->CustomDepthStencilValue == Applied->StencilValue;
+    if (StillOwnsComponentState)
+    {
+        InComponent->SetCustomDepthStencilValue(Applied->PreviousStencilValue);
+        InComponent->SetRenderCustomDepth(Applied->PreviousRenderCustomDepth);
+    }
 
     // An expired preset must not release: FWeakObjectPtr treats ALL invalid weak ptrs as equal, so a
     // nullptr Find against the weak-keyed _ActivePresets can match an unrelated expired entry.
@@ -163,7 +334,7 @@ auto
     { return 0; }
 
     // External renderers (shadow ISM, ISKM SKMCs, batched clusters) allocate directly without ever calling
-    // Apply_Outline_To_Component. Failure here is non-fatal (headless/tests): DoEnsure_ViewEffect re-writes
+    // DoApply_PhysicalOutline. Failure here is non-fatal (headless/tests): DoEnsure_ViewEffect re-writes
     // every active row on its first success, so early allocations are not left with zeroed LUT rows.
     DoEnsure_ViewEffect();
 
@@ -354,14 +525,20 @@ auto
         if (Applied.Key.IsValid() == false)
         { Dead.Add(Applied.Key); }
     }
+    for (const auto& Owners : _ResolvedOwners)
+    {
+        if (Owners.Key.IsValid() == false)
+        { Dead.AddUnique(Owners.Key); }
+    }
 
     for (const auto& DeadComponent : Dead)
     {
-        // Same expired-preset guard as Remove_Outline_From_Component. No value guard here: the component
+        // Same expired-preset guard as DoRemove_PhysicalOutline. No value guard here: the component
         // is already gone, so there is nothing to disable and nothing to protect.
         if (auto* Applied = _AppliedComponents.Find(DeadComponent);
             Applied != nullptr && Applied->Preset.IsValid())
         { Release_StencilFor(Applied->Preset.Get()); }
         _AppliedComponents.Remove(DeadComponent);
+        _ResolvedOwners.Remove(DeadComponent);
     }
 }

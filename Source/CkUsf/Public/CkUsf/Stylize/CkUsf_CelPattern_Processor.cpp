@@ -41,7 +41,7 @@ namespace ck_usf_cel_pattern_processor
     }
 
     // DISABLES custom depth; it does not restore whatever the primitive had before this feature wrote to
-    // it. That is UCkUsf_OutlineSubsystem::Remove_Outline_From_Component's precedent verbatim — the two
+    // it. That is the outline subsystem's physical undo precedent verbatim — the two
     // features must agree, and a primitive that was already rendering custom depth for a third reason is
     // outside what either can see. Consequence worth knowing: hand-authored custom depth on a mesh does
     // not survive a cel pattern being applied and then cleared.
@@ -153,7 +153,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Usf_CelPatternApplied_Actor& InApplied,
-            const FFragment_Usf_OutlineTarget& InOutlineTarget)
+            const FFragment_Usf_OutlineResolved& InOutlineResolved)
         -> void
     {
         // UNDO before dropping the state that records what to undo. Dropping alone assumes the outline's
