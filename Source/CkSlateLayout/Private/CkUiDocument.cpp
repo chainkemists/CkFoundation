@@ -1222,10 +1222,14 @@ namespace ck_ui_document
                     if (Property.bRequired) { Required.Add(Attribute); }
                 }
                 const FCkUiCustomPropertySchema* Changed = Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
-                { return Property.Name == TEXT("changed") && Property.Kind == ECkUiCustomPropertyKind::BoolChanged; });
+                {
+                    return Property.Name == TEXT("changed")
+                        && (Property.Kind == ECkUiCustomPropertyKind::BoolChanged || Property.Kind == ECkUiCustomPropertyKind::TextChanged);
+                });
                 const FCkUiCustomPropertySchema* Committed = Custom->Schema.Properties.FindByPredicate([](const FCkUiCustomPropertySchema& Property)
                 {
-                    return Property.Name == TEXT("committed") && (Property.Kind == ECkUiCustomPropertyKind::NumberCommitted || Property.Kind == ECkUiCustomPropertyKind::IntegerCommitted);
+                    return Property.Name == TEXT("committed") && (Property.Kind == ECkUiCustomPropertyKind::TextCommitted
+                        || Property.Kind == ECkUiCustomPropertyKind::NumberCommitted || Property.Kind == ECkUiCustomPropertyKind::IntegerCommitted);
                 });
                 if (Changed != nullptr) { Expected.Add(TEXT("item-changed"), EValueKind::Action); }
                 if (Committed != nullptr) { Expected.Add(TEXT("item-committed"), EValueKind::Action); }
