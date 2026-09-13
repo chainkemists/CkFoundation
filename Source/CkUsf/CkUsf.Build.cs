@@ -22,6 +22,7 @@ public class CkUsf : CkModuleRules
             "CkLog",
             "CkSettings",
             "CkGraphics",
+            "CkUsfRenderer",
         });
     }
 }

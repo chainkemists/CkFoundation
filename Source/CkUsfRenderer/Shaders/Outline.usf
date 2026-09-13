@@ -1,0 +1,202 @@
+// Exact, uncapped outline dilation. A minimum-depth occupancy pyramid supplies conservative
+// branch-and-bound distances. No fixed-radius probes, jump-flood approximation or width clamp.
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Private/SceneTexturesCommon.ush"
+
+float4 OutlineColors[16];
+float4 FillColors[16];
+int2 ViewSize;
+uint ActiveMask;
+uint StencilMin;
+uint WorldSpace;
+uint SquareCorners;
+float Thickness;
+uint DebugMode;
+int2 HierarchySize;
+int2 ColorMin;
+uint RootLevel;
+RWTexture2D<float> OutDepth;
+Texture2D<float> InDepth;
+Texture2D<float> Hierarchy;
+Texture2D InputColor;
+RWTexture2D<float4> OutputColor;
+
+static const float EmptyDepth = 3.402823466e+38;
+
+uint ReadStencil(int2 pixel)
+{ return CalcSceneCustomStencil(uint2(pixel + int2(View.ViewRectMin.xy))); }
+
+bool Active(uint stencil)
+{
+    if (stencil < StencilMin || stencil >= StencilMin + 16) { return false; }
+    return (ActiveMask & (1u << (stencil - StencilMin))) != 0;
+}
+
+float2 BufferUV(int2 pixel)
+{ return (pixel + View.ViewRectMin.xy + 0.5) * View.BufferSizeAndInvSize.zw; }
+
+bool Visible(uint stencil, int2 pixel, out float depth)
+{
+    float2 uv = BufferUV(pixel);
+    depth = CalcSceneCustomDepth(uv);
+    return OutlineColors[stencil - StencilMin].a > 0.5 || depth <= CalcSceneDepth(uv) + 1.0;
+}
+
+[numthreads(8, 8, 1)]
+void SeedCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= uint2(HierarchySize))) { return; }
+    float depth = EmptyDepth;
+    if (all(id.xy < uint2(ViewSize)))
+    {
+        uint stencil = ReadStencil(id.xy);
+        float sourceDepth;
+        if (Active(stencil) && Visible(stencil, id.xy, sourceDepth))
+        {
+            // Orthographic depth does not affect projection. Use a positive occupancy value even
+            // when an orthographic camera places its near plane on a visible surface.
+            depth = (WorldSpace != 0 && View.ViewToClip[3][3] < 1.0) ? sourceDepth : 1.0;
+            if (!(depth > 0.0 && depth < EmptyDepth)) { depth = EmptyDepth; }
+        }
+    }
+    OutDepth[id.xy] = depth;
+}
+
+[numthreads(8, 8, 1)]
+void ReduceCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= uint2(HierarchySize))) { return; }
+    int2 p = int2(id.xy) * 2;
+    OutDepth[id.xy] = min(min(InDepth.Load(int3(p, 0)), InDepth.Load(int3(p + int2(1,0), 0))),
+                         min(InDepth.Load(int3(p + int2(0,1), 0)), InDepth.Load(int3(p + 1, 0))));
+}
+
+float Metric(float2 d)
+{ return SquareCorners != 0 ? max(d.x, d.y) : length(d); }
+
+float2 UnitsPerPixel(float sourceDepth)
+{
+    if (WorldSpace == 0) { return 1.0; }
+    float2 projectionPixels = 0.5 * View.ViewSizeAndInvSize.xy *
+        abs(float2(View.ViewToClip[0][0], View.ViewToClip[1][1]));
+    return sourceDepth / projectionPixels;
+}
+
+// The child containing/nearest the destination is visited first. XOR enumerates every other
+// child exactly once. Recomputing this order on ascent makes traversal stackless and finite.
+uint FirstChild(uint2 node, uint level, float2 pixel)
+{
+    float2 split = (float2(node) + 0.5) * float(1u << level) - 0.5;
+    return (pixel.x > split.x ? 1u : 0u) | (pixel.y > split.y ? 2u : 0u);
+}
+
+[numthreads(8, 8, 1)]
+void CompositeCS(uint3 id : SV_DispatchThreadID)
+{
+    if (any(id.xy >= uint2(ViewSize))) { return; }
+    int2 pixel = int2(id.xy);
+    int2 colorPixel = pixel + ColorMin;
+    float4 color = InputColor.Load(int3(colorPixel, 0));
+    uint center = ReadStencil(pixel);
+    if (DebugMode >= 1 && DebugMode <= 3)
+    {
+        bool occupied = DebugMode == 1 ? Active(center) : (DebugMode == 2 ?
+            Hierarchy.Load(int3(pixel, 0)) : Hierarchy.Load(int3(0, 0, RootLevel))) < EmptyDepth;
+        OutputColor[colorPixel] = float4(occupied ? float3(1,0,0) : 0.0, 1);
+        return;
+    }
+    if (DebugMode >= 5)
+    {
+        OutputColor[colorPixel] = float4(DebugMode == 5 ? OutlineColors[0].rgb * View.PreExposure :
+            (DebugMode == 6 ? OutlineColors[0].rgb : View.PreExposure.xxx), 1);
+        return;
+    }
+    if (Active(center))
+    {
+        float4 fill = FillColors[center - StencilMin];
+        float depth;
+        if (fill.a > 0.0 && Visible(center, pixel, depth))
+        {
+            float opacity = saturate(fill.a);
+            if (OutlineColors[center - StencilMin].a > 1.5)
+            { opacity *= ((pixel.x / 4 + pixel.y / 4) & 1); }
+            color.rgb = lerp(color.rgb, fill.rgb * View.PreExposure, opacity);
+        }
+        OutputColor[colorPixel] = color;
+        return;
+    }
+
+    uint2 node = 0;
+    uint level = RootLevel;
+    float best = EmptyDepth;
+    float bestCenter = EmptyDepth;
+    float bestDepth = EmptyDepth;
+    uint bestStencil = 0xffffffff;
+    float coverage = 0.0;
+    float3 outline = 0.0;
+    [loop]
+    while (true)
+    {
+        float minDepth = Hierarchy.Load(int3(node, level));
+        float size = float(1u << level);
+        float2 lower = float2(node) * size - 0.5;
+        float2 upper = lower + size;
+        float2 delta = max(max(lower - pixel, pixel - upper), 0.0);
+        float2 scale = UnitsPerPixel(minDepth);
+        float lowerDistance = Metric(delta * scale);
+        // Conservative pixel-space radius bound also includes outer-edge AA. minDepth gives
+        // the largest projected radius in this node, never a smaller-than-actual search region.
+        float maxRadius = (Thickness + 0.5 * max(scale.x, scale.y)) / min(scale.x, scale.y);
+        bool visit = minDepth < EmptyDepth && lowerDistance <= best && Metric(delta) <= maxRadius;
+        if (visit && level > 0)
+        {
+            uint first = FirstChild(node, level, pixel);
+            node = node * 2 + uint2(first & 1, first >> 1);
+            --level;
+            continue;
+        }
+        if (visit)
+        {
+            float distance = lowerDistance;
+            float gradient = SquareCorners != 0
+                ? (delta.x * scale.x >= delta.y * scale.y ? scale.x : scale.y)
+                : length(delta * scale * scale) / max(distance, 1e-30);
+            float alpha = saturate((Thickness - distance) / gradient + 0.5);
+            uint stencil = ReadStencil(node);
+            float centerDistance = dot(float2(node) - pixel, float2(node) - pixel);
+            float depth = CalcSceneCustomDepth(BufferUV(node));
+            bool better = distance < best || (distance == best && (centerDistance < bestCenter ||
+                (centerDistance == bestCenter && (depth < bestDepth || (depth == bestDepth && stencil < bestStencil)))));
+            if (alpha > 0.0 && better)
+            {
+                best = distance;
+                bestCenter = centerDistance;
+                bestDepth = depth;
+                bestStencil = stencil;
+                coverage = alpha;
+                outline = OutlineColors[stencil - StencilMin].rgb;
+            }
+        }
+        // Finish this subtree, then find the next unvisited sibling. No arbitrary iteration limit.
+        bool advanced = false;
+        [loop]
+        while (level < RootLevel)
+        {
+            uint2 parent = node >> 1;
+            uint first = FirstChild(parent, level + 1, pixel);
+            uint order = ((node.x & 1) | ((node.y & 1) << 1)) ^ first;
+            if (order < 3)
+            {
+                uint next = (order + 1) ^ first;
+                node = parent * 2 + uint2(next & 1, next >> 1);
+                advanced = true;
+                break;
+            }
+            node = parent;
+            ++level;
+        }
+        if (!advanced) { break; }
+    }
+    color.rgb = DebugMode == 4 ? float3(coverage, 0, 0) : lerp(color.rgb, outline * View.PreExposure, coverage);
+    OutputColor[colorPixel] = color;
+}

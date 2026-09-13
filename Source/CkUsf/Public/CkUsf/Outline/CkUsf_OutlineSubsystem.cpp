@@ -2,22 +2,32 @@
 
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkUsf/Outline/CkUsf_Outline_ProjectSettings.h"
-#include "CkUsf/LookDefinition/CkUsf_LookDefinition_Naming.h"
+#include "CkUsfRenderer/Outline/CkUsf_Outline_Renderer.h"
 #include "CkUsf_Log.h"
 
 #include "CkCore/Validation/CkIsValid.h"
 
 #include "Engine/Engine.h"
 #include "Engine/World.h"
-#include "Engine/Texture2D.h"
-#include "Materials/MaterialInterface.h"
-#include "Materials/MaterialInstanceDynamic.h"
-#include "Components/PostProcessComponent.h"
 #include "Components/PrimitiveComponent.h"
 #include "GameFramework/Actor.h"
 #include "Math/Float16Color.h"
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto UCkUsf_OutlineSubsystem::Initialize(FSubsystemCollectionBase& InCollection) -> void
+{
+    Super::Initialize(InCollection);
+    _LutData.SetNumZeroed(kLutWidth * kLutHeight);
+    TrySet_ThicknessSettings(UCk_Utils_Usf_Outline_Settings_UE::Get_ThicknessSettings());
+}
+
+auto UCkUsf_OutlineSubsystem::Deinitialize() -> void
+{
+    if (_Renderer.IsValid()) { _Renderer->Deactivate(); }
+    _Renderer.Reset();
+    Super::Deinitialize();
+}
 
 auto
     UCkUsf_OutlineSubsystem::
@@ -258,7 +268,6 @@ auto
 
     if (DoEnsure_ViewEffect() == false)
     {
-        ck::usf::Warning(TEXT("Outline view effect unavailable (SolidOutline master missing? run Generate Look Materials)"));
         return;
     }
 
@@ -315,13 +324,16 @@ auto
 
 auto
     UCkUsf_OutlineSubsystem::
-    Set_GlobalOutlineThickness(
-        float InThickness)
-    -> void
+    TrySet_ThicknessSettings(
+        const FCk_Usf_OutlineThicknessSettings& InSettings)
+    -> bool
 {
-    _GlobalThickness = InThickness;
-    if (_OutlineMID != nullptr)
-    { _OutlineMID->SetScalarParameterValue(TEXT("GlobalThickness"), InThickness); }
+    if (NOT UCk_Utils_Usf_Outline_Settings_UE::TryValidate_ThicknessSettings(InSettings))
+    { return false; }
+    _ThicknessSettings = InSettings;
+    _ThicknessSettingsAreValid = true;
+    DoUpload_Lut();
+    return true;
 }
 
 auto
@@ -333,10 +345,8 @@ auto
     if (ck::Is_NOT_Valid(InPreset))
     { return 0; }
 
-    // External renderers (shadow ISM, ISKM SKMCs, batched clusters) allocate directly without ever calling
-    // DoApply_PhysicalOutline. Failure here is non-fatal (headless/tests): DoEnsure_ViewEffect re-writes
-    // every active row on its first success, so early allocations are not left with zeroed LUT rows.
-    DoEnsure_ViewEffect();
+    // External renderers allocate directly. Validate the view/configuration before publishing any slot.
+    if (NOT DoEnsure_ViewEffect()) { return 0; }
 
     DoReap_DeadComponents();
 
@@ -400,72 +410,15 @@ auto
     DoEnsure_ViewEffect()
     -> bool
 {
-    if (_OutlineMID != nullptr)
-    { return true; }
-
+    if (_Renderer.IsValid()) { return true; }
     auto* World = GetWorld();
-    if (ck::Is_NOT_Valid(World))
-    { return false; }
-
-    // ---- Params LUT (16 x 2 RGBA16f; sampled at exact texel centers, never streamed) ----
-    _ParamsTex = UTexture2D::CreateTransient(kLutWidth, kLutHeight, PF_FloatRGBA);
-    if (_ParamsTex == nullptr)
-    { return false; }
-
-    _ParamsTex->SRGB = false;
-    _ParamsTex->Filter = TF_Nearest;
-    _ParamsTex->AddressX = TA_Clamp;
-    _ParamsTex->AddressY = TA_Clamp;
-    _ParamsTex->NeverStream = true;
-    _ParamsTex->UpdateResource();
-
-    _LutData.SetNumZeroed(kLutWidth * kLutHeight);
+    const auto IsWorldValid = ck::IsValid(World);
+    CK_ENSURE_IF_NOT(IsWorldValid, TEXT("Outline renderer requires a valid world")) {}
+    if (NOT IsWorldValid) { return false; }
+    CK_ENSURE_IF_NOT(_ThicknessSettingsAreValid, TEXT("Outline renderer requires valid thickness settings")) {}
+    if (NOT _ThicknessSettingsAreValid) { return false; }
+    _Renderer = MakeShared<ck::usf::FOutlineRenderer, ESPMode::ThreadSafe>(World);
     DoUpload_Lut();
-
-    // ---- SolidOutline master -> MID ----
-    const auto MasterPath = ck::usf::Get_GeneratedMasterObjectPath(FName(TEXT("SolidOutline")));
-    auto* Master = LoadObject<UMaterialInterface>(nullptr, *MasterPath);
-    if (ck::Is_NOT_Valid(Master))
-    {
-        ck::usf::Warning(TEXT("SolidOutline master not found at [{}] — run Generate Look Materials"), MasterPath);
-        return false;
-    }
-
-    _OutlineMID = UMaterialInstanceDynamic::Create(Master, this);
-    _OutlineMID->SetTextureParameterValue(TEXT("OutlineParams"), _ParamsTex);
-    _OutlineMID->SetScalarParameterValue(TEXT("GlobalThickness"), _GlobalThickness);
-    _OutlineMID->SetScalarParameterValue(TEXT("StencilMin"), static_cast<float>(_StencilMin));
-    _OutlineMID->SetScalarParameterValue(TEXT("StencilMax"), static_cast<float>(_StencilMax));
-
-    // ---- Unbound post-process component on a transient actor -> whole-view blendable ----
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.ObjectFlags |= RF_Transient;
-    SpawnParams.Name = TEXT("CkUsf_OutlineView");
-    _ViewActor = World->SpawnActor<AActor>(AActor::StaticClass(), SpawnParams);
-    if (_ViewActor == nullptr)
-    {
-        // The MID is what this function early-outs on, so leaving it set turns a failed spawn into a
-        // permanent silent success: every later call returns true with no post-process component attached
-        // and outlines never render in this world. Same shape as UCkUsf_ScreenDitherSubsystem's.
-        _OutlineMID = nullptr;
-        return false;
-    }
-
-    _ViewPP = NewObject<UPostProcessComponent>(_ViewActor, TEXT("OutlinePostProcess"));
-    _ViewActor->SetRootComponent(_ViewPP);
-    _ViewPP->bUnbound = true;
-    _ViewPP->RegisterComponent();
-    _ViewPP->Settings.AddBlendable(_OutlineMID, 1.0f);
-
-    // Presets may have allocated stencils before the view effect existed (renderers call
-    // Get_OrAllocate_StencilFor directly) — their LUT rows were unwritable then; write them now.
-    for (const auto& Active : _ActivePresets)
-    {
-        if (auto* Preset = Active.Key.Get())
-        { DoWrite_PresetRow(static_cast<int32>(Active.Value.Value) - static_cast<int32>(_StencilMin), Preset); }
-    }
-    DoUpload_Lut();
-
     return true;
 }
 
@@ -500,18 +453,23 @@ auto
     DoUpload_Lut()
     -> void
 {
-    if (_ParamsTex == nullptr || _LutData.Num() == 0)
-    { return; }
-
-    auto* PlatformData = _ParamsTex->GetPlatformData();
-    if (PlatformData == nullptr || PlatformData->Mips.Num() == 0)
-    { return; }
-
-    auto& Mip = PlatformData->Mips[0];
-    auto* Dest = Mip.BulkData.Lock(LOCK_READ_WRITE);
-    FMemory::Memcpy(Dest, _LutData.GetData(), _LutData.Num() * sizeof(FFloat16Color));
-    Mip.BulkData.Unlock();
-    _ParamsTex->UpdateResource();
+    if (NOT _Renderer.IsValid() || _LutData.IsEmpty()) { return; }
+    auto State = ck::usf::FOutlineRenderState{};
+    State.StencilMin = _StencilMin;
+    State.WorldSpace = _ThicknessSettings.Get_Space() == ECk_Usf_OutlineThicknessSpace::WorldSpace;
+    State.SquareCorners = _ThicknessSettings.Get_SquareCorners();
+    State.Thickness = State.WorldSpace ? _ThicknessSettings.Get_WorldSpaceThickness() :
+        _ThicknessSettings.Get_ScreenSpaceThickness();
+    for (const auto& Active : _ActivePresets)
+    { State.ActiveMask |= 1u << (Active.Value.Value - _StencilMin); }
+    for (auto Index = 0; Index < kLutWidth; ++Index)
+    {
+        const auto Outline = _LutData[kLutRow_Outline * kLutWidth + Index].GetFloats();
+        const auto Fill = _LutData[kLutRow_Fill * kLutWidth + Index].GetFloats();
+        State.Outline[Index] = FVector4f(Outline.R, Outline.G, Outline.B, Outline.A);
+        State.Fill[Index] = FVector4f(Fill.R, Fill.G, Fill.B, Fill.A);
+    }
+    _Renderer->Set_State(State);
 }
 
 auto

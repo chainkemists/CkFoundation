@@ -304,6 +304,34 @@ wires SubsurfaceColor (and Opacity drives the scatter), `ClearCoat` wires ClearC
 
 ### Entity outlines
 
+Entity outlines use the engine-only `CkUsfRenderer` module (PostConfigInit) and its per-world
+`FWorldSceneViewExtension`, not the generated `Looks/SolidOutline.ush` material. The standalone
+look remains available separately. No generated master, MID, post-process actor or GPU LUT is
+required for entity outlines. The subsystem owns allocation and publishes immutable plain-data
+color/settings snapshots to the render thread; teardown deactivates through the same ordered
+command stream, without flushing frames already submitted.
+
+Project Settings -> Ck -> Usf Outline -> Thickness supplies each new world's defaults:
+`WorldSpace` / 5 centimeters, or optional `ScreenSpace` / 5 scene-render pixels. Square corners
+use box distance; round corners use Euclidean distance. `TrySet_ThicknessSettings` changes an
+active world atomically; unknown modes and non-finite/non-positive widths ensure and return false
+without mutation. Both widths are validated, including the inactive mode. There is no minimum
+pixel floor or maximum projected-width clamp. Project setting edits apply to newly created worlds;
+use the subsystem API for an already-running world.
+
+AfterDOF (before temporal upsampling) builds a per-view minimum-depth occupancy pyramid and
+performs exact stackless branch-and-bound dilation. Candidate source depth and both projection
+axes convert centimeters to screen coverage. Orthographic views use projection scale without
+depth scaling. Source visibility is checked before admitting a seed; partial outer coverage is
+antialiased rather than inflated to one pixel. Search is view-local. Ties use source-center distance,
+depth, then stencil slot. Cost depends on occupancy/depth distribution and view size; this is not
+a constant-cost performance guarantee. Full-resolution gym performance and temporal appearance
+remain separate acceptance checks from the isolated image fixture.
+
+Real-RHI coverage: `CkTests.UnitTests.CkUsf.SolidOutlineRendersToTexture` (`--no-nullrhi`), including
+screen/world units, depth/FOV scaling, fractional width and widths beyond 16 pixels. CPU oracle:
+`_scratch/outline-world-space/Test-Hierarchy.js` in the development host (not a packaged test).
+
 Each renderer module's sync processor reacts to (`ck::FFragment_Usf_OutlineTarget` + its own proxy
 fragment) and records what it applied in a module-local `...OutlineApplied` fragment, so removal /
 EndPlay can undo without the Target fragment. Cascade-derived targets are stamped on lifetime

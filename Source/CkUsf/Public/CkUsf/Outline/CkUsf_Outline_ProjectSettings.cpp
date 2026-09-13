@@ -2,6 +2,7 @@
 
 #include "CkUsf/Outline/CkUsf_OutlinePreset.h"
 #include "CkCore/Validation/CkIsValid.h"
+#include "Math/UnrealMathUtility.h"
 #include "NativeGameplayTags.h"
 #if WITH_EDITOR
 #include "UObject/UnrealType.h"
@@ -180,6 +181,40 @@ auto UCk_Utils_Usf_Outline_Settings_UE::TryGet_RuntimeConfig(
     Settings->_RuntimeConfigIsCached = true;
     OutConfig = Settings->_CachedRuntimeConfig;
     return true;
+}
+
+auto UCk_Utils_Usf_Outline_Settings_UE::TryValidate_ThicknessSettings(
+    const FCk_Usf_OutlineThicknessSettings& InSettings) -> bool
+{
+    const auto SpaceIsValid = InSettings.Get_Space() == ECk_Usf_OutlineThicknessSpace::WorldSpace ||
+                              InSettings.Get_Space() == ECk_Usf_OutlineThicknessSpace::ScreenSpace;
+    CK_ENSURE_IF_NOT(SpaceIsValid,
+        TEXT("Outline thickness settings: space [{}] is invalid"), InSettings.Get_Space()) {}
+    if (NOT SpaceIsValid) { return false; }
+
+    const auto WorldSpaceThicknessIsValid = FMath::IsFinite(InSettings.Get_WorldSpaceThickness()) &&
+                                          InSettings.Get_WorldSpaceThickness() > 0.0f;
+    CK_ENSURE_IF_NOT(WorldSpaceThicknessIsValid,
+        TEXT("Outline thickness settings: world-space thickness [{}] must be finite and positive"),
+        InSettings.Get_WorldSpaceThickness()) {}
+    if (NOT WorldSpaceThicknessIsValid) { return false; }
+
+    const auto ScreenSpaceThicknessIsValid = FMath::IsFinite(InSettings.Get_ScreenSpaceThickness()) &&
+                                           InSettings.Get_ScreenSpaceThickness() > 0.0f;
+    CK_ENSURE_IF_NOT(ScreenSpaceThicknessIsValid,
+        TEXT("Outline thickness settings: screen-space thickness [{}] must be finite and positive"),
+        InSettings.Get_ScreenSpaceThickness()) {}
+    if (NOT ScreenSpaceThicknessIsValid) { return false; }
+
+    return true;
+}
+
+auto UCk_Utils_Usf_Outline_Settings_UE::Get_ThicknessSettings()
+    -> FCk_Usf_OutlineThicknessSettings
+{
+    const auto* Settings = Get();
+    if (ck::Is_NOT_Valid(Settings)) { return {}; }
+    return Settings->Get_ThicknessSettings();
 }
 
 auto UCk_Utils_Usf_Outline_Settings_UE::Get_SelectionOutlineTag() -> FGameplayTag
