@@ -13,6 +13,7 @@
 #include "CkJolt/CkJolt_Stats.h"
 #include "CkJolt/CkJolt_Utils.h"
 #include "CkJolt/Settings/CkJolt_ProjectSettings.h"
+#include "CkJolt/StaticWorld/CkJoltBakeExtraction.h"
 #include "CkJolt/StaticWorld/CkJoltStaticActor_Fragment.h"
 #include "CkJolt/World/CkJoltWorld.h"
 
@@ -45,22 +46,6 @@ DECLARE_CYCLE_STAT(TEXT("JoltStaticWorld_DestroyBodies"), STAT_CkJolt_StaticWorl
 
 namespace ck::jolt
 {
-    namespace static_world_private
-    {
-        auto Get_CanonicalDataLayerNames(const AActor& InActor) -> TArray<FName>
-        {
-            auto Names = InActor.GetDataLayerInstanceNames();
-            Names.Remove(NAME_None);
-            Names.Sort(FNameLexicalLess{});
-            for (auto Index = Names.Num() - 1; Index > 0; --Index)
-            {
-                if (Names[Index] == Names[Index - 1])
-                { Names.RemoveAt(Index); }
-            }
-            return Names;
-        }
-    }
-
     auto
         Get_CookedIndexAssetPath(
             const FString& InCookedDataRootPath,
@@ -1422,7 +1407,7 @@ auto
     Fragment._SourceActor = &InSourceActor;
     Fragment._SourceActorName = InSourceActor.GetFName();
     Fragment._DataLayerNames = InCookedDataLayerNames == nullptr
-        ? ck::jolt::static_world_private::Get_CanonicalDataLayerNames(InSourceActor)
+        ? ck::jolt::bake::Get_CanonicalDataLayerNames(InSourceActor)
         : *InCookedDataLayerNames;
 
     UCk_Utils_Handle_UE::Set_DebugName(NewEntity, InSourceActor.GetFName());
