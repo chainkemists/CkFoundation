@@ -1171,6 +1171,30 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
         GeneratedItemEventAliases.Add(Alias);
         return true;
     };
+    const auto ReplaceItemTextCommitted = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
+    {
+        const FCkUiOnItemTextCommitted Callback = _Data.ItemTextCommitted.FindRef(Handler);
+        if (!Callback.IsBound()) { OutErrors.Add(TEXT("Repeat item requires its declared text-committed handler.")); return false; }
+        const FString Alias = TEXT("@item-text:") + Handler;
+        if (Data.TextCommitted.Contains(Alias) && !_GeneratedRepeatItemEventAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat item event alias collision.")); return false; }
+        Data.TextCommitted.Add(Alias, FOnTextCommitted::CreateLambda([Eligible, WeakRecord, Callback](const FText& InValue, const ETextCommit::Type InCommitType)
+        { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey(), InValue, InCommitType); } } }));
+        GeneratedItemEventAliases.Add(Alias);
+        return true;
+    };
+    const auto ReplaceItemTextChanged = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
+    {
+        const FCkUiOnItemTextChanged Callback = _Data.ItemTextChanged.FindRef(Handler);
+        if (!Callback.IsBound()) { OutErrors.Add(TEXT("Repeat item requires its declared text-changed handler.")); return false; }
+        const FString Alias = TEXT("@item-text-changed:") + Handler;
+        if (Data.TextChanged.Contains(Alias) && !_GeneratedRepeatItemEventAliases.Contains(Alias))
+        { OutErrors.Add(TEXT("Reserved repeat item event alias collision.")); return false; }
+        Data.TextChanged.Add(Alias, FOnTextChanged::CreateLambda([Eligible, WeakRecord, Callback](const FText& InValue)
+        { if (Eligible()) { const auto Row = WeakRecord.Pin(); if (Row.IsValid()) { Callback.ExecuteIfBound(Row->GetKey(), InValue); } } }));
+        GeneratedItemEventAliases.Add(Alias);
+        return true;
+    };
     const auto ReplaceItemNumberCommitted = [this, &Data, &GeneratedItemEventAliases, Eligible, WeakRecord, &OutErrors](const FString& Handler) -> bool
     {
         const FCkUiOnItemNumberCommitted Callback = _Data.ItemNumberCommitted.FindRef(Handler);
@@ -1201,6 +1225,10 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
     // retained item may switch A -> B -> B -> A without its candidate data looking caller-owned.
     for (const auto& Entry : _Data.ItemBoolChanged)
     { if (!ReplaceItemBoolChanged(Entry.Key)) { return {}; } }
+    for (const auto& Entry : _Data.ItemTextChanged)
+    { if (!ReplaceItemTextChanged(Entry.Key)) { return {}; } }
+    for (const auto& Entry : _Data.ItemTextCommitted)
+    { if (!ReplaceItemTextCommitted(Entry.Key)) { return {}; } }
     for (const auto& Entry : _Data.ItemNumberCommitted)
     { if (!ReplaceItemNumberCommitted(Entry.Key)) { return {}; } }
     for (const auto& Entry : _Data.ItemIntegerCommitted)
@@ -1286,6 +1314,18 @@ auto FCkUiView::MakeRepeatItem(const FCkUiNode& InNode, const TSharedPtr<FCkUiCo
                 if (!_Data.ItemBoolChanged.FindRef(Handler).IsBound())
                 { OutErrors.Add(TEXT("Repeat item requires its declared bool-changed handler.")); }
                 else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-bool:") + Handler}); }
+            }
+            else if (PropertyName == TEXT("changed") && Property->Kind == ECkUiCustomPropertyKind::TextChanged)
+            {
+                if (!_Data.ItemTextChanged.FindRef(Handler).IsBound())
+                { OutErrors.Add(TEXT("Repeat item requires its declared text-changed handler.")); }
+                else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-text-changed:") + Handler}); }
+            }
+            else if (PropertyName == TEXT("committed") && Property->Kind == ECkUiCustomPropertyKind::TextCommitted)
+            {
+                if (!_Data.ItemTextCommitted.FindRef(Handler).IsBound())
+                { OutErrors.Add(TEXT("Repeat item requires its declared text-committed handler.")); }
+                else { Node.CustomProperties.Add(PropertyName, FCkUiCustomPropertyValue{.Kind = Property->Kind, .Name = TEXT("@item-text:") + Handler}); }
             }
             else if (PropertyName == TEXT("committed") && Property->Kind == ECkUiCustomPropertyKind::NumberCommitted)
             {
