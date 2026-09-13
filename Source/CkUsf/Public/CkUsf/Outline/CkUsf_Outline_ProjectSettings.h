@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Format/CkFormat.h"
 #include "CkSettings/ProjectSettings/CkProjectSettings.h"
 #include "GameplayTagContainer.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
@@ -10,6 +11,46 @@
 class UCkUsf_OutlinePreset;
 class FProperty;
 struct FPropertyChangedEvent;
+
+UENUM(BlueprintType)
+enum class ECk_Usf_OutlineThicknessSpace : uint8
+{
+    WorldSpace,
+    ScreenSpace
+};
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Usf_OutlineThicknessSpace);
+
+USTRUCT(BlueprintType)
+struct CKUSF_API FCk_Usf_OutlineThicknessSettings
+{
+    GENERATED_BODY()
+
+    CK_GENERATED_BODY(FCk_Usf_OutlineThicknessSettings);
+
+private:
+    UPROPERTY(EditAnywhere, Category = "Thickness", meta = (AllowPrivateAccess = true))
+    ECk_Usf_OutlineThicknessSpace _Space = ECk_Usf_OutlineThicknessSpace::WorldSpace;
+
+    UPROPERTY(EditAnywhere, Category = "Thickness", meta = (Units = "cm", AllowPrivateAccess = true))
+    float _WorldSpaceThickness = 5.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Thickness",
+              meta = (ToolTip = "Outline width in pixels when Space is Screen Space.", AllowPrivateAccess = true))
+    float _ScreenSpaceThickness = 5.0f;
+
+    UPROPERTY(EditAnywhere, Category = "Thickness", meta = (AllowPrivateAccess = true))
+    bool _SquareCorners = true;
+
+public:
+    CK_PROPERTY_GET(_Space);
+    CK_PROPERTY_SET(_Space);
+    CK_PROPERTY_GET(_WorldSpaceThickness);
+    CK_PROPERTY_SET(_WorldSpaceThickness);
+    CK_PROPERTY_GET(_ScreenSpaceThickness);
+    CK_PROPERTY_SET(_ScreenSpaceThickness);
+    CK_PROPERTY_GET(_SquareCorners);
+    CK_PROPERTY_SET(_SquareCorners);
+};
 
 USTRUCT(BlueprintType)
 struct CKUSF_API FCk_Usf_OutlineDefinition
@@ -78,6 +119,9 @@ private:
               meta = (TitleProperty = "_OutlineTag", AllowPrivateAccess = true))
     TArray<FCk_Usf_OutlineDefinition> _OutlineDefinitions;
 
+    UPROPERTY(Config, EditDefaultsOnly, Category = "Thickness", meta = (AllowPrivateAccess = true))
+    FCk_Usf_OutlineThicknessSettings _ThicknessSettings;
+
     UPROPERTY(Transient)
     TArray<TObjectPtr<UCkUsf_OutlinePreset>> _LoadedOutlinePresets;
 
@@ -91,6 +135,7 @@ private:
 public:
     CK_PROPERTY_GET(_LayerPrecedenceHighestFirst);
     CK_PROPERTY_GET(_OutlineDefinitions);
+    CK_PROPERTY_GET(_ThicknessSettings);
 
     virtual void PostReloadConfig(FProperty* InPropertyThatWasLoaded) override;
 
@@ -117,6 +162,11 @@ public:
         FCk_Usf_OutlineRuntimeConfig& OutConfig);
 
     static bool TryGet_RuntimeConfig(FCk_Usf_OutlineRuntimeConfig& OutConfig);
+
+    static bool TryValidate_ThicknessSettings(const FCk_Usf_OutlineThicknessSettings& InSettings);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Usf|Outline")
+    static FCk_Usf_OutlineThicknessSettings Get_ThicknessSettings();
 
     UFUNCTION(BlueprintPure, Category = "Ck|Usf|Outline")
     static FGameplayTag Get_SelectionOutlineTag();

@@ -1,45 +1,18 @@
-// /CkUsf/Looks/SolidOutline.ush
-// PostProcess SELECTIVE outline: draws a solid-color silhouette around objects that wrote a value into
-// the Custom Stencil buffer. Per-preset appearance is fetched from a small RGBA16f params LUT (one column
-// per active preset / stencil slot), owned and written by UCkUsf_OutlineSubsystem and bound as OutlineParams:
-//   LUT is CKUSF_OUTLINE_LUT_W (=16, max active presets) wide x CKUSF_OUTLINE_LUT_H (=2) tall.
-//     row 0: rgb = OutlineColor * OutlineBrightness, a = OutlineType (0=Normal, 1=SeeThrough, 2=MaskedSeeThrough)
-//     row 1: rgb = FillColor,                        a = FillOpacity (0 => no fill)
-// Stencil slot = round(CustomStencil) - StencilMin, in [0, 15]. Sampled at exact texel centers so filtering
-// is irrelevant. Declaring the SceneColor/SceneDepth/CustomDepth/CustomStencil inputs legalizes raw
-// SceneTextureLookup() below.
-//
-// IMPORTANT (chain placement): this look runs PRE-TSR/TAA (_BlendableLocation = SceneColorAfterDOF on
-// the look definition). Custom depth/stencil are rendered with the TAA-jittered projection every frame,
-// so an after-tonemapping placement thresholds a mask that shifts sub-pixel per frame with no temporal
-// resolve ever seeing the outline — the edges shimmer even on a stationary camera. Pre-TAA, the outline
-// is drawn in the same jittered space as the stencil and TSR/TAA accumulates it like geometry edges.
-// Consequence: output is scene-referred LINEAR (tonemapper remaps the LUT colors; bright outlines bloom).
-//
-// IMPORTANT (viewport vs buffer UV): the look's In.UV is the VIEWPORT UV (0..1 across the view), but
-// SceneTextureLookup() expects the scene-texture BUFFER UV. When the view rect does not fill the whole scene
-// buffer (editor/PIE window resize, screen percentage, dynamic resolution) those differ, and sampling at raw
-// ViewportUV makes the whole outline drift off its object. We convert ViewportUV -> BufferUV once and sample
-// everything (center + neighbours, stencil + depth) in buffer space so the mask always aligns with the object.
+// Standalone material look; callers supply the 16x2 RGBA16F LUT. Entity outlines use CkUsfRenderer.
+// row 0 = outline RGB * brightness, type (Normal / SeeThrough / MaskedSeeThrough);
+// row 1 = fill RGB, opacity. StencilMin..StencilMax index its columns.
+// Keep this look at SceneColorAfterDOF: custom stencil is jittered, so temporal AA must
+// resolve the outline together with the scene. Output remains scene-referred linear.
 #pragma once
 #include "/CkUsf/Common.ush"
 
 #define CKUSF_OUTLINE_LUT_W 16.0
 #define CKUSF_OUTLINE_LUT_H 2.0
+// Limit of this standalone material's local kernel, not the native entity-outline renderer.
+#define CKUSF_OUTLINE_MAX_THICKNESS 16.0
 
-// Ring anti-aliasing feather width, in scene-buffer texels. The outer edge is softened by averaging
-// ring-membership over 8 points on a circle of this radius — larger = softer / wider edge. THIS is the
-// knob to turn if the edge still looks hard (try 2.0-3.0). Cost is paid on outline-band pixels only.
-#ifndef CKUSF_OUTLINE_AA_RADIUS
-#define CKUSF_OUTLINE_AA_RADIUS 1.5
-#endif
-
-// Corner shape of the outline dilation. 0 = octagonal reach: the 8 direction taps are unit-length, so a
-// diagonal only reaches 0.707*thickness toward a box corner — convex corners pinch to 0.707*thickness and
-// read as rounded/chamfered, while straight edges keep the full thickness. 1 = Chebyshev/box reach: the 4
-// diagonal taps extend to sqrt(2)*thickness (the actual box corner), so convex corners come to a SQUARE
-// point at full edge thickness. Cost: a silhouette edge running diagonally gets up to ~1.41x thicker.
-// Prefer 1 for hard-edged rectangular subjects (poster / UI frames), 0 for organic silhouettes.
+// Preserve the look's authored corner metric: box dilation for square corners,
+// Euclidean dilation for rounded corners. Both search the entire footprint.
 #ifndef CKUSF_OUTLINE_SQUARE_CORNERS
 #define CKUSF_OUTLINE_SQUARE_CORNERS 0
 #endif
@@ -50,141 +23,110 @@ FCkUsf_SurfaceOutput CkUsf_PP_SolidOutline(
     float GlobalThickness, float StencilMin, float StencilMax)
 {
     FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
-    float3 Scene = In.SceneColor.rgb;
+    O.EmissiveColor = In.SceneColor.rgb;
+    O.Opacity = 1.0;
 
-    // ViewportUV (In.UV) -> scene-texture BUFFER UV. Accounts for the view rect not filling the buffer.
-    float2 bufferUV = CkUsf_ViewportUVToBufferUV(In.UV);
+    // Fail closed even if a hand-authored MID bypasses the subsystem's validation.
+    if (!(GlobalThickness >= 1.0 && GlobalThickness <= CKUSF_OUTLINE_MAX_THICKNESS))
+    { return O; }
 
+    // Snap to stencil texel centers, in the current view rect rather than the entire
+    // backing buffer. Neighbour taps must never see another editor/split-screen view.
+    float2 texel = CkUsf_BufferTexelSize();
+    float2 pixel = floor(CkUsf_ViewportUVToBufferUV(In.UV) / texel);
+    float2 bufferUV = (pixel + 0.5) * texel;
     float sC = round(SceneTextureLookup(bufferUV, PPI_CustomStencil, false).r);
     bool centerMarked = (sC >= StencilMin && sC <= StencilMax);
 
-    // Outline band radius in scene-texture (buffer) UV space.
-    float2 texel = CkUsf_BufferTexelSize();
-    float thickness = max(GlobalThickness, 1.0);
-
-    // Ring directions (8) reused by the band scan below and the AA supersampler in the ring block.
-    const float2 dirs[8] =
+    if (centerMarked)
     {
-        float2( 1.0,  0.0), float2(-1.0,  0.0), float2( 0.0,  1.0), float2( 0.0, -1.0),
-        float2( 0.70711,  0.70711), float2(-0.70711,  0.70711),
-        float2( 0.70711, -0.70711), float2(-0.70711, -0.70711)
-    };
-
-    // Per-direction reach multiplier for the two dilation scans below (NOT the AA circle, which stays
-    // unit so the feather stays circular). Diagonals extend to the box corner when square corners are on,
-    // converting the octagonal (rounded-corner) reach into a Chebyshev (square-corner) one.
-#if CKUSF_OUTLINE_SQUARE_CORNERS
-    const float reach[8] = { 1.0, 1.0, 1.0, 1.0, 1.41421356, 1.41421356, 1.41421356, 1.41421356 };
-#else
-    const float reach[8] = { 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 };
-#endif
-
-    // Band scan: a pixel within `thickness` of a silhouette has at least one toward-object tap that lands
-    // on the marked region. The nearest marked neighbour gives the ring pixel its preset slot + occlusion
-    // depths. The radius is inflated past the band (by the feather radius + 1px) so pixels just BEYOND it
-    // are not culled before the AA pass can give them partial coverage (else the outer edge stays hard).
-    bool  foundMarkedNeighbor = false;
-    float ringStencil      = 0.0;
-    float ringObjDepth     = 0.0;   // CustomDepth at the marked neighbour
-    float ringSceneDepth   = 0.0;   // SceneDepth  at the marked neighbour
-
-    [unroll]
-    for (int i = 0; i < 8; ++i)
-    {
-        float2 nuv = bufferUV + dirs[i] * texel * (thickness + CKUSF_OUTLINE_AA_RADIUS + 1.0) * reach[i];
-        float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
-        if (sN >= StencilMin && sN <= StencilMax)
+        float u = (sC - StencilMin + 0.5) / CKUSF_OUTLINE_LUT_W;
+        float4 P0 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler,
+            float2(u, 0.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+        float4 P1 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler,
+            float2(u, 1.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+        float outlineType = round(P0.a);
+        if (P1.a > 0.0)
         {
-            foundMarkedNeighbor = true;
-            ringStencil    = sN;
-            ringObjDepth   = SceneTextureLookup(nuv, PPI_CustomDepth, false).r;
-            ringSceneDepth = SceneTextureLookup(nuv, PPI_SceneDepth,  false).r;
+            float objectDepth = SceneTextureLookup(bufferUV, PPI_CustomDepth, false).r;
+            float sceneDepth = SceneTextureLookup(bufferUV, PPI_SceneDepth, false).r;
+            if (outlineType > 0.5 || objectDepth <= sceneDepth + 1.0)
+            {
+                float opacity = saturate(P1.a);
+                if (outlineType > 1.5)
+                {
+                    float2 px = pixel - View.ViewRectMin.xy;
+                    opacity *= fmod(floor(px.x / 4.0) + floor(px.y / 4.0), 2.0);
+                }
+                O.EmissiveColor = lerp(O.EmissiveColor, P1.rgb, opacity);
+            }
         }
-    }
-
-    // Outline pixels (outside the object) use the neighbour's preset; fill pixels (inside) use the center's.
-    float slotStencil = centerMarked ? sC : ringStencil;
-    if ((centerMarked || foundMarkedNeighbor) == false ||
-        slotStencil < StencilMin || slotStencil > StencilMax)
-    {
-        O.EmissiveColor = Scene;
-        O.Opacity = 1.0;
         return O;
     }
 
-    // ---- Fetch the preset params from the LUT column for this stencil slot (exact texel centers) ----
-    float slot = slotStencil - StencilMin;
-    float u = (slot + 0.5) / CKUSF_OUTLINE_LUT_W;
-    float4 P0 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler, float2(u, 0.5 / CKUSF_OUTLINE_LUT_H), 0.0);
-    float4 P1 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler, float2(u, 1.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+    float thickness = GlobalThickness;
+    float nearestDistance = thickness + 0.5;
+    float nearestCenterDistanceSq = 1e30;
+    float nearestStencil = StencilMax + 1.0;
+    float nearestObjectDepth = 1e30;
+    float3 outlineColor = 0.0;
 
-    float3 outlineColor = P0.rgb;
-    float  outlineType  = round(P0.a);   // 0 Normal, 1 SeeThrough, 2 MaskedSeeThrough
-    float3 fillColor    = P1.rgb;
-    float  fillOpacity  = P1.a;
-    bool   seeThrough   = (outlineType > 0.5);
-
-    float3 outColor = Scene;
-
-    // ---- Fill (inside the silhouette). Normal hides where the object is occluded (scene closer than the
-    //      object's own custom depth); see-through / masked ignore occlusion. ----
-    if (centerMarked && fillOpacity > 0.0)
+    // Distance is to the occupied texel's boundary (half a texel from its center).
+    // Visiting EVERY texel within reach keeps even a one-pixel limb connected to its
+    // ring. Fixed-radius directional probes can jump over it and draw detached copies.
+    // Restrict the validated footprint to this view.
+    float2 viewMin = View.ViewRectMin.xy;
+    float2 viewMax = viewMin + View.ViewSizeAndInvSize.xy - 1.0;
+    int2 minOffset = int2(max(-ceil(thickness), viewMin - pixel));
+    int2 maxOffset = int2(min(ceil(thickness), viewMax - pixel));
+    [loop]
+    for (int y = minOffset.y; y <= maxOffset.y; ++y)
     {
-        float centerObjDepth   = SceneTextureLookup(bufferUV, PPI_CustomDepth, false).r;
-        float centerSceneDepth = SceneTextureLookup(bufferUV, PPI_SceneDepth,  false).r;
-        bool  visibleHere = seeThrough || (centerObjDepth <= centerSceneDepth + 1.0);
-        if (visibleHere)
+        [loop]
+        for (int x = minOffset.x; x <= maxOffset.x; ++x)
         {
-            float op = fillOpacity;
-            // MaskedSeeThrough: stipple the fill into a screen-space checker so it reads as "masked".
-            if (outlineType > 1.5)
-            {
-                float2 px = In.UV * View.ViewSizeAndInvSize.xy;
-                float checker = fmod(floor(px.x / 4.0) + floor(px.y / 4.0), 2.0);
-                op *= checker;
-            }
-            outColor = lerp(outColor, fillColor, saturate(op));
+            float2 offset = float2(x, y);
+            float2 boundaryDistance = max(abs(offset) - 0.5, 0.0);
+#if CKUSF_OUTLINE_SQUARE_CORNERS
+            float distance = max(boundaryDistance.x, boundaryDistance.y);
+#else
+            float distance = length(boundaryDistance);
+#endif
+            float centerDistanceSq = dot(offset, offset);
+            if (distance > nearestDistance || distance >= thickness + 0.5 ||
+                (distance == nearestDistance && centerDistanceSq > nearestCenterDistanceSq))
+            { continue; }
+
+            float2 neighborUV = (pixel + offset + 0.5) * texel;
+            float stencil = round(SceneTextureLookup(neighborUV, PPI_CustomStencil, false).r);
+            if (stencil < StencilMin || stencil > StencilMax)
+            { continue; }
+            float u = (stencil - StencilMin + 0.5) / CKUSF_OUTLINE_LUT_W;
+            float4 P0 = Texture2DSampleLevel(OutlineParams, OutlineParamsSampler,
+                float2(u, 0.5 / CKUSF_OUTLINE_LUT_H), 0.0);
+            float objectDepth = SceneTextureLookup(neighborUV, PPI_CustomDepth, false).r;
+            float sceneDepth = SceneTextureLookup(neighborUV, PPI_SceneDepth, false).r;
+            // Reject occluded Normal candidates before choosing the nearest source;
+            // otherwise a hidden neighbor can erase a visible outline behind it.
+            if (round(P0.a) < 0.5 && objectDepth > sceneDepth + 1.0)
+            { continue; }
+            // Equidistant overlapping rings favor the nearer surface, then a stable slot.
+            if (distance == nearestDistance && centerDistanceSq == nearestCenterDistanceSq &&
+                (objectDepth > nearestObjectDepth ||
+                (objectDepth == nearestObjectDepth && stencil >= nearestStencil)))
+            { continue; }
+
+            nearestDistance = distance;
+            nearestCenterDistanceSq = centerDistanceSq;
+            nearestStencil = stencil;
+            nearestObjectDepth = objectDepth;
+            outlineColor = P0.rgb;
         }
     }
 
-    // ---- Outline ring (outside the object), anti-aliased. Normal hides the ring where the neighbour
-    //      object is occluded. Coverage = fraction of 8 sample points (on a CKUSF_OUTLINE_AA_RADIUS-texel
-    //      circle around the pixel) that classify as a ring pixel — unmarked there, with a marked object
-    //      within `thickness`. Averaging over the feather circle blurs the hard mask edge over ~2x the
-    //      radius, so the silhouette no longer stair-steps. CKUSF_OUTLINE_AA_RADIUS sets the feather width. ----
-    if (centerMarked == false && foundMarkedNeighbor)
-    {
-        bool visible = seeThrough || (ringObjDepth <= ringSceneDepth + 1.0);
-        if (visible)
-        {
-            float coverage = 0.0;
-            [unroll]
-            for (int s = 0; s < 8; ++s)
-            {
-                float2 sampUV = bufferUV + dirs[s] * texel * CKUSF_OUTLINE_AA_RADIUS;
-
-                // A ring sample must be unmarked itself...
-                float ssC = round(SceneTextureLookup(sampUV, PPI_CustomStencil, false).r);
-                if (ssC >= StencilMin && ssC <= StencilMax)
-                { continue; }
-
-                // ...and have a marked object within `thickness` in some direction.
-                [unroll]
-                for (int d = 0; d < 8; ++d)
-                {
-                    float2 nuv = sampUV + dirs[d] * texel * thickness * reach[d];
-                    float sN = round(SceneTextureLookup(nuv, PPI_CustomStencil, false).r);
-                    if (sN >= StencilMin && sN <= StencilMax)
-                    { coverage += 1.0; break; }
-                }
-            }
-            coverage *= (1.0 / 8.0);
-
-            outColor = lerp(outColor, outlineColor, coverage);
-        }
-    }
-
-    O.EmissiveColor = outColor;
-    O.Opacity = 1.0;
+    // One-texel outer-edge coverage, not a blur of the whole band. Integer widths
+    // give fully opaque straight bands; fractional widths only soften the last pixel.
+    float coverage = saturate(thickness + 0.5 - nearestDistance);
+    O.EmissiveColor = lerp(O.EmissiveColor, outlineColor, coverage);
     return O;
 }

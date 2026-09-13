@@ -2,6 +2,7 @@
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkUsf/Outline/CkUsf_Outline_Fragment.h"
+#include "CkUsf/Outline/CkUsf_Outline_ProjectSettings.h"
 
 #include <Subsystems/WorldSubsystem.h>
 
@@ -10,16 +11,14 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCkUsf_OutlinePreset;
-class UMaterialInstanceDynamic;
-class UTexture2D;
-class UPostProcessComponent;
 class UPrimitiveComponent;
+namespace ck::usf { class FOutlineRenderer; }
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Per-world manager for CkUsf solid-color outlines: owns the SolidOutline post-process blendable on the
-// local view, refcounted Custom-Stencil allocation (one value per ACTIVE preset, within a configurable
-// range), and the params LUT. Project requirement: r.CustomDepth=3 (Custom Depth-Stencil WITH stencil).
+// Per-world solid outlines: owns the native view extension, refcounted Custom-Stencil allocation
+// (one value per active preset), and CPU color rows copied into immutable render snapshots.
+// Project requirement: r.CustomDepth=3 (Custom Depth-Stencil WITH stencil).
 UCLASS(NotBlueprintable, BlueprintType, DisplayName = "CkSubsystem_Usf_Outline")
 class CKUSF_API UCkUsf_OutlineSubsystem : public UWorldSubsystem
 {
@@ -30,6 +29,8 @@ public:
 
 public:
     auto ShouldCreateSubsystem(UObject* InOuter) const -> bool override;
+    auto Initialize(FSubsystemCollectionBase& InCollection) -> void override;
+    auto Deinitialize() -> void override;
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
@@ -66,12 +67,13 @@ public:
     Get_OutlineOwnerCount(
         UPrimitiveComponent* InComponent) const;
 
-    // Global outline thickness (pixels) applied to all presets, scaled per-preset by _ThicknessScale.
+    // Invalid settings are rejected atomically; world-space centimeters are the default.
     UFUNCTION(BlueprintCallable, Category = "Ck|Usf|Outline",
-              DisplayName = "[Ck][Usf] Set Global Outline Thickness")
-    void
-    Set_GlobalOutlineThickness(
-        float InThickness);
+              DisplayName = "[Ck][Usf] Try Set Outline Thickness Settings")
+    bool TrySet_ThicknessSettings(const FCk_Usf_OutlineThicknessSettings& InSettings);
+
+    UFUNCTION(BlueprintPure, Category = "Ck|Usf|Outline")
+    FCk_Usf_OutlineThicknessSettings Get_ThicknessSettings() const { return _ThicknessSettings; }
 
     // ---- Stencil allocation (refcounted; shared with the other renderer modules) ----
 
@@ -116,24 +118,14 @@ private:
     auto DoReap_DeadComponents() -> void;
 
 private:
-    static constexpr int32 kLutWidth = 16;   // max active presets (must match SolidOutline.ush CKUSF_OUTLINE_LUT_W)
-    static constexpr int32 kLutHeight = 2;    // rows per preset column   (must match CKUSF_OUTLINE_LUT_H)
-    static constexpr int32 kLutRow_Outline = 0; // row order must match SolidOutline.ush
+    static constexpr int32 kLutWidth = 16;   // max active presets; matches FOutlineRenderState arrays
+    static constexpr int32 kLutHeight = 2;   // CPU outline/fill rows (not a GPU texture)
+    static constexpr int32 kLutRow_Outline = 0;
     static constexpr int32 kLutRow_Fill = 1;
 
-    UPROPERTY(Transient)
-    TObjectPtr<UMaterialInstanceDynamic> _OutlineMID;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UTexture2D> _ParamsTex;
-
-    UPROPERTY(Transient)
-    TObjectPtr<UPostProcessComponent> _ViewPP;
-
-    UPROPERTY(Transient)
-    TObjectPtr<AActor> _ViewActor;
-
-    float _GlobalThickness = 5.0f;
+    TSharedPtr<ck::usf::FOutlineRenderer, ESPMode::ThreadSafe> _Renderer;
+    FCk_Usf_OutlineThicknessSettings _ThicknessSettings;
+    bool _ThicknessSettingsAreValid = false;
     uint8 _StencilMin = 240;
     uint8 _StencilMax = 255;
 
