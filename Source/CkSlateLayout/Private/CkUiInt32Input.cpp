@@ -157,7 +157,7 @@ namespace ck_ui_int32_input
             Arguments.BoolBindings.Add(TEXT("enabled"), TAttribute<bool>::CreateLambda([WeakInput]()
             {
                 const TSharedPtr<FInt32Input> Input = WeakInput.Pin();
-                return Input.IsValid() && Input->_Configuration.Enabled.Get(true);
+                return Input.IsValid() && Input->IsEnabled();
             }));
             Arguments.BoolBindings.Add(TEXT("read-only"), TAttribute<bool>::CreateLambda([WeakInput]()
             {
@@ -167,7 +167,7 @@ namespace ck_ui_int32_input
             Arguments.CanDispatchEvents = TAttribute<bool>::CreateLambda([WeakInput]()
             {
                 const TSharedPtr<FInt32Input> Input = WeakInput.Pin();
-                return Input.IsValid() && Input->CanDispatch();
+                return Input.IsValid() && Input->CanRouteEvents();
             });
             Arguments.TextCommitted.Add(TEXT("committed"), FOnTextCommitted::CreateLambda([WeakInput](const FText& InText, const ETextCommit::Type InReason)
             {
@@ -176,10 +176,19 @@ namespace ck_ui_int32_input
             return Arguments;
         }
 
+        auto CanRouteEvents() const -> bool
+        {
+            return _Active && _Configuration.CanDispatchEvents.Get(false);
+        }
+
+        auto IsEnabled() const -> bool
+        {
+            return CanRouteEvents() && _Configuration.Enabled.Get(true);
+        }
+
         auto CanDispatch() const -> bool
         {
-            return _Active && _Configuration.CanDispatchEvents.Get(false)
-                && _Configuration.Enabled.Get(true) && !_Configuration.ReadOnly.Get(false);
+            return IsEnabled() && !_Configuration.ReadOnly.Get(false);
         }
 
         auto OnTextCommitted(const FText& InText, const ETextCommit::Type InReason) -> void

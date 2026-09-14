@@ -97,7 +97,7 @@ namespace ck_ui_text_input
                 .IsEnabled(TAttribute<bool>::CreateLambda([WeakInput]()
                 {
                     const TSharedPtr<FTextInput> Input = WeakInput.Pin();
-                    return Input.IsValid() && Input->_Configuration.Enabled.Get(true);
+                    return Input.IsValid() && Input->IsEnabled();
                 }))
                 .IsCaretMovedWhenGainFocus(TAttribute<bool>::CreateLambda([WeakInput]()
                 {
@@ -176,9 +176,15 @@ namespace ck_ui_text_input
             return _Editing ? FText::FromString(_Draft) : _Configuration.Value.Get(FText::GetEmpty());
         }
 
+        auto IsEnabled() const -> bool
+        {
+            return _Active && _Configuration.CanDispatchEvents.Get(false)
+                && _Configuration.Enabled.Get(true);
+        }
+
         auto CanDispatch() const -> bool
         {
-            return _Active && _Configuration.CanDispatchEvents.Get(false);
+            return IsEnabled() && !_Configuration.ReadOnly.Get(false);
         }
 
         auto OnTextChanged(const FText& InText) -> void
