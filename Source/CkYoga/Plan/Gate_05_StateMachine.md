@@ -1,6 +1,6 @@
 # Gate 05: StateMachine inspector
 
-**Status:** Authored in production with bounded core-action and lifetime evidence. Full inspector acceptance remains open. No publication is implied.
+**Status:** Authored in production with bounded core-action, populated-history/timeline, and lifetime evidence. Full inspector acceptance remains open. No publication is implied.
 
 ## Ownership and invariant
 
@@ -21,18 +21,19 @@ The final incremental Development build succeeded and fresh real-RHI `Ck.UiAutho
 
 The lifecycle recorder observes its virtual `ExitState` override again during EndPlay before the production base method deduplicates through `FTag_SmState_Active`. The accepted assertion therefore requires one Enter followed by Exit and permits only trailing Exit attempts; it does not claim direct exactly-once `DoExitState` instrumentation.
 
+The follow-up incremental Development build and fresh real-RHI run of the same production fixture passed 1/1 with zero failed, skipped, or contaminated tests in `scratch/yoga-ecs-state-machine-history8-20260914.log` (SHA256 `00536766BE4F3188B4B8A774732D93B8EDEA8AA086ACA5CE96912CD22174C93C`). A separate captured run issues nine real `Request_Transition` operations through the StateMachine processors and proves exact source/target ordering, nondecreasing render-frame IDs, increasing timestamps, native-to-authored populated field parity, chronological last-eight repeat rows with stable entity/version/run/index keys, all-nine native timeline tooltip payload parity, compatible reload identity/content, and populated view/timeline release. The red predecessor established that `GFrameNumber` may remain equal across completed transitions because it advances with viewport rendering; the final oracle preserves strict timestamp ordering and accepts only nondecreasing render-frame IDs.
+
 The whole-log scan found no compiler error, automation failure, ensure, fatal, authored-resource/CSS/parser error, or AngelScript compile error. Inherited missing development assets, scheduler ordering, Iris, generator-without-editor, and Chromium USB warnings remain outside this focused gate.
 
 ## Unproven inspector rows
 
 - Real Task, Transition, Condition, requested-class and hierarchy variants.
 - Physical sub-state-machine navigation.
-- Populated history and timeline projection, last-eight ordering and stable keys, compatible reload identity for populated timeline state, and timeline release.
 - Default/stale handles, invalid initial class, authority refusal, and Hidden/OnHover history policy.
 - Direct exactly-once `DoExitState` instrumentation.
 - Authored text values are not selectable/copyable like the native read-only editable-text rows; this is a shared authoring-surface limitation, not StateMachine-only parity.
 
-These rows prevent a full StateMachine acceptance claim. The smallest additional production-path slice is one fresh real-PIE history/timeline fixture using actual transitions, native-to-authored projection checks, compatible reload identity, and retained timeline/view release.
+These rows prevent a full StateMachine acceptance claim. The smallest additional production-path slice is a real non-root variant fixture, starting with Task/Transition/Condition projection and preserving exact native parity before expanding to hierarchy and Sub-SM navigation.
 
 ## Remaining campaign boundary
 
