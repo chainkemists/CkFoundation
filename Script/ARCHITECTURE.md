@@ -66,6 +66,17 @@ auto ArmorValue = uint8(Math::Clamp(V * 2.0f, 0.0f, 255.0f));
 auto DisplayText = "=== ATTRIBUTES ===\n";
 DisplayText = f"{DisplayText}Health: {HP} (Base: {Base})\n";
 
+// Shipped scripts are plain ASCII - comments AND string literals. A VM package
+// ships every Script/ root as loose source. This repo has no CI of its own for
+// it: BusterBlock's compile check rejects any other character when it bumps its
+// CkFoundation pin, so run `python CkAuto/Sanitize-ShippedScripts.py --check`
+// from the BusterBlock root (CkAuto is a BusterBlock submodule) before merging
+// here (exempt: dialogue banks and lines building
+// NSLOCTEXT/LOCTEXT/FText/DisplayName). Write -> not the arrow glyph, - not an
+// em dash, ... not an ellipsis, x not a times sign, >= not its glyph.
+// --apply folds mapped characters in comments only; a literal is program data
+// and is fixed by hand - and if it matches text emitted elsewhere, see 22.6.
+
 // Advanced format specifiers
 auto Debug     = f"{DeltaSeconds =}";              // "DeltaSeconds = 0.01"
 auto Precise   = f"{Value :.3}";                   // 3 decimals ( :010d pad, :#x hex, :>40 right-align)
@@ -772,6 +783,18 @@ property void  SetHealth(float Value) { _Health = Value; }
 //    Rev 12) makes the second instance a READ-ONLY secondary — it compiles
 //    against the owner's generated files and writes nothing to Generated
 //    (generator Claude.md:28-32).
+// 6. Folding a string literal that MATCHES text produced elsewhere - an AutoTest
+//    Get_ExpectedLogErrors() pattern, a breadcrumb watch - while the emitter
+//    (often a C++ log message) still produces the non-ASCII character. The
+//    ASCII pattern stops matching, and the pattern itself is never reported:
+//    expected-error patterns are plain substrings registered with
+//    Occurrences=-1. The warning it was meant to cover then fails the test,
+//    and the failure reads as that warning, not as the dead pattern. Either
+//    make the emitter ASCII in the same change (fixes every matcher at once)
+//    or match an ASCII-only part of the text. Case: the CkCrowd warning
+//    "CrowdAgent [..] PathPending -> Idle (path failed: ..)" logs U+2192 from
+//    CkCrowdAgent_OnPathResolved_Processor.cpp, so patterns folded to "->"
+//    match nothing.
 
 //============================================================================
 // 23. PROVENANCE AND MAINTENANCE
