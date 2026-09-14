@@ -31,8 +31,10 @@ The AStar production window authors its stable two-splitter grid/stats/history p
 
 This advances the census to 14/27. Broader production-host acceptance remains outside this focused row, and the known collector ordering defect can still record zero grid-derived path/cost because completion is tracked before the test-grid overlay is applied.
 
-## Audio outer-shell checkpoint
+## Audio outer-shell and runtime-lifecycle checkpoints
 
 `SCkAudioDebuggerWindow` now mounts its stable tabs/stats/filter/page-body stack through retained `AudioDebuggerShell.ui.html/.css` while keeping the exact six-page native switcher and shared WindowChrome. Incremental Development build `scratch/yoga-audio-shell-final-build-20260914.log` succeeded (SHA256 `F32B4A9B04008368703CA1C02106349D9505C574343C32EC3D533F0ED5DC6BCF`); fresh serial D3D12 `Ck.AudioDebugger.AuthoredShell` passed 1/1 in `scratch/yoga-audio-shell-final-test-20260914.log` (SHA256 `3B1436DA86FF59A79E42EFD8D9210B32AFC0149CF55A513C039B11E714641C69`). The fixture proves physical non-default page selection, compatible/rejected reload, narrow/short reachability, release and invalid-startup fallback recovery.
 
-This is not Audio acceptance and does not change the 14/27 census. Its tabs, ordinary controls, six page presentations and painted widgets remain native; world/session invalidation, stable same-name entity replacement, dedicated Directors active counts, held-control revocation and production-host teardown remain open.
+A later incremental Development build and fresh serial D3D12 `Ck.AudioDebugger.AuthoredShell` passed 1/1 in `scratch/yoga-audio-lifecycle-test-realrhi-final-20260914.log` (SHA256 `21BC3E0EB1DB7B484362B5ED951FF3DBFC3CEE2474763F1FEEAFEAD9211C055A`). The production fixture proves identity-keyed same-name replacement, empty/director active counts, actual physical Overlay mutation through real ECS handles, stale held-control revocation, independent world/session invalidation and module pre-exit ownership release. The preceding NullRHI physical/layout cluster failure is not acceptance evidence.
+
+This is not Audio acceptance and does not change the 14/27 census. Ordinary controls and six page presentations remain native, Radar/FalloffCurve still need retained adapters, and the broader production-host every-debugger teardown matrix remains open.
