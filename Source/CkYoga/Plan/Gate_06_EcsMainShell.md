@@ -23,10 +23,10 @@ The final whole-log scan found no relevant ensure, fatal, authored-resource, CSS
 
 This accepts the ECS main stable-layout row, not the campaign. Production module-tab closure, world/session reset ordering under a live PIE transition, retained native overlay/filter callback lifetime, actual narrow-width scrolling, the all-debugger teardown matrix, ownership gates and representative performance remain open under the recorded CTO dispositions.
 
-The outer-shell census is now 13/27 complete. Fourteen rows remain: AStar, Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Input HUD Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save and SM debugger.
+The outer-shell census is now 14/27 complete. Thirteen rows remain: Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Input HUD Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save and SM debugger.
 
-## AStar partial checkpoint
+## AStar outer-shell acceptance
 
-The AStar production window now authors its stable two-splitter grid/stats/history placement and mounts the exact painted grid through a retained `<astar-grid>` adapter. Incremental Development build plus fresh D3D12 `Ck.AStarDebugger.AuthoredShell` passed 1/1 in `scratch/yoga-astar-shell-grid-final8-20260914.log` (SHA256 `C3FA9FC8F4E8DD7E0E4C0266910BC4623DA9C7D295DD3EAF6F66A50BAF8765B6`), covering physical selection, compatible/rejected reload, retained identity, capture-preserving pan continuation, view release and held-subtree input revocation.
+The AStar production window authors its stable two-splitter grid/stats/history placement, mounts the exact painted grid through a retained `<astar-grid>` adapter and independently authors Stats and SearchHistory presentation. Incremental Development build plus fresh D3D12 `Ck.AStarDebugger.AuthoredShell` passed 1/1 in `scratch/yoga-astar-shell-complete-final4-20260914.log` (SHA256 `0709A065ED82ECBB1ACD3113544DAC5D3E4D71D7D4D036A283BF9543CEA7772F`), covering physical grid selection and copy actions, same-cell stats refresh, equal-count history replacement, compatible/rejected reload, capture-preserving pan continuation, actual narrow overflow, view release and post-reload held-action/input revocation.
 
-This does not advance the census: AStar stats/history presentation remains native, and their equal-count/same-cell refresh plus actual narrow-width scrolling remain open.
+This advances the census to 14/27. Broader production-host acceptance remains outside this focused row, and the known collector ordering defect can still record zero grid-derived path/cost because completion is tracked before the test-grid overlay is applied.
