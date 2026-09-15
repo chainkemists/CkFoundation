@@ -1,5 +1,7 @@
 # Gate 05: StateMachine inspector
 
+Campaign disposition (2026-09-15): representative performance is explicitly CTO-deferred, not measured or accepted. See [current closure gates](CampaignFinishCensus.md); this supersedes historical performance prerequisites below.
+
 **Status:** Authored and accepted in Editor with core-action, populated-history/timeline, variant, negative-policy, navigation, and exact-once teardown evidence. Known Iris ensure debt remains. No publication is implied.
 
 ## Ownership and invariant
@@ -40,8 +42,8 @@ One inherited Iris handled ensure at `DataStreamChannel.cpp:244` is emitted duri
 
 ## Remaining campaign boundary
 
-All 47 registered ECS inspectors instantiate authored views in current source, and the StateMachine inspector's recorded acceptance matrix is now complete in Editor with the Iris ensure debt above. Fifteen of the campaign's 27 outer consumer shells are complete and twelve retain native layout composition. Grid toolkit and common Gallery supporting/editor surfaces also remain native and must stay explicit outside that denominator.
+All 47 registered ECS inspectors instantiate authored views in current source, and the StateMachine inspector's recorded acceptance matrix is now complete in Editor with the Iris ensure debt above. Fifteen of the campaign's 27 outer consumer shells are accepted; Audio is authored but unaccepted, and eleven others retain incomplete or partial native outer composition. Grid toolkit and common Gallery supporting/editor surfaces also remain native and must stay explicit outside that denominator.
 
-The twelve incomplete consumer rows are Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save, and SM debugger. Save already has an authored entity-navigation tree but retains native outer splitters, so it is partial rather than wholly unauthored. The SM debugger includes editor and packaged variants in one campaign row and is distinct from the accepted ECS StateMachine inspector.
+The twelve unaccepted consumer rows are Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save, and SM debugger. Audio already authors its shell/pages and retains acceptance gaps. Save already has an authored entity-navigation tree but retains native outer splitters. The SM module constructs the same `SCkSmDebuggerWindow` in Editor and packaged Development; the separately named `SCkSmDebuggerPackagedWindow` is explicitly tombstoned. That active SM debugger row is distinct from the accepted ECS StateMachine inspector. See [the current source census](CampaignFinishCensus.md).
 
 The approved local-player/gamepad and two-Slate-user ownership gate, representative measured performance on an identified reference machine, and production-host every-debugger teardown matrix remain required. Packaging, keyboard-only traversal, localization, and browser/narrow-breakpoint restacking remain deferred. Resource Inspector `+` remains excluded. Network multiplayer remains conditional.

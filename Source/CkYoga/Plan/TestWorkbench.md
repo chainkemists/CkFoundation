@@ -1,5 +1,9 @@
 # Pipeline test workbench
 
+Superseding CTO disposition (2026-09-15): the representative performance gate is explicitly deferred. No measured performance acceptance is claimed; references below to required performance evidence are historical. Other functional, visual, input-ownership and production-host teardown gates are unchanged.
+
+Current closure ledger (2026-09-15): [CampaignFinishCensus.md](CampaignFinishCensus.md) records the twelve unaccepted outer rows and their production owners. The CTO explicitly deferred Audio packaged-resource proof with general packaging on 2026-09-15. Audio's real collector, Radar/pixel and production-host teardown gates remain required. Controller/two-user, representative measured performance, remaining browser-reference parity and every-debugger production-host teardown remain open. Narrow breakpoint restacking alone is CTO-deferred; that does not establish full browser parity.
+
 The browser reference remains a design reference, but CTO-deferred narrow breakpoint
 restacking is not a campaign acceptance gate. Resource Inspector remains
 the native test host and must load documents through the production CkSlateLayout
