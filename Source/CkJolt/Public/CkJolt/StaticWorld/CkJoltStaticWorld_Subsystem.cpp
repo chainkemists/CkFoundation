@@ -233,7 +233,6 @@ auto
         UWorld& InWorld)
         -> void
 {
-    // Profiled inside DoRun_InitialSweep, not here: that is the one function every sweep route shares.
     Super::OnWorldBeginPlay(InWorld);
 
 #if WITH_EDITOR
@@ -289,10 +288,6 @@ auto
     if (NOT DoGet_IsStaticWorldEnabled(*World))
     { return; }
 
-    // Encloses BOTH halves of the re-derive: freeing every tracked level below, then the sweep. Below the
-    // early-outs, so the count is re-sweeps that actually ran. Without it the free half has no CPU-trace
-    // name (DoRemove_BodiesForLevel's SCOPE_CYCLE_COUNTER emits one only under -statnamedevents) and its
-    // cost lands on the editor's undo/redo handler.
     TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_ResweepAllLevels);
 
     // A copy of the keys, because DoRemove_BodiesForLevel erases the entry it frees (taking its _Swept
@@ -320,18 +315,7 @@ auto
         UWorld& InWorld)
         -> void
 {
-    // Every full-sweep route shares this function -- OnWorldBeginPlay (Game/PIE), Request_EnsureSwept (the
-    // lazy route) and Request_ResweepAllLevels -- so the scope lives here; the enclosing trace frame says
-    // which route ran.
-    //
-    // Do NOT read it as "the static-world build". An already-swept level early-outs in DoAdd_BodiesForLevel,
-    // so this measures only what nothing has swept yet, and that depends on the route. From OnWorldBeginPlay,
-    // the LevelAddedToWorld delegate already swept every streaming sublevel during FlushLevelStreaming (that
-    // cost is under UWorld::AddToWorld -> Ck_JoltStaticWorld_LevelAdd). What is left is the persistent level,
-    // which never passes through AddToWorld, plus any level the delegate left unmarked: one whose extraction
-    // yielded NO bodies (DoAdd_BodiesForLevel returns before setting _Swept, so it is extracted again here),
-    // or one deferred for a missing transient entity. From Request_ResweepAllLevels every tracked level was
-    // just freed, so this is the extract half of the full re-derive.
+    // Excludes levels the LevelAddedToWorld delegate already swept -- from BeginPlay, every streaming sublevel.
     TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_InitialSweep);
 
     _HasSwept = true;
@@ -1045,12 +1029,6 @@ auto
         return {};
     }
 
-    // BELOW the early-outs on purpose: above them the scope counted every no-op re-entry, so its call
-    // count read 87 on a 43-level map (43 real adds from the LevelAddedToWorld delegate + 44 no-op
-    // re-attempts from the sweep) and meant nothing. Here, n == levels that actually did work.
-    // ONE profiling macro per site: SCOPE_CYCLE_COUNTER already emits a CPU trace event under
-    // -statnamedevents (Stats.h:578), so keeping both nested the STAT inside this scope and pushed
-    // this one's exclusive time to ~0.
     TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_LevelAdd);
 
     auto ActorEntities = TArray<FCk_Handle_JoltStaticActor>{};
@@ -1506,10 +1484,6 @@ auto
     if (BodyInterface == nullptr)
     { return; }
 
-    // Below the early-outs, same reason as LevelAdd: a scope above them counts no-op calls and its
-    // call count stops meaning anything. This is the INSERTION half of the sweep -- without it the
-    // trace can only say "shape loading vs everything else", which is not the loading-vs-insertion
-    // split this instrumentation exists to produce.
     TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BatchAddBodies);
 
     auto BodyIds = TArray<JPH::BodyID>{};
