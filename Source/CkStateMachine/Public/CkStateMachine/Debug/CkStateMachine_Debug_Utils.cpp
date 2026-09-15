@@ -3,8 +3,6 @@
 #include "CkStateMachine/Debug/CkStateMachine_Debug_Fragment.h"
 #include "CkStateMachine/Debug/CkStateMachine_Debug_GraphWalk_Fragment.h"
 
-#include "HAL/IConsoleManager.h"
-
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_state_machine_debug_utils
@@ -79,15 +77,7 @@ auto
     if (LastConsumed != 0 && GFrameCounter - LastConsumed <= ck_state_machine_debug_utils::ConsumedGraceFrames)
     { return true; }
 
-    // The on-screen entity debug overlay reads SM debug data every tick while enabled. Resolved by
-    // name — and re-probed until found, since the debugger plugin may load after this module — so
-    // CkStateMachine takes no dependency on the debugger modules.
-    static IConsoleVariable* OverlayCVar = nullptr;
-
-    if (OverlayCVar == nullptr)
-    { OverlayCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("ck.DebugOverlay")); }
-
-    return OverlayCVar != nullptr && OverlayCVar->GetInt() != 0;
+    return false;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

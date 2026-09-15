@@ -27,7 +27,7 @@ public:
 
     // Demand tracking for the Sm_Debug poll processor: pull-based debugger consumers stamp each read
     // of FFragment_Sm_Debug here, and the poll skips its whole view iteration when nothing consumed
-    // recently AND the on-screen debug overlay (ck.DebugOverlay) is off. Game thread only.
+    // recently. Game thread only.
     static auto
     NotifyDebugDataConsumed() -> void;
 
@@ -35,8 +35,8 @@ public:
     Get_IsDebugDataDesired() -> bool;
 
     // Dedicated State Machine debugger capture contract. This is intentionally separate from
-    // Get_IsDebugDataDesired(): the on-screen overlay may need current-state polling without
-    // authorizing graph discovery or transition-history retention.
+    // Get_IsDebugDataDesired(): rendering existing debug data must not authorize graph discovery
+    // or transition-history retention.
     static auto
     Set_IsDebuggerCaptureVisible(bool InIsVisible) -> void;
 
