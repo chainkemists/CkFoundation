@@ -23,7 +23,15 @@ The final whole-log scan found no relevant ensure, fatal, authored-resource, CSS
 
 This accepts the ECS main stable-layout row, not the campaign. Production module-tab closure, world/session reset ordering under a live PIE transition, retained native overlay/filter callback lifetime, actual narrow-width scrolling, the all-debugger teardown matrix, ownership gates and representative performance remain open under the recorded CTO dispositions.
 
-The outer-shell census is now 14/27 complete. Thirteen rows remain: Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Input HUD Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save and SM debugger.
+The outer-shell census is now 15/27 complete. Twelve rows remain: Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save and SM debugger.
+
+## Input HUD Overlay acceptance
+
+The production `SCkInputHud_Root` now loads `InputHudOverlay.ui.html/.css`. HTML/CSS owns the passive panel outline/fill hierarchy, exact-Ribbon/readout/layer composition, spacing, typography and stick/layer visibility predicates. C++ retains viewport anchor/corner pivot/inset, scale, whole-overlay fade, live model/style policy and the exact custom-painted `SCkInputHud_Ribbon` through one required native port. Compatible reload preserves that exact Ribbon; malformed startup and missing-port candidates retain a bounded native fallback with disjoint parent ownership. The viewport subsystem and Style Lab both construct this production Root.
+
+The subsystem teardown contract stops the ticker and registered input observer, explicitly releases the Root's authored view and Ribbon before viewport detachment, clears CommonInput observation and resets the model. Final incremental Development build passed in `scratch/yoga-input-hud-build-20260914-r5.log` (SHA256 `B126B9E5CE1DA30BE08E7623BF79372CC7593E579FFA333A79FE59EA8E823129`). After fresh discovery, the final fresh serial D3D12/SM6 `InputHud` aggregate passed 16/16 with zero failed/skipped/contaminated in 41s in `scratch/yoga-input-hud-complete-final-realrhi-20260914.log` (SHA256 `BBC41FFE561A65DB887348CB155915D25C85B15F9814DC1241A37A7190FB6696`). This proves installed admission, live bindings and styling, placement/fade, exact-port retention, compatible/rejected reload, isolated invalid-startup recovery, expired-model safety, real Slate analog collection, CVar disable/re-enable and deterministic EndPIE release for the primary local player.
+
+This accepts Input HUD Overlay and advances the census to 15/27; it does not establish secondary-player/two-Slate-user ownership, packaged resource loading or visual/pixel parity. Audio remains open for packaged resource loading, real collector sourcing, Radar/pixel visual acceptance and the broader production-host every-debugger teardown matrix. StateMachine remains open for Task/Transition/Condition/requested-class/hierarchy variants, physical Sub-SM navigation, default/stale/invalid initial classes, authority refusal, Hidden/OnHover behavior and direct exactly-once `DoExitState` evidence.
 
 ## AStar outer-shell acceptance
 
