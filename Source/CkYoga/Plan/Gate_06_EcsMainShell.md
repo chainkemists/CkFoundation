@@ -1,5 +1,9 @@
 # Gate 06: ECS main debugger shell
 
+Campaign disposition (2026-09-15): representative performance is explicitly CTO-deferred, not measured or accepted. See [current closure gates](CampaignFinishCensus.md); this supersedes historical performance prerequisites below.
+
+Current-source resumption audit (2026-09-15): [CampaignFinishCensus.md](CampaignFinishCensus.md). The accepted total remains 15/27: Audio is authored but unaccepted; eleven other outer rows retain incomplete/partial native composition. Historical counts in the checkpoints below describe their dates. On 2026-09-15 the CTO explicitly deferred Audio packaged-resource proof with general packaging, superseding the package requirement in the historical checkpoints below. Packaged loading remains unproven; Audio's real collector, Radar/pixel and production-host teardown gates remain required. No package work is authorized by this disposition.
+
 ## Accepted boundary
 
 `SCkDebuggerWindow_Main` now authors its stable three-pane outer splitter and its center tab/body composition from `EcsDebuggerShell.ui.html/.css` and `EcsDebuggerCenter.ui.html/.css`. The two independently retained views keep native bindings disjoint: the outer view owns entity, shared `SCkDebug_PaneHost` center and inspector placement, while the nested center view owns the page-tab and page-body ports. C++ remains authoritative for pages, entity and inspector panels, selection, world/session lifecycle, refresh gating, picker behavior and native startup fallback.
