@@ -307,7 +307,7 @@ namespace ck
                 { PolylineLen += FVector::Dist(Wps[i], Wps[i + 1]); }
                 const auto StraightLen = Wps.Num() >= 2 ? FVector::Dist(Wps[0], Wps.Last()) : 0.0;
                 ck::crowd::Verbose(
-                    TEXT("CrowdAgent [{}] PathPending → Walking ({} wps, polyline={}cm, straight={}cm, start={}, end={})"),
+                    TEXT("CrowdAgent [{}] PathPending -> Walking ({} wps, polyline={}cm, straight={}cm, start={}, end={})"),
                     InHandle, Wps.Num(), PolylineLen, StraightLen,
                     Wps.Num() > 0 ? Wps[0] : FVector::ZeroVector,
                     Wps.Num() > 0 ? Wps.Last() : FVector::ZeroVector);
@@ -335,7 +335,7 @@ namespace ck
                             InPathFollow.Get_StrictStandingCrowdPlanFailed(),
                             InPathFollow.Get_ActiveGoal()}));
 
-                ck::crowd::Warning(TEXT("CrowdAgent [{}] PathPending → Idle (path failed: {})"),
+                ck::crowd::Warning(TEXT("CrowdAgent [{}] PathPending -> Idle (path failed: {})"),
                     InHandle, InPathResult.Get_Diagnostics().Get_LastFailReason());
                 break;
             }
