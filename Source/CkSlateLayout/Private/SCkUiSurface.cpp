@@ -402,7 +402,8 @@ auto FCkUiView::GetRepeat(const FString& InId) const -> TSharedPtr<SCkUiRepeat>
 
 auto FCkUiView::CanDispatchEvents() const -> bool
 {
-    return !_IsReloading && (!_Data.CanDispatchEvents.IsSet() || _Data.CanDispatchEvents.Get(true));
+    return !_OwnerInteractionsReleased && !_IsReloading
+        && (!_Data.CanDispatchEvents.IsSet() || _Data.CanDispatchEvents.Get(true));
 }
 
 auto FCkUiView::BuildMenuEntries(const TMap<FString, FCkUiMenu>& InMenus, const FString& InMenuId,
@@ -2780,6 +2781,31 @@ auto FCkUiView::ReleaseTransientInteractions(const TSharedRef<SWidget>& InRoot, 
     for (const TSharedPtr<SCkUiMenuButton>& Menu : Menus) { Menu->ReleasePopup(); }
     for (const TSharedPtr<SCkUiTable>& Table : Tables) { Table->ReleaseContextMenu(); }
     for (const TSharedPtr<SCkUiTree>& Tree : Trees) { Tree->ReleaseContextMenu(); }
+}
+
+auto FCkUiView::ReleaseOwnerInteractions() -> void
+{
+    if (_OwnerInteractionsReleased)
+    { return; }
+
+    _OwnerInteractionsReleased = true;
+    if (!FSlateApplication::IsInitialized())
+    {
+        for (const auto& [Id, Record] : _CommittedRetained)
+        {
+            if (Record.Component.IsValid())
+            { Record.Component->ReleaseOwnerInteraction(); }
+        }
+        return;
+    }
+
+    auto Mounts = TArray<TSharedPtr<SBox>>{};
+    _RegionMounts.GenerateValueArray(Mounts);
+    for (const TSharedPtr<SBox>& Mount : Mounts)
+    {
+        if (Mount.IsValid())
+        { ReleaseTransientInteractions(Mount.ToSharedRef(), true); }
+    }
 }
 
 FCkUiView::~FCkUiView()
