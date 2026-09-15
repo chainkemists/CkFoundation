@@ -145,6 +145,13 @@ public:
         const FString& InMarkupPath,
         const FString& InStylesheetPath) -> void;
 
+    /**
+     * Revokes interaction owned by every mounted region without destroying the retained view.
+     * Window/module teardown uses this before detaching its regions so externally held view references cannot retain
+     * popups, pointer capture, or owner callbacks after the production owner is gone.
+     */
+    auto ReleaseOwnerInteractions() -> void;
+
     const FCkUiLoadResult& GetLastResult() const { return _LastResult; }
     int64 GetRevision() const { return _Revision; }
     /** IDs are local; use container-id/slot-name/child-id to explicitly traverse custom slots. */
@@ -260,5 +267,6 @@ private:
     FTokens _LastPolledTokens;
     bool _HasPolledContent = false;
     bool _IsReloading = false;
+    bool _OwnerInteractionsReleased = false;
     int64 _Revision = 0;
 };
