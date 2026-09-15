@@ -1019,6 +1019,10 @@ Steering or the sampler from here. Coverage:
 - **Never bypass `_MaxNeighborsForSteering`.** It's the perf cliff — a careless "let me just look at all 30 neighbors" inside a custom processor will tank stress runs.
 - **Don't read `FFragment_Velocity_Current` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.
 - **Don't add a new flag bit beyond bit 31.** It's a `uint32`; the bitfield is documented; pick a reserved slot.
+- **Keep log and warning text ASCII.** AutoTests match crowd warnings from AngelScript (`Get_ExpectedLogErrors`, plain
+  substring), and shipped AngelScript must be ASCII, so a matcher cannot contain a non-ASCII character a message
+  prints. `PathPending → Idle (path failed: ...)` did, and left eight BusterBlock patterns written with `->` matching
+  nothing, so the warning they were meant to expect failed those tests instead. It reads `PathPending -> Idle` now.
 
 ---
 
