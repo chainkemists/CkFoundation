@@ -1,6 +1,6 @@
 # Gate 05: StateMachine inspector
 
-**Status:** Authored in production with bounded core-action, populated-history/timeline, and lifetime evidence. Full inspector acceptance remains open. No publication is implied.
+**Status:** Authored and accepted in Editor with core-action, populated-history/timeline, variant, negative-policy, navigation, and exact-once teardown evidence. Known Iris ensure debt remains. No publication is implied.
 
 ## Ownership and invariant
 
@@ -25,20 +25,23 @@ The follow-up incremental Development build and fresh real-RHI run of the same p
 
 The whole-log scan found no compiler error, automation failure, ensure, fatal, authored-resource/CSS/parser error, or AngelScript compile error. Inherited missing development assets, scheduler ordering, Iris, generator-without-editor, and Chromium USB warnings remain outside this focused gate.
 
-## Unproven inspector rows
+## Final inspector acceptance extension
 
-- Real Task, Transition, Condition, requested-class and hierarchy variants.
-- Physical sub-state-machine navigation.
-- Default/stale handles, invalid initial class, authority refusal, and Hidden/OnHover history policy.
-- Direct exactly-once `DoExitState` instrumentation.
-- Authored text values are not selectable/copyable like the native read-only editable-text rows; this is a shared authoring-surface limitation, not StateMachine-only parity.
+The final incremental Development build succeeded in `scratch/yoga-state-machine-acceptance-build-r13-20260915.log` (SHA256 `79F105848563C0A2C364B74DEB3C021793B975A05A6EF8A21320D035A83DE8A4`). Fresh real-RHI `Ck.UiAuthoring.EcsDebugger.StateMachineInspector` passed 2/2 across two Toolbox lanes with zero failed, skipped, or contaminated tests in 42s in `scratch/yoga-state-machine-acceptance-final-r13-20260915.log` (SHA256 `6347C633CCE8C1C6AD655CB20D7B73C6C5EE8BC10CBBFD1BACD22410B153268B`). The acceptance extension proves:
 
-These rows prevent a full StateMachine acceptance claim. The smallest additional production-path slice is a real non-root variant fixture, starting with Task/Transition/Condition projection and preserving exact native parity before expanding to hierarchy and Sub-SM navigation.
+- real Task, Transition, Condition, requested/resolved-class and multi-level hierarchy projection with native parity;
+- full-handle Sub-StateMachine ID parity and physical navigation through the exact `SCkDebug_EntityRef`;
+- default and stale handle rejection, atomic invalid-initial-class failure, and client authority refusal;
+- Hidden and physical OnHover action policy;
+- direct `DoExitState` recording exactly once for physical Stop and active owner destruction, with no second invocation after teardown; and
+- fixture UI, inspector, handle, cursor and style release before EndPIE.
+
+One inherited Iris handled ensure at `DataStreamChannel.cpp:244` is emitted during the multi-client fixture. Unreal forwards it as multiple independent `LogOutputDevice` error records, so the fixture uses a finite signature-and-record-shape allowlist: another ensure or a changed condition/message fails the test. The complete accepted raw log was also audited and contains no other Unreal error block, fatal, script, AngelScript or automation error. The inherited ensure remains explicit gate debt rather than a claim that it is absent. Authored text values also remain non-selectable/non-copyable like other shared authored text surfaces; that campaign-wide limitation is not StateMachine-only parity.
 
 ## Remaining campaign boundary
 
-All 47 registered ECS inspectors now instantiate authored views in current source. This is a source-composition statement, not a completed acceptance matrix. Twelve of the campaign's 27 outer consumer shells are complete and fifteen retain native layout composition. Grid toolkit and common Gallery supporting/editor surfaces also remain native and must stay explicit outside that denominator.
+All 47 registered ECS inspectors instantiate authored views in current source, and the StateMachine inspector's recorded acceptance matrix is now complete in Editor with the Iris ensure debt above. Fifteen of the campaign's 27 outer consumer shells are complete and twelve retain native layout composition. Grid toolkit and common Gallery supporting/editor surfaces also remain native and must stay explicit outside that denominator.
 
-The fourteen incomplete consumer rows are AStar, Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Input HUD Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save, and SM debugger. Save already has an authored entity-navigation tree but retains native outer splitters, so it is partial rather than wholly unauthored. SM debugger includes editor and packaged variants in one campaign row.
+The twelve incomplete consumer rows are Audio, Crowd, Launcher/Suite, Entity Debug Overlay, Insights, Intent, Jolt Bake, Jolt, Map, Optimization, Save, and SM debugger. Save already has an authored entity-navigation tree but retains native outer splitters, so it is partial rather than wholly unauthored. The SM debugger includes editor and packaged variants in one campaign row and is distinct from the accepted ECS StateMachine inspector.
 
 The approved local-player/gamepad and two-Slate-user ownership gate, representative measured performance on an identified reference machine, and production-host every-debugger teardown matrix remain required. Packaging, keyboard-only traversal, localization, and browser/narrow-breakpoint restacking remain deferred. Resource Inspector `+` remains excluded. Network multiplayer remains conditional.
