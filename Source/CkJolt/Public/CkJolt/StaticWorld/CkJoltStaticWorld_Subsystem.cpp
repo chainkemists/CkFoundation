@@ -233,13 +233,7 @@ auto
         UWorld& InWorld)
         -> void
 {
-    // NOT the whole static-world build. UWorld::AddToWorld broadcasts LevelAddedToWorld during
-    // FlushLevelStreaming, which runs BEFORE OnWorldBeginPlay, so every streaming sublevel was already
-    // added by the delegate and hits the _LevelBodies early-out here. In practice this scope covers the
-    // persistent level plus any level deferred for a missing transient entity. Do not read it as "the
-    // sweep cost" -- the streaming levels' cost lives under UWorld::AddToWorld -> Ck_JoltStaticWorld_LevelAdd.
-    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_BeginPlaySweep_PersistentAndDeferred);
-
+    // Profiled inside DoRun_InitialSweep, not here: that is the one function every sweep route shares.
     Super::OnWorldBeginPlay(InWorld);
 
 #if WITH_EDITOR
@@ -295,6 +289,12 @@ auto
     if (NOT DoGet_IsStaticWorldEnabled(*World))
     { return; }
 
+    // Encloses BOTH halves of the re-derive: freeing every tracked level below, then the sweep. Below the
+    // early-outs, so the count is re-sweeps that actually ran. Without it the free half has no CPU-trace
+    // name (DoRemove_BodiesForLevel's SCOPE_CYCLE_COUNTER emits one only under -statnamedevents) and its
+    // cost lands on the editor's undo/redo handler.
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_ResweepAllLevels);
+
     // A copy of the keys, because DoRemove_BodiesForLevel erases the entry it frees (taking its _Swept
     // flag with it, which is what lets the sweep below re-visit the level).
     auto TrackedLevels = TArray<TWeakObjectPtr<ULevel>>{};
@@ -320,6 +320,20 @@ auto
         UWorld& InWorld)
         -> void
 {
+    // Every full-sweep route shares this function -- OnWorldBeginPlay (Game/PIE), Request_EnsureSwept (the
+    // lazy route) and Request_ResweepAllLevels -- so the scope lives here; the enclosing trace frame says
+    // which route ran.
+    //
+    // Do NOT read it as "the static-world build". An already-swept level early-outs in DoAdd_BodiesForLevel,
+    // so this measures only what nothing has swept yet, and that depends on the route. From OnWorldBeginPlay,
+    // the LevelAddedToWorld delegate already swept every streaming sublevel during FlushLevelStreaming (that
+    // cost is under UWorld::AddToWorld -> Ck_JoltStaticWorld_LevelAdd). What is left is the persistent level,
+    // which never passes through AddToWorld, plus any level the delegate left unmarked: one whose extraction
+    // yielded NO bodies (DoAdd_BodiesForLevel returns before setting _Swept, so it is extracted again here),
+    // or one deferred for a missing transient entity. From Request_ResweepAllLevels every tracked level was
+    // just freed, so this is the extract half of the full re-derive.
+    TRACE_CPUPROFILER_EVENT_SCOPE(Ck_JoltStaticWorld_InitialSweep);
+
     _HasSwept = true;
 
     auto SweepStats = ck::jolt::bake::FCk_Jolt_ExtractionStats{};
@@ -1022,12 +1036,12 @@ auto
     { return {}; }
 
     // A level can be added before BeginPlay: with no transient entity to parent attribution entities under,
-    // SKIP — the level is not recorded, so the OnWorldBeginPlay sweep re-attempts it.
+    // SKIP — the level is not recorded, so the initial sweep re-attempts it.
     const auto TransientEntity = DoGet_TransientEntity();
     if (ck::Is_NOT_Valid(TransientEntity))
     {
         ck::jolt::Verbose(TEXT("JoltStaticWorld: level [{}] added before the ECS world was ready — deferring "
-            "to the BeginPlay sweep"), InLevel.GetOutermost()->GetName());
+            "to the initial sweep"), InLevel.GetOutermost()->GetName());
         return {};
     }
 

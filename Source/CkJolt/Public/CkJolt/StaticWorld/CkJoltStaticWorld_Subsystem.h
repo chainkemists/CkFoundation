@@ -221,13 +221,14 @@ private:
 #endif
 
     // The world's initial sweep of every loaded level, and the single writer of _HasSwept. Reached from
-    // OnWorldBeginPlay in a Game/PIE world and from Request_EnsureSwept everywhere else; each caller gates
-    // on its OWN setting before calling, so neither setting can silently disable the other's world.
+    // OnWorldBeginPlay in a Game/PIE world and from Request_EnsureSwept everywhere else, and re-run by
+    // Request_ResweepAllLevels to re-derive an Editor world; each caller gates on its OWN setting before
+    // calling, so neither setting can silently disable the other's world.
     auto
     DoRun_InitialSweep(
         UWorld& InWorld) -> void;
 
-    // Returns the level's extraction stats so the BeginPlay sweep can report a per-world summary
+    // Returns the level's extraction stats so the initial sweep can report a per-world summary
     // (zeroed for the cooked path — its skips happened at cook time and are loud there).
     auto
     DoAdd_BodiesForLevel(
@@ -355,7 +356,7 @@ private:
     auto
     DoEnsure_IndexLoaded() -> bool;
 
-    // Invalid until the ECS world is ready — the caller SKIPS the level for the OnWorldBeginPlay sweep.
+    // Invalid until the ECS world is ready — the caller SKIPS the level for the initial sweep.
     auto
     DoGet_TransientEntity() const -> FCk_Handle;
 
