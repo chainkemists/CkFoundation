@@ -42,7 +42,8 @@ namespace ck
         using SetMaxSpeedRequestType  = FCk_Request_CrowdAgent_SetMaxSpeed;
         using SetNavQueryFilterRequestType = FCk_Request_CrowdAgent_SetNavQueryFilter;
         using SetTransientPersonalSpaceScaleRequestType = FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale;
-        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType, SetMaxSpeedRequestType, SetNavQueryFilterRequestType, SetTransientPersonalSpaceScaleRequestType>;
+        using EnableDisableRequestType = FCk_Request_CrowdAgent_EnableDisable;
+        using RequestType             = std::variant<MoveToRequestType, FollowTargetRequestType, StopRequestType, SetMaxSpeedRequestType, SetNavQueryFilterRequestType, SetTransientPersonalSpaceScaleRequestType, EnableDisableRequestType>;
 
     private:
         TArray<RequestType> _Requests;
@@ -202,6 +203,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_CrowdAgent_Grounding);
 
         friend class FProcessor_CrowdAgent_ConstrainToNavmesh;
+        friend class FProcessor_CrowdAgent_HandleRequests;
         friend class ::UCk_Utils_CrowdAgent_UE;
 
     private:
@@ -279,9 +281,9 @@ namespace ck
     // distinct tag rather than a shared one so the two providers can never consume each other's retry.
     CK_DEFINE_ECS_TAG(FTag_CrowdAgent_VoxelPathFallbackPending);
 
-    // Nothing stamps this today; the steering views carry TExclude<> for it so a future sleep pass
-    // is wire-compatible without retro-fitting every view.
-    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Asleep);
+    // Out of the crowd (Request_EnableDisable): its own views exclude it and NeighborSync hides it from
+    // everyone else. StationaryMarkup keeps it in view because it is the only thing that unpaints.
+    CK_DEFINE_ECS_TAG(FTag_CrowdAgent_Disabled);
 
     // Stamped by Add from the params' _AgentMode and never changed after. Every surface-bound or
     // planar stage of the pipeline excludes it — the navmesh constraint (replaced for these agents by

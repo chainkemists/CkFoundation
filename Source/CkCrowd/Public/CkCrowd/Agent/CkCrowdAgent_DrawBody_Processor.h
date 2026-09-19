@@ -43,7 +43,7 @@ namespace ck
     };
 
     // Per-tick refresh of each shape's visibility and colour from the DrawAgentBody toggle and the
-    // agent's state tags (PathPending → yellow blend, Asleep → desaturate). Mesh topology is never
+    // agent's state tags (PathPending → yellow blend, Disabled → desaturate). Mesh topology is never
     // rebuilt.
     class CKCROWD_API FProcessor_CrowdAgent_DrawBody_Update : public ck_exp::TProcessor<
             FProcessor_CrowdAgent_DrawBody_Update,
