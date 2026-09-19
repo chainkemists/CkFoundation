@@ -27,7 +27,7 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_FollowTarget>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

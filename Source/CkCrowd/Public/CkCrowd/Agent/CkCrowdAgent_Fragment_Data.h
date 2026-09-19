@@ -688,6 +688,33 @@ struct CKCROWD_API FCk_Request_CrowdAgent_Stop : public FCk_Request_Base
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Public request — take the agent out of the crowd (Disable) or put it back (Enable). A disabled
+// agent is ABSENT, not merely stopped: see UCk_Utils_CrowdAgent_UE::Request_EnableDisable.
+USTRUCT(BlueprintType)
+struct CKCROWD_API FCk_Request_CrowdAgent_EnableDisable : public FCk_Request_Base
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Request_CrowdAgent_EnableDisable);
+    CK_REQUEST_DEFINE_DEBUG_NAME(FCk_Request_CrowdAgent_EnableDisable);
+
+    friend class ck::FProcessor_CrowdAgent_HandleRequests;
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_EnableDisable _EnableDisable = ECk_EnableDisable::Enable;
+
+public:
+    CK_PROPERTY_GET(_EnableDisable);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_CrowdAgent_EnableDisable, _EnableDisable);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Public request — override the agent's max speed at runtime (sprint/flee gaits). Applies from the
 // next tick and persists until the next SetMaxSpeed; does not disturb the active path or goal.
 USTRUCT(BlueprintType)

@@ -36,7 +36,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -98,6 +98,7 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

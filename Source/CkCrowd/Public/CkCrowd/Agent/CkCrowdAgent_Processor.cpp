@@ -88,6 +88,12 @@ namespace ck
 
         InProbeRef._ProbeChild = ProbeHandle;
 
+        if (AgentNonConst.Has<FTag_CrowdAgent_Disabled>())
+        {
+            UCk_Utils_Probe_UE::Request_EnableDisable(
+                ProbeHandle, FCk_Request_Probe_EnableDisable{ECk_EnableDisable::Disable}, {});
+        }
+
         // NeedsSetup is shared with other Setup-marked processors — clear it only once our own
         // work is done.
         AgentNonConst.Add<FTag_CrowdAgent_HasProbe>();

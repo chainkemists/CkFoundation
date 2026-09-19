@@ -47,7 +47,7 @@ namespace ck_crowd_debug_settings_cvars
         TEXT("Draw a body capsule + forward-facing cone for every crowd agent.\n")
         TEXT("  0 = off (default)\n")
         TEXT("  1 = on — color comes from UCk_Utils_CrowdAgent_UE::Get_DebugColor; state\n")
-        TEXT("        tags (PathPending → yellow blend, Asleep → desaturate) modulate it"),
+        TEXT("        tags (PathPending → yellow blend, Disabled → desaturate) modulate it"),
         FConsoleVariableDelegate::CreateLambda([](IConsoleVariable* InCVar)
         {
             WriteToSettings(

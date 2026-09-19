@@ -339,6 +339,55 @@ auto
 
 auto
     UCk_Utils_CrowdAgent_UE::
+    Request_EnableDisable(
+        FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate)
+    -> FCk_Handle_CrowdAgent
+{
+    const auto AgentIsValid = ck::IsValid(InAgent);
+    CK_ENSURE_IF_NOT(AgentIsValid,
+        TEXT("Invalid CrowdAgent handle [{}] passed to Request_EnableDisable"), InAgent)
+    {
+        InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAgent;
+    }
+
+    const auto HasAuthority = UCk_Utils_Net_UE::Get_HasAuthority(InAgent);
+    CK_ENSURE_IF_NOT(HasAuthority,
+        TEXT("Request_EnableDisable on CrowdAgent [{}] dropped - caller does not have authority."), InAgent)
+    {
+        InDelegate.ExecuteIfBound(InAgent, ECk_Request_OperationResult::Failed_NotEnqueued);
+        return InAgent;
+    }
+
+    auto Request = InRequest;
+
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
+    InAgent.AddOrGet<ck::FFragment_CrowdAgent_MoveRequests>()._Requests.Emplace(Request);
+    return InAgent;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
+    Get_IsEnabled(
+        const FCk_Handle_CrowdAgent& InAgent)
+    -> bool
+{
+    if (ck::Is_NOT_Valid(InAgent))
+    { return false; }
+
+    return NOT InAgent.Has<ck::FTag_CrowdAgent_Disabled>();
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_CrowdAgent_UE::
     Request_SetMaxSpeed(
         FCk_Handle_CrowdAgent& InAgent,
         float InMaxSpeed,

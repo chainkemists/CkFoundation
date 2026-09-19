@@ -35,7 +35,7 @@ public:
 private:
     UPROPERTY(Config, EditAnywhere, Category = "Visualization",
               meta = (AllowPrivateAccess = true,
-                      ToolTip = "Draw a body capsule + forward-facing cone for every crowd agent. Color comes from the agent's debug color (per-agent override or hash-derived stable fallback). PathPending agents tint yellow; Asleep agents desaturate."))
+                      ToolTip = "Draw a body capsule + forward-facing cone for every crowd agent. Color comes from the agent's debug color (per-agent override or hash-derived stable fallback). PathPending agents tint yellow; Disabled agents desaturate."))
     bool _DrawAgentBody = false;
 
     UPROPERTY(Config, EditAnywhere, Category = "Visualization",

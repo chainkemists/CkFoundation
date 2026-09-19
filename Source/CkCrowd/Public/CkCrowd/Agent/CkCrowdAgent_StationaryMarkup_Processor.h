@@ -46,7 +46,6 @@ namespace ck
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadWrite<FFragment_CrowdAgent_NavMarkup>,
-            TExclude<FTag_CrowdAgent_Asleep>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {

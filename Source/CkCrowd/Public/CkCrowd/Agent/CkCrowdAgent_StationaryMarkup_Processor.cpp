@@ -91,6 +91,16 @@ namespace ck
         }
 
         const auto Location = InTransform.Get_Transform().GetLocation();
+
+        // Same reason as Permeable; the stillness window restarts so a re-enabled body does not paint at once.
+        if (InHandle.Has<FTag_CrowdAgent_Disabled>())
+        {
+            Remove_Markup(InHandle, InMarkup);
+            InMarkup._StillnessSampleAccumSec = 0.0f;
+            InMarkup._StillnessSampleLoc = Location;
+            return;
+        }
+
         const auto& Settings = *UCk_Utils_Crowd_Settings_UE::Get();
         const auto StationarySpeedThreshold = Settings.Get_StationaryMarkupSpeedThreshold();
         const auto SpeedThresholdIsValid =
