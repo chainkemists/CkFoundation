@@ -42,7 +42,7 @@ namespace ck
             TReadOnly<FFragment_CrowdAgent_AvoidanceVolumeCache>,
             TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
             TReadWrite<FFragment_CrowdAgent_LocalBoundary>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {

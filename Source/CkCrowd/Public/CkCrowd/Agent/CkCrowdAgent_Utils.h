@@ -143,6 +143,27 @@ public:
         UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
+    // Take the agent out of the crowd (Disable) or put it back (Enable). Disabled is ABSENT, not stopped: the
+    // episode ends as on Stop, no other agent perceives it, and its own pipeline stands still so the owner may
+    // relocate it. A MoveTo or FollowTarget on a disabled agent completes Failed. Queue membership is untouched.
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Request Enable/Disable",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_CrowdAgent
+    Request_EnableDisable(
+        UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+        const FCk_Request_CrowdAgent_EnableDisable& InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
+
+    // False from the frame a Disable request is processed until an Enable request is.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|CrowdAgent",
+              DisplayName="[Ck][CrowdAgent] Get Is Enabled")
+    static bool
+    Get_IsEnabled(
+        const FCk_Handle_CrowdAgent& InAgent);
+
     // Override the agent's max speed at runtime (sprint/flee gaits). Applies from the next tick
     // and persists until the next SetMaxSpeed; does not disturb the active path or goal.
     UFUNCTION(BlueprintCallable,

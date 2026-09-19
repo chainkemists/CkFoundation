@@ -30,7 +30,7 @@ namespace ck
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadOnly<FFragment_CrowdAgent_SeparationForce>,
             ck::TReadWrite<FFragment_CrowdAgent_DesiredVelocity>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

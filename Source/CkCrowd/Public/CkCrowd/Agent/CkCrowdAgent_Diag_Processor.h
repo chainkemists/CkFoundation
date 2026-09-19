@@ -78,7 +78,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_AvoidanceVolumeCache>,
             ck::TReadOnly<FFragment_CrowdAgent_LocalBoundary>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>, ck::TReadWrite<FFragment_CrowdAgent_DiagRecorder>,
-            TExclude<FTag_CrowdAgent_Asleep>, CK_IGNORE_PENDING_KILL>
+            TExclude<FTag_CrowdAgent_Disabled>, CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Physics;

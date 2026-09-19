@@ -14,10 +14,12 @@
 
 namespace ck
 {
+    // A disabled agent keeps its queue membership: leaving the queue is the owner's call, not the adapter's.
     class CKCROWD_API FProcessor_CrowdQueueAdapter_Dispatch : public ck_exp::TProcessor<
         FProcessor_CrowdQueueAdapter_Dispatch,
         FCk_Handle_CrowdAgent,
         ck::TReadWrite<FFragment_CrowdQueueAdapter>,
+        TExclude<FTag_CrowdAgent_Disabled>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -34,6 +36,7 @@ namespace ck
         FCk_Handle_CrowdAgent,
         ck::TReadWrite<FFragment_CrowdQueueAdapter>,
         TExclude<FTag_CrowdQueueAdapter_LeaveRequested>,
+        TExclude<FTag_CrowdAgent_Disabled>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -50,6 +53,7 @@ namespace ck
         ck::TReadOnly<FFragment_CrowdQueueAdapter>,
         ck::TReadOnly<FFragment_CrowdAgent_FaceAngle>,
         TExclude<FTag_CrowdQueueAdapter_LeaveRequested>,
+        TExclude<FTag_CrowdAgent_Disabled>,
         CK_IGNORE_PENDING_KILL>
     {
     public:

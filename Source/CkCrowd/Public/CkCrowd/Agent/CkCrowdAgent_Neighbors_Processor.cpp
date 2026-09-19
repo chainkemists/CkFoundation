@@ -158,6 +158,10 @@ namespace ck
                 if (NOT UCk_Utils_CrowdAgent_UE::Has(OtherAgent))
                 { continue; }
 
+                // Its probe can still overlap for the frames the broadphase takes to drop it.
+                if (OtherAgent.Has<FTag_CrowdAgent_Disabled>())
+                { continue; }
+
                 const auto OtherLoc = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(OtherTransform);
 
                 auto OtherVelocity = UCk_Utils_Velocity_UE::Cast(OtherAgent);

@@ -25,7 +25,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadOnly<FFragment_CrowdAgent_TransientPersonalSpace>,
             ck::TReadWrite<FFragment_CrowdAgent_SeparationForce>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {

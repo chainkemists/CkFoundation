@@ -34,7 +34,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_FaceAngle>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             // GoalFailedHold is terminal until an explicit wake: translating and turning are both
             // observable motion, so never consume residual/avoidance velocity to re-face it.
