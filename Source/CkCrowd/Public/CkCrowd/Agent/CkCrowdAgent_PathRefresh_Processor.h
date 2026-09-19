@@ -61,7 +61,7 @@ namespace ck
             ck::TReadOnly<FFragment_Nav_PathResult>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
             ck::TReadWrite<FFragment_CrowdAgent_BlockDetect>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {

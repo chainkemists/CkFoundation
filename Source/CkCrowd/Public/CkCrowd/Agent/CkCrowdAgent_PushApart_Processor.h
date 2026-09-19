@@ -35,7 +35,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_NeighborCache>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             // A permeable agent does not de-overlap: bodies interpenetrate on purpose. Safe as a
             // view exclusion (unlike Separation) because this processor STAGES into
