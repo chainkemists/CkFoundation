@@ -77,7 +77,7 @@ namespace ck
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             ck::TReadWrite<FFragment_CrowdAgent_Grounding>,
             ck::TReadWrite<FFragment_CrowdAgent_PathFollow>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             TExclude<FTag_CrowdAgent_Flying>,
             CK_IGNORE_PENDING_KILL>
     {

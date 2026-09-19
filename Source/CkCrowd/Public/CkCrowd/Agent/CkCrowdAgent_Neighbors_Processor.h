@@ -28,7 +28,7 @@ namespace ck
             TReadOnly<FFragment_CrowdAgent_PathFollow>,
             TReadWrite<FFragment_CrowdAgent_NeighborCache>,
             TReadWrite<FFragment_CrowdAgent_AvoidanceVolumeCache>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

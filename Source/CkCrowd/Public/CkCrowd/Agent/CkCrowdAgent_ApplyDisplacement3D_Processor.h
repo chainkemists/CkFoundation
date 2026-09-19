@@ -29,7 +29,7 @@ namespace ck
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_Flying,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

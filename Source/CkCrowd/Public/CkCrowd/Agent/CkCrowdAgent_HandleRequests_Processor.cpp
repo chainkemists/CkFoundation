@@ -11,6 +11,7 @@
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
 
+#include "CkCrowd/Agent/CkCrowdAgent_Neighbors_Fragment.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Steering_Processor.h"
 #include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Algorithm.h"
@@ -31,6 +32,10 @@
 #include "CkNavigation/Utils/CkNav_Utils.h"
 
 #include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
+
+#include "CkPhysics/Velocity/CkVelocity_Utils.h"
+
+#include "CkSpatialQuery/Probe/CkProbe_Utils.h"
 
 #include "CkVoxelNav/Path/CkVoxelNavPath_Fragment.h"
 #include "CkVoxelNav/Path/CkVoxelNavPath_Utils.h"
@@ -338,6 +343,15 @@ namespace ck
         -> ECk_Request_OperationResult
     {
         const auto Goal = InRequest.Get_Target();
+
+        // FollowTarget delegates here, so this one refusal covers both movement commands.
+        if (InHandle.Has<FTag_CrowdAgent_Disabled>())
+        {
+            ck::crowd::Log(
+                TEXT("CrowdAgent [{}] MoveTo {} refused: the agent is disabled (out of the crowd) - enable it before moving it"),
+                InHandle, Goal);
+            return ECk_Request_OperationResult::Failed;
+        }
 
         // Re-issuing the goal we are already walking to resets the waypoint cursor, so a noisy
         // re-issuer would stop the final-stop ever latching and the agent would orbit its goal.
@@ -922,6 +936,78 @@ namespace ck
         DoClearBlockedState(InHandle);
 
         ck::crowd::Verbose(TEXT("CrowdAgent [{}] Stop"), InHandle);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_EnableDisable& InRequest)
+        -> void
+    {
+        switch (InRequest.Get_EnableDisable())
+        {
+            case ECk_EnableDisable::Disable:
+            {
+                if (InHandle.Has<FTag_CrowdAgent_Disabled>())
+                { return; }
+
+                DoHandleRequest(InHandle, InParams, InPathFollow, InDesired, FCk_Request_CrowdAgent_Stop{});
+
+                // The velocity bridge is excluded from now on, so nothing else would clear a stale velocity.
+                if (auto Velocity = UCk_Utils_Velocity_UE::Cast(InHandle);
+                    ck::IsValid(Velocity))
+                { UCk_Utils_Velocity_UE::Request_OverrideVelocity(Velocity, FVector::ZeroVector, {}); }
+
+                DoSetProbeEnabled(InHandle, ECk_EnableDisable::Disable);
+                InHandle.AddOrGet<FTag_CrowdAgent_Disabled>();
+
+                ck::crowd::Verbose(TEXT("CrowdAgent [{}] disabled - out of the crowd until re-enabled"), InHandle);
+                return;
+            }
+            case ECk_EnableDisable::Enable:
+            {
+                if (NOT InHandle.Has<FTag_CrowdAgent_Disabled>())
+                { return; }
+
+                InHandle.Try_Remove<FTag_CrowdAgent_Disabled>();
+                DoSetProbeEnabled(InHandle, ECk_EnableDisable::Enable);
+
+                // Grounding did not run while the body was out, and the owner may have moved it.
+                if (InHandle.Has<FFragment_CrowdAgent_Grounding>())
+                {
+                    InHandle.Get<FFragment_CrowdAgent_Grounding>()._SecondsSinceVerified =
+                        UCk_Utils_Crowd_Settings_UE::Get_GroundingVerifyIntervalSeconds();
+                }
+
+                ck::crowd::Verbose(TEXT("CrowdAgent [{}] enabled - back in the crowd"), InHandle);
+                return;
+            }
+        }
+
+        CK_INVALID_ENUM(InRequest.Get_EnableDisable());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
+        DoSetProbeEnabled(
+            HandleType InHandle,
+            ECk_EnableDisable InEnableDisable)
+        -> void
+    {
+        // An agent disabled before Setup has no probe child yet; Setup creates it already disabled.
+        auto Probe = InHandle.Get<FFragment_CrowdAgent_ProbeRef>().Get_ProbeChild();
+        if (ck::Is_NOT_Valid(Probe))
+        { return; }
+
+        UCk_Utils_Probe_UE::Request_EnableDisable(Probe, FCk_Request_Probe_EnableDisable{InEnableDisable}, {});
     }
 
     // --------------------------------------------------------------------------------------------------------------------

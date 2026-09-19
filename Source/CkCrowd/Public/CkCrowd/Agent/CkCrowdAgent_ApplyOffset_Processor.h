@@ -23,7 +23,7 @@ namespace ck
             ck::TReadOnly<FFragment_EulerIntegrator_Current>,
             ck::TReadWrite<FFragment_CrowdAgent_PendingDisplacement>,
             FTag_EulerIntegrator_NeedsUpdate,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

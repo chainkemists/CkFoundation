@@ -22,7 +22,7 @@ namespace ck
             FProcessor_CrowdAgent_VelocityBridge,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
     public:

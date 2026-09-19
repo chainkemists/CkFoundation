@@ -32,8 +32,8 @@ namespace ck_crowd_agent_draw_body_processor
     constexpr auto PathPending_BlendT      = 0.55f;
     const auto     PathPending_BlendColor   = FLinearColor(1.0f, 0.92f, 0.20f, 1.0f);
 
-    constexpr auto Asleep_DesaturateT      = 0.65f;
-    const auto     Asleep_BlendColor        = FLinearColor(0.45f, 0.45f, 0.45f, 1.0f);
+    constexpr auto Disabled_DesaturateT      = 0.65f;
+    const auto     Disabled_BlendColor        = FLinearColor(0.45f, 0.45f, 0.45f, 1.0f);
 
     constexpr auto Cone_RadiusFraction      = 0.36f;
     constexpr auto Cone_LengthFraction      = 0.625f;  // of HalfHeight
@@ -47,15 +47,15 @@ namespace ck_crowd_agent_draw_body_processor
     // PMG Duration sentinel: -1 = persist until the parent dies; 0 = single-tick.
     constexpr auto Persist                  = -1.0f;
 
-    // PathPending wins over Asleep: pending is transient and actionable, sleep is steady-state.
+    // PathPending wins over Disabled: pending is transient and actionable, disabled is steady-state.
     auto ResolveTintedColor(
         const FCk_Handle_CrowdAgent& InAgent,
         const FLinearColor& InBaseColor) -> FLinearColor
     {
         if (InAgent.Has<ck::FTag_CrowdAgent_PathPending>())
         { return FMath::Lerp(InBaseColor, PathPending_BlendColor, PathPending_BlendT); }
-        if (InAgent.Has<ck::FTag_CrowdAgent_Asleep>())
-        { return FMath::Lerp(InBaseColor, Asleep_BlendColor, Asleep_DesaturateT); }
+        if (InAgent.Has<ck::FTag_CrowdAgent_Disabled>())
+        { return FMath::Lerp(InBaseColor, Disabled_BlendColor, Disabled_DesaturateT); }
         return InBaseColor;
     }
 }

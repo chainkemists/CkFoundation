@@ -34,7 +34,7 @@ namespace ck
             ck::TReadOnly<FFragment_CrowdAgent_Params>,
             ck::TReadOnly<FFragment_CrowdAgent_DesiredVelocity>,
             ck::TReadWrite<FFragment_CrowdAgent_FaceAngle>,
-            TExclude<FTag_CrowdAgent_Asleep>,
+            TExclude<FTag_CrowdAgent_Disabled>,
             // Keep the terminal hold semantically stationary for flyers too; a later explicit
             // wake re-enters this view and resumes normal yaw/pitch facing.
             TExclude<FTag_CrowdAgent_GoalFailedHold>,

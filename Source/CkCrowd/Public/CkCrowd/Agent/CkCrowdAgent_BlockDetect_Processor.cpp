@@ -288,6 +288,9 @@ namespace ck
             if (ck::Is_NOT_Valid(InBlockedBy))
             { return false; }
 
+            if (InBlockedBy.Has<FTag_CrowdAgent_Disabled>())
+            { return false; }
+
             const auto BlockerTransform = UCk_Utils_Transform_UE::Cast(InBlockedBy);
             if (ck::Is_NOT_Valid(BlockerTransform))
             { return false; }

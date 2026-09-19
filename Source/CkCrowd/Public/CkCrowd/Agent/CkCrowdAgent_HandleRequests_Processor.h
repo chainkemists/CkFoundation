@@ -224,6 +224,19 @@ namespace ck
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_Stop& InRequest) -> void;
 
+        static auto
+        DoHandleRequest(
+            HandleType InHandle,
+            const FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_PathFollow& InPathFollow,
+            FFragment_CrowdAgent_DesiredVelocity& InDesired,
+            const FCk_Request_CrowdAgent_EnableDisable& InRequest) -> void;
+
+        static auto
+        DoSetProbeEnabled(
+            HandleType InHandle,
+            ECk_EnableDisable InEnableDisable) -> void;
+
         // Ends any blocked episode: OnGoalBlocked may fire again for the new goal, and BlockedRecheck
         // can no longer resume the goal the caller abandoned.
         static auto
