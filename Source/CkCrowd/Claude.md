@@ -38,6 +38,11 @@ static FCk_Handle_CrowdAgent Request_MoveTo(
 static FCk_Handle_CrowdAgent Request_Stop(
     UPARAM(ref) FCk_Handle_CrowdAgent& InAgent);
 
+// Take it out of the crowd entirely (absent to every other agent), or put it back.
+static FCk_Handle_CrowdAgent Request_EnableDisable(
+    UPARAM(ref) FCk_Handle_CrowdAgent& InAgent,
+    const FCk_Request_CrowdAgent_EnableDisable& InRequest);
+
 // Add a static path-aware oriented obstacle to any transform-bearing entity.
 static FCk_Handle_CrowdAvoidanceVolume Add(
     UPARAM(ref) FCk_Handle_Transform& InOwner,
@@ -314,7 +319,7 @@ FTag_CrowdAgent_Idle              # No goal
 FTag_CrowdAgent_PathPending       # FindPath / FindRoute in flight
 FTag_CrowdAgent_DebugOverride     # Debugger "took control" — gameplay must not issue its own MoveTo
 FTag_CrowdAgent_GoalBlocked       # Goal is unreachable; agent is Idle but still WANTS it (resumable)
-FTag_CrowdAgent_Asleep            # DEFINED AND EXCLUDED, BUT NOTHING EVER STAMPS IT (see below)
+FTag_CrowdAgent_Disabled          # OUT of the crowd (Request_EnableDisable) — absent to every other agent (see below)
 FTag_CrowdAgent_Flying            # Free-space agent; opts out of every surface-bound / planar stage
 FTag_CrowdAgent_TraversingLink    # Part-way across an authored nav link; composes WITH Walking, never replaces it
 FTag_CrowdAgent_StationaryMarkupConfirmed  # Markup disc is confirmed on the mesh; with Idle, makes this agent the hard side of a pair
@@ -340,11 +345,11 @@ mover. It is deliberately narrower than `Is_NeighbourSettled` (which also counts
 `GoalFailedHold` and merely-painted agents) — confirmation is the only one of those with rebuild-latency hysteresis
 behind it, and hardening on paint alone would turn any agent that paused for 1.5s into furniture.
 
-**`FTag_CrowdAgent_Asleep` is dead weight.** Every steering-side processor carries
-`TExclude<FTag_CrowdAgent_Asleep>`, but no code path anywhere adds the tag — the SleepEvaluator that
-was supposed to stamp it was never built. The exclusion is therefore a no-op today. (It is load-bearing
-for tests in one respect: an *idle* agent is never sampled or steered because those views require
-`FTag_CrowdAgent_Walking`, which is what actually lets agents stand still.)
+**`FTag_CrowdAgent_Disabled` takes an agent out of the crowd** — see "Taking an agent out of the crowd"
+below. It replaced `FTag_CrowdAgent_Asleep`, a tag every steering view excluded but nothing ever
+stamped (the SleepEvaluator that was meant to was never built). The rename kept the exclusions and gave
+them an owner. Note that an *idle* agent is still never sampled or steered because those views require
+`FTag_CrowdAgent_Walking` — that, not this tag, is what lets agents stand still.
 
 **NOT BUILT:** `FTag_CrowdAgent_Failed`, `FTag_CrowdAgent_IsObstacleOnly`.
 
@@ -697,6 +702,91 @@ limits how far a stander is shoved in the meantime (and when a player barges thr
 
 ---
 
+## Taking an agent out of the crowd — `Request_EnableDisable`
+
+A stopped agent is still a crowd BODY. Every other agent keeps perceiving it:
+- it is a neighbour-cache entry, fed by probe overlaps with no tag filter;
+- it is a separation and avoidance obstacle;
+- it is a PushApart hard body once its markup confirms;
+- it paints a `Nav.Area.Crowd.Agent` disc, which the strict planning phase treats as impassable;
+- it is a `GoalOccupied` blocker and a `GoalCrowded` anchor.
+
+That is exactly right for someone waiting in a queue and exactly wrong for a body the game has taken
+out of the world. **The case that forced this:** BusterBlock parks NPCs that went home ("dormant")
+hidden on the spawn portal they will later leave from. The portal pivot is also every departing
+tourist's goal and every new tourist's spawn point. The parked bodies stayed live agents, so the
+portal filled with an invisible, immovable pile. Departures were held `GoalOccupied` by it,
+renters woken inside it never got out, and spawns landed in it with no route.
+
+`UCk_Utils_CrowdAgent_UE::Request_EnableDisable(Agent, FCk_Request_CrowdAgent_EnableDisable{Disable})`
+makes the agent ABSENT. A deferred request, it drains in order with MoveTo/Stop in
+`FProcessor_CrowdAgent_HandleRequests`.
+
+**Disable:**
+- runs the Stop body, ending the episode and releasing the provider query;
+- zeroes `FFragment_Velocity_Current`, because the bridge that would ramp it down is excluded from
+  then on, and a stale velocity reads as a moving body;
+- disables the probe child, so Jolt stops pairing it;
+- stamps `FTag_CrowdAgent_Disabled`.
+
+**Other agents stop perceiving it at these choke points:**
+- `NeighborSync` skips any neighbour carrying the tag. This one filter covers every consumer that
+  reads the cache: PushApart, Separation, AvoidanceSample, the occupied-goal and crowded-goal
+  detectors, and the settled predicate. It also covers the frames before the probe body has left the
+  broadphase.
+- `Does_RememberedBlockerStillObstruct` returns false for a disabled blocker, so a hold that
+  remembers the body resumes within one `BlockedRecheck` cadence.
+- `StationaryMarkup` unpaints its disc and restarts its stillness window, so the world-wide disc
+  scans (escape starts, strict dynamic obstacles, PathRefresh) lose it too. StationaryMarkup is the
+  one per-agent processor that deliberately does NOT exclude the tag: it is the only unpainter, and
+  excluding an already-painted body would strand its disc on the navmesh forever. This is the same
+  reason Permeable stays in its view.
+
+**The agent's own pipeline stands still.** Every per-agent simulation view carries
+`TExclude<FTag_CrowdAgent_Disabled>`: NeighborSync, BlockDetect, BlockedRecheck, Separation,
+Steering, AvoidanceSample, AccelClamp, VelocityBridge, ApplyOffset, PushApart, ConstrainToNavmesh,
+ApplyDisplacement3D, FaceAngle(3D), FollowTarget, PathRefresh, the debug draws, and the queue
+adapter's Dispatch, ObserveOutcome and MaintainFacing. With nothing writing its transform, the owner
+may relocate a disabled body without fighting the single-transform-writer rule - once the Disable
+has DRAINED. A relocation enqueued in the same frame as a Disable issued after `FGroup_Gameplay`
+(a state machine's entry, say) drains first, in `FGroup_Transform`. That frame's ConstrainToNavmesh
+offset, computed at the old position, is at most one frame of motion, and it lands on top of the
+relocation. BusterBlock's Dormant state accepts this because its wake re-projects the body onto the
+mesh. An owner that needs the exact pose relocates from the Disable's completion.
+
+**Movement while disabled:** a MoveTo or FollowTarget completes `Failed` with a Log line naming the
+agent. It is never silently dropped.
+
+**Queue membership is untouched.** Withdrawing a queued agent does not leave its queue — that is the
+owner's decision. The Stop inside Disable ends the adapter's owned episode, so its Dispatch should
+re-issue the assignment's move once the agent is enabled again. That is read from
+`CkCrowdQueueAdapter_Processor.cpp` Dispatch and no test pins it yet; BusterBlock's Dormant state
+releases its queue slots on entry, so it never relies on it.
+
+**Enable:**
+- removes the tag;
+- re-enables the probe, which re-adds its Jolt body at the entity's CURRENT transform, so a body
+  moved while out rejoins where it now stands;
+- sets the grounding lease due, so the first ConstrainToNavmesh pass re-grounds it immediately.
+
+Both directions are idempotent and complete `Succeeded`. `Get_IsEnabled` reflects the last DRAINED
+request, not the last one enqueued.
+
+**Ordering a consumer can rely on.**
+- HandleRequests runs in `FGroup_Gameplay`, ahead of the whole Physics chain. A Disable enqueued
+  before that group removes the body from every neighbour cache before any steering reads one. A
+  Disable enqueued later in the frame, for example by a state machine in `FGroup_Gameplay_AI`,
+  drains in the scheduler's tail pump after the main graph, so other agents perceive the body for
+  the rest of that frame and lose it from the next steering pass.
+- An Enable and the MoveTo that follows it share one `_Requests` array and drain in order.
+
+**Not persisted.** The tag is session state, re-derived by whoever owns the withdrawal: the owner
+re-issues Disable after a load.
+
+Coverage: `CkAutoTest_Crowd_Disable_*`.
+
+---
+
 ## Avoidance — how agents actually avoid each other
 
 **`FProcessor_CrowdAgent_AvoidanceSample` is the avoidance layer.** It is a port of dtCrowd's
@@ -1014,7 +1104,7 @@ Steering or the sampler from here. Coverage:
 ## Anti-patterns
 
 - **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity_Current → EulerIntegrator → PendingDisplacement → ConstrainToNavmesh → SceneNode`. Skipping any step is a bug.
-- **Never write a crowd agent's Transform position from anywhere but the agent's one displacement drain** — `ConstrainToNavmesh` for a grounded agent, `ApplyDisplacement3D` for a flying one (the two views are disjoint on `FTag_CrowdAgent_Flying`, so it is still exactly one writer per agent). A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead. Rotation is a separate concern with its own single writer per agent (`FaceAngle` / `FaceAngle3D`) and does not compete with either.
+- **Never write a crowd agent's Transform position from anywhere but the agent's one displacement drain** — `ConstrainToNavmesh` for a grounded agent, `ApplyDisplacement3D` for a flying one (the two views are disjoint on `FTag_CrowdAgent_Flying`, so it is still exactly one writer per agent). A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead. The one exception is a DISABLED agent (`Request_EnableDisable`): nothing drains it while it is out, so its owner may relocate it, and Enable re-grounds it on the first pass back. Rotation is a separate concern with its own single writer per agent (`FaceAngle` / `FaceAngle3D`) and does not compete with either.
 - **Never enqueue MoveTo from a client.** Server-authoritative. `Request_MoveTo` checks authority.
 - **Never bypass `_MaxNeighborsForSteering`.** It's the perf cliff — a careless "let me just look at all 30 neighbors" inside a custom processor will tank stress runs.
 - **Don't read `FFragment_Velocity_Current` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.
@@ -1083,8 +1173,8 @@ magnitude only and left direction free to snap.
   entity sets (agents vs projectiles), so the explicit RunAfter (EulerIntegrator_Update first) exists
   only to silence the dirty-marker-conflict advisory. `PumpPolicy` is `SkipPump` because the
   integrator's NeedsUpdate tag is sticky and a `DeltaT = 0` re-run would re-enqueue the same
-  `_DistanceOffset`, doubling per-frame movement. Its `TExclude<FTag_CrowdAgent_Asleep>` is
-  forward-compatible only (nothing stamps that tag today).
+  `_DistanceOffset`, doubling per-frame movement. Its `TExclude<FTag_CrowdAgent_Disabled>` is what
+  keeps a withdrawn agent's integrator output from ever being staged.
 - **`FProcessor_CrowdAgent_OnPathResolved`** polls `FFragment_Nav_PathResult` rather than binding a
   delegate per move-request: it is view-iteration driven, only touches agents actually waiting for a
   path, and the view filter excludes the entity again as soon as `PathPending` clears.
@@ -1309,7 +1399,7 @@ and teardown cancel or complete it on their own paths.
 - **`Get_SeparationForce` is the only assertion surface for an agent's neighbour-detection VOLUME.**
   The probe is Jolt-side geometry and a defect in it (the Y-axis cylinder incident) is invisible to
   every behavioural crowd test we own. It reads on an *idle* agent because the separation processor
-  excludes only `FTag_CrowdAgent_Asleep`, not Idle.
+  excludes only `FTag_CrowdAgent_Disabled`, not Idle.
 - **`Get_CurrentWaypointIndex`** is meant to be paired with the path's waypoint list — e.g.
   `UCk_Utils_PathNetworkFollower_UE::Get_RouteResult`'s compiled waypoints, which
   `InstallExternalPath` copies verbatim into the nav path result — to say exactly *which* point the
