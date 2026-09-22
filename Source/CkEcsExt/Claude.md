@@ -148,6 +148,19 @@ not from this fragment.
 
 ## Transform-local settle after derived producers
 
+### Late writes after the normal propagation pass
+
+Tail-pump transform requests can apply after the normal SceneNode pass. `FTag_Transform_Updated`
+is cleared near the start of the next frame, so it cannot be the sole wake-up for those descendants.
+`FProcessor_SceneNode_QueueLateChildren` runs after Physics and before both `FProcessor_Transform_Cleanup`
+and `FGroup_Transform_SyncFrom`, preserving cleanup-before-anchor-write ordering while
+publishing only updated parents with child records into the durable, consumed SceneNode propagation queue.
+The existing world-transform watermark avoids re-queuing already-published poses. This includes intermediate
+parents, not only scene roots; the normal depth-ordered pass then resolves their descendants.
+It does not extend the public transform marker's lifetime or use that persistent marker to trigger a pump.
+
+### Derived-producer barrier
+
 `FProcessor_Transform_HandleRequests` and the `TProcessor_SceneNode_Update` layer chain are registered once
 in `FGroup_Transform`. Those canonical processors declare `LocalSettleAfter = FGroup_Transform_Derived`, so
 the scheduler can replay the same ordered transform-resolution slice before `FGroup_Transform_Finalize`.

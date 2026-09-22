@@ -105,6 +105,34 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Tail-pump writes outlive the normal propagation pass, but not next frame's transform cleanup.
+    // Preserve their descendants in the consumed SceneNode queue before that marker is discarded.
+    class CKECSEXT_API FProcessor_SceneNode_QueueLateChildren : public ck_exp::TProcessor<
+            FProcessor_SceneNode_QueueLateChildren,
+            FCk_Handle_Transform,
+            ck::TReadOnly<FFragment_Transform>,
+            ck::TReadOnly<FFragment_RecordOfSceneNodes>,
+            FTag_Transform_Updated,
+            CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using RunAfter = TDepList<FGroup_Physics>;
+        using RunBefore = TDepList<FProcessor_Transform_Cleanup, FGroup_Transform_SyncFrom>;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren) -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKECSEXT_API FProcessor_SceneNode_QueueRootChildren : public ck_exp::TProcessor<
             FProcessor_SceneNode_QueueRootChildren,
             FCk_Handle_Transform,
