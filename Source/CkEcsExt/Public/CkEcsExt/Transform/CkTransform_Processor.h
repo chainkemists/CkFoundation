@@ -210,6 +210,8 @@ namespace ck
     {
     public:
         using RunAfter = TDepList<ck::FGroup_Physics>;
+        // Clear previous-frame updates before anchors publish this frame's transforms.
+        using RunBefore = TDepList<ck::FGroup_Transform_SyncFrom>;
 
     private:
         using Super = TProcessorBase;
