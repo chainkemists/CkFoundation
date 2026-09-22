@@ -171,9 +171,22 @@ Rationale relocated out of the source during the 2026-07-25 comment sweep. These
   the raycast and the synchronous path — so a filter tag means the same thing on either provider;
   empty/unmapped falls back to NavData's default. A request may also carry `_QueryFilterOverride`
   (a `FGameplayTag` that outranks the request's `_QueryFilter` for THAT query) — used by CkCrowd's
-  strict/permissive planning phases. Note the start/end projection is UNFILTERED, so a query whose
-  filter excludes the area under its own start still projects onto it — callers standing inside an
-  excluded band must move their start out first (CkCrowd's `Get_EscapedQueryStart`).
+  strict/permissive planning phases. **The two endpoints are projected differently, on purpose.**
+  The START goes through the query's policy: the search must begin on a polygon the policy allows,
+  and snapping the start changes nothing the caller asked for (the agent walks from where it
+  stands). That is what lets an agent standing inside its own stationary markup plan strictly at
+  all. A caller inside SOMEONE ELSE'S excluded band should still move its start out first (CkCrowd's
+  `Get_EscapedQueryStart`), because the nearest allowed polygon is not a followable exit.
+  The END goes onto the SURFACE (NavData's default filter) and must stay there: a goal inside an
+  area the policy excludes has to come back as a route that ends SHORT of it, never as a Ready
+  route to a different point. Between 2026-08-28 and 2026-09-22 the end was projected through the
+  policy over the 500uu search box, so CkCrowd's strict phase (which excludes `Nav.Area.Crowd.Agent`)
+  moved every goal covered by a standing body's markup out to the markup's edge, the route read
+  Ready, and the agent was told it had arrived there. The reachability query follows the same rule.
+  One residual is Recast's own: `FPImplRecastNavMesh::InitPathfinding` re-projects both endpoints
+  through the filter inside the navmesh's default query extent (50uu), so a goal just inside an
+  excluded area can still come back Ready at the edge. CkCrowd therefore judges "ends short" by
+  distance, not by status (`Get_RouteEndsShortOfGoal`).
 - No async path queries. `FindPathSync` is fast enough at 8/frame for any realistic scenario; if it ever isn't, a dedicated async processor lives at the next layer.
 - No off-mesh links / jumps. Recast supports them but we don't surface them.
 - **The deferred-FindPath queue is per-world** (`ck::FFragment_Nav_DeferredRequests` on the

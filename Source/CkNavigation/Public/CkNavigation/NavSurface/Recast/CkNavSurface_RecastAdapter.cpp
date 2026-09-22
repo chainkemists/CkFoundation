@@ -602,11 +602,15 @@ namespace ck::nav_surface_recast
             return Result;
         }
 
+        // The same contract as FCk_Nav_Algorithm::FindPathSync: the start through the policy, the end
+        // onto the SURFACE. Projecting the end through the policy would move an end inside an excluded
+        // area out to its edge, and answer Reachable for a point nobody asked about.
+        const auto SurfaceFilter = NavData->GetDefaultQueryFilter();
         const auto Extent = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
         auto StartProj = FNavLocation{};
         auto EndProj = FNavLocation{};
         if (NOT NavSys->ProjectPointToNavigation(InQuery.Get_Start(), StartProj, Extent, NavData, QueryFilter)
-            || NOT NavSys->ProjectPointToNavigation(InQuery.Get_End(), EndProj, Extent, NavData, QueryFilter))
+            || NOT NavSys->ProjectPointToNavigation(InQuery.Get_End(), EndProj, Extent, NavData, SurfaceFilter))
         {
             Result.Set_Reachability(ECk_NavSurface_Reachability::Unreachable);
             return Result;
