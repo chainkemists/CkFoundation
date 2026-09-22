@@ -18,6 +18,7 @@
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_CancelPendingRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_FollowUnrealAnchor);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_QueueLateChildren);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SceneNode_QueueRootChildren);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_Update<ck::FTag_SceneNode_Layer0>);
 CK_REGISTER_PROCESSOR(ck::TProcessor_SceneNode_QueueChildren<ck::FTag_SceneNode_Layer0>);
@@ -145,6 +146,20 @@ namespace ck
         {
             InHandle.template DeferAddOrGet<FTag_Transform_Updated>();
         }
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_SceneNode_QueueLateChildren::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_Transform& InTransform,
+            const FFragment_RecordOfSceneNodes& InChildren)
+        -> void
+    {
+        FUtils_SceneNodePropagation::PublishChildrenIfChanged(InHandle, InTransform.Get_Transform());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
