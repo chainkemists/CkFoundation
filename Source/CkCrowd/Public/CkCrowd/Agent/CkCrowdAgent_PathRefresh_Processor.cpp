@@ -295,6 +295,7 @@ namespace ck
 
         auto Centers = TArray<FVector, TInlineAllocator<32>>{};
         auto Radii = TArray<float, TInlineAllocator<32>>{};
+        auto VerticalHalfExtents = TArray<float, TInlineAllocator<32>>{};
         if (UseStationaryMarkup)
         {
             InAnyWorldHandle.View<FFragment_CrowdAgent_NavMarkup>().ForEach(
@@ -306,14 +307,18 @@ namespace ck
                 // geometry and is valid the moment the disc exists.
                 const auto& MarkupLocation = InMarkup.Get_MarkupLocation();
                 const auto MarkupRadius = InMarkup.Get_MarkupRadiusUu();
+                const auto MarkupVerticalHalfExtent = InMarkup.Get_MarkupVerticalHalfExtentUu();
                 if (NOT ck::IsValid(InMarkup.Get_Markup()) ||
                     MarkupLocation.ContainsNaN() ||
                     NOT FMath::IsFinite(MarkupRadius) ||
-                    MarkupRadius <= 0.0f)
+                    MarkupRadius <= 0.0f ||
+                    NOT FMath::IsFinite(MarkupVerticalHalfExtent) ||
+                    MarkupVerticalHalfExtent <= 0.0f)
                 { return; }
 
                 Centers.Add(MarkupLocation);
                 Radii.Add(MarkupRadius);
+                VerticalHalfExtents.Add(MarkupVerticalHalfExtent);
             });
         }
 
@@ -333,11 +338,18 @@ namespace ck
             return {};
         }
 
+        // The markup is a BOX, not a column: it marks only the polygons within its vertical
+        // half-extent of the painter's feet. A body above or below that band - on a mezzanine, or
+        // lifted clear of the mesh - is not standing in it, and escaping it would launch a path query
+        // from a point the navmesh cannot project.
         const auto IsInsideAny = [&](const FVector& InPoint) -> bool
         {
             for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
             {
-                if (ck_crowd_agent_path_refresh::Is_InsidePaintedBand(
+                const auto IsWithinVerticalBand =
+                    FMath::Abs(InPoint.Z - Centers[Idx].Z) <= VerticalHalfExtents[Idx];
+                if (IsWithinVerticalBand &&
+                    ck_crowd_agent_path_refresh::Is_InsidePaintedBand(
                         static_cast<float>(FVector::Dist2D(InPoint, Centers[Idx])), Radii[Idx]))
                 { return true; }
             }
