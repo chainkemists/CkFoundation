@@ -4,6 +4,8 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkNavigation/Nav/CkNav_Fragment_Data.h"
+
 #include "Templates/Function.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -107,6 +109,35 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
             InOutCurrentSegmentStart,
             InProtectedLeadingWaypointCount,
             EveryChordIsNavigable);
+    }
+
+    // A route that stops farther than the arrival radius from the goal can never produce a genuine
+    // arrival, and walking it to its end must be reported as a failure.
+    //
+    // Partial is not the only way to get one. Recast re-projects both endpoints through the query
+    // filter inside the navmesh's default query extent (FPImplRecastNavMesh::InitPathfinding), so
+    // a goal inside an excluded area near its edge comes back READY, ending at the edge. A Ready
+    // route is therefore judged too - but only against a goal CkNavigation projected onto that same
+    // surface (InGoalIsOnSurface). A route installed from elsewhere is compared against the caller's
+    // raw goal, whose Z need not lie on the surface, and its provider does not move goals (CkGroundNav
+    // keeps the goal's XY and snaps only Z), so judging it would fail genuine arrivals.
+    inline auto Get_RouteEndsShortOfGoal(
+        const ECk_Nav_PathStatus InStatus,
+        const TConstArrayView<FVector> InWaypoints,
+        const FVector& InGoal,
+        const bool InGoalIsOnSurface,
+        const float InArrivalRadius) -> bool
+    {
+        if (InWaypoints.IsEmpty())
+        { return false; }
+
+        const auto IsJudged =
+            InStatus == ECk_Nav_PathStatus::Partial ||
+            (InStatus == ECk_Nav_PathStatus::Ready && InGoalIsOnSurface);
+        if (NOT IsJudged)
+        { return false; }
+
+        return FVector::Dist(InWaypoints.Last(), InGoal) > InArrivalRadius;
     }
 }
 
