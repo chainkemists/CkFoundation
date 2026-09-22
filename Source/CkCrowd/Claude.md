@@ -1395,6 +1395,12 @@ and teardown cancel or complete it on their own paths.
   and merely arrives early when the rebake hasn't landed. Gating it on `_ConfirmedOnMesh` opened a
   paint-to-confirm window where a fresh MoveTo from inside the band planned *through*, and a repaint
   (push-apart drift) reopened that window by resetting the flag.
+- **A disc is the BOX it paints, not a column.** The escape's inside test honours each markup's
+  vertical half-extent (`_MarkupVerticalHalfExtentUu`, the painter's height about its feet), because
+  the modifier only marks polygons inside that band. A body on a mezzanine above a standing crowd,
+  or one lifted clear of the mesh, is not inside the crowd's discs; a 2D-only test used to escape it
+  anyway and launched the escape path query from a point the navmesh could not project (surfaced by
+  `CkAutoTest_Crowd_Grounding_StationaryAgentReGrounds` once honest arrivals packed its formation).
 - **The escape is a RAY-MARCH along the lean direction** (away from the nearest disc centre), not a
   fixed-point pairwise push. For a painted *line* the discs' push-out zones overlap (spacing < 2×
   required radius), so each pairwise push lands inside the neighbouring disc's zone and the iteration
