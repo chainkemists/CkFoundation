@@ -233,15 +233,29 @@ Enabled) sits on top of the toll: every agent FindPath plans FIRST with a STRICT
 treats the markup area as IMPASSABLE. The toll alone has a break-even — for a destination close
 behind a standing crowd, crossing beats any detour, so single-phase planning legitimately walked
 agents into bodies they could never pass (the queue-cross field symptom). A strict answer of
-Failed on a genuine PLANNING VERDICT (no-path / find-path error / invalid / empty), or Partial
+Failed on a genuine PLANNING VERDICT (no-path / find-path error / invalid / empty), or a route
 ending short of the goal, re-dispatches the episode ONCE with the permissive toll filter
 (`OnPathResolved`, before the path-trouble stamp, revision advanced) — which is how queue-joiners
-still reach a slot beside standing bodies. The strict query's own failure still broadcasts the
+still reach a slot beside standing bodies. **"Ending short" is decided by DISTANCE, never by
+status** (`ck_crowd_agent_path_follow_algorithm::Get_RouteEndsShortOfGoal`, also the verdict behind
+`_ActivePathEndsShortOfGoal`): the route's last waypoint against the goal as CkNavigation projected
+it onto the SURFACE (a Ready route is judged only against that projection; an externally
+installed CkGroundNav route carries none, and its provider never moves a goal, so only its Partial
+answers are judged). A goal on a standing body sits inside that body's markup, which the strict
+filter excludes, and Recast's own `InitPathfinding` re-projects endpoints through the filter, so
+such a route can come back Ready while stopping at the markup edge. Judged by status alone, that
+route produced a false `OnGoalReached` a body-width from the goal and no block was ever raised
+(worse from 2026-08-28 to 2026-09-22, while CkNavigation projected the goal itself through the
+policy - see CkNavigation/Claude.md). Judged by distance, it retries permissively, walks to the goal, and
+`BlockDetect` names the body standing on it (`GoalOccupied`). The strict query's own failure still broadcasts the
 per-query `Nav_OnPathFailed` signal exactly as any failed `Request_FindPath` would; the episode's
 verdict — whether it ultimately succeeds on the permissive retry or not — is CkCrowd's own
 `CrowdAgent_OnGoalFailed`, not that signal. Infrastructure failures never trigger the fallback:
-projection is unfiltered (a strict projection miss fails permissive identically), NoNavData is
-filter-independent, and the pending watchdog's `PendingTimeout` MUST terminate exactly once — a
+the END is projected onto the surface (a strict end-projection miss fails permissive identically);
+the START is projected through the policy, but it is escaped out of other bodies' markup first and
+an agent's own markup is far inside the projection extent, so a start that still misses is an agent
+off the mesh (`CkAutoTest_Crowd_Grounding_StationaryAgentReGrounds` pins exactly one terminal for
+it); NoNavData is filter-independent, and the pending watchdog's `PendingTimeout` MUST terminate exactly once — a
 fallback there resurrected the timed-out episode into a second Pending wait
 (`CkAutoTest_Crowd_Watchdog_PendingTimeoutFailsEpisodeOnce` pins this). Such an episode ends in
 strict phase with `_StrictPlanFailed` false, so its OnGoalFailed payload reads structural, not
