@@ -70,7 +70,7 @@ namespace ck_crowd_agent_handle_requests
      */
     auto Get_PlanPhaseFilter(
         FCk_Handle_CrowdAgent                      InHandle,
-        const ck::FFragment_CrowdAgent_Params&     InParams,
+        const ck::FFragment_CrowdAgent_Tunables&     InTunables,
         const ck::FFragment_CrowdAgent_PathFollow& InPathFollow,
         ECk_CrowdAgent_PathProvider                InProvider,
         bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter;
@@ -164,7 +164,7 @@ namespace ck
 		static auto
 		ApplyPlanPhase(
 			HandleType InHandle,
-			const FFragment_CrowdAgent_Params& InParams,
+			const FFragment_CrowdAgent_Tunables& InTunables,
 			FFragment_CrowdAgent_PathFollow& InPathFollow,
 			FCk_Request_Nav_FindPath& InOutRequest,
 			bool InForcePermissive = false) -> void;
@@ -189,13 +189,13 @@ namespace ck
         static auto
         ApplyMarkupEscapeStart(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FVector& InGoal,
             FCk_Request_PathNetworkFollower_FindRoute& InOutRequest) -> void;
 
         static auto
         GetPlanQueryFilterTag(
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
             -> FGameplayTag;
 
@@ -227,7 +227,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_EnableDisable& InRequest) -> void;
@@ -269,7 +269,7 @@ namespace ck
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_CrowdAgent_Params& InParams,
+            FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_DesiredVelocity& InDesired,
             const FCk_Request_CrowdAgent_SetTransientPersonalSpaceScale& InRequest) -> void;

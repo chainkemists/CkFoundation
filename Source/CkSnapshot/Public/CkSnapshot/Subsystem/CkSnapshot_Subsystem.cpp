@@ -1691,7 +1691,7 @@ auto
         const auto HasTransformAnchor =
             Entity.Has_Any<ck::FFragment_Transform_MeshSocket, ck::FFragment_Transform_RootComponent>();
         const auto IsParentDrivenSceneNode =
-            Entity.Has<ck::FFragment_SceneNode_Current>()
+            Entity.Has<ck::FFragment_SceneNode>()
             && Entity.Has<ck::SceneNodeParent>()
             && NOT Entity.Has<ck::FFragment_SceneNode_UnrealAnchor>()
             && (NOT HasTransformAnchor || Entity.Has<ck::FTag_Transform_ExternallyDriven>());

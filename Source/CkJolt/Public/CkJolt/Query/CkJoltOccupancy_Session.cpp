@@ -115,8 +115,8 @@ namespace ck_jolt_occupancy_session
 
         const auto DebugName = UCk_Utils_Handle_UE::Get_DebugName(Entity).ToString();
 
-        const auto SourceActorName = Entity.Has<ck::FFragment_JoltStaticActor_Current>()
-            ? Entity.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActorName()
+        const auto SourceActorName = Entity.Has<ck::FFragment_JoltStaticActor>()
+            ? Entity.Get<ck::FFragment_JoltStaticActor>().Get_SourceActorName()
             : FName{};
 
         if (SourceActorName.IsNone())
@@ -508,10 +508,10 @@ namespace ck::jolt
             : FCk_Handle{};
         const auto Entity = ck_jolt_occupancy_session::TryResolve_Handle(
             Lock.GetBody().GetUserData(), TransientEntity);
-        if (ck::Is_NOT_Valid(Entity) || NOT Entity.Has<ck::FFragment_JoltStaticActor_Current>())
+        if (ck::Is_NOT_Valid(Entity) || NOT Entity.Has<ck::FFragment_JoltStaticActor>())
         { return false; }
 
-        OutDataLayerNames = Entity.Get<ck::FFragment_JoltStaticActor_Current>().Get_DataLayerNames();
+        OutDataLayerNames = Entity.Get<ck::FFragment_JoltStaticActor>().Get_DataLayerNames();
         return true;
     }
 

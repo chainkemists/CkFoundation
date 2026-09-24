@@ -129,7 +129,7 @@ namespace ck
     class CKPMG_API FProcessor_Pmg_Donut_ApplyRuntimeVisibility : public ck_exp::TProcessor<
             FProcessor_Pmg_Donut_ApplyRuntimeVisibility,
             FCk_Handle_Pmg_Donut,
-            ck::TReadOnly<FFragment_Pmg_Donut_Current>,
+            ck::TReadOnly<FFragment_Pmg_Donut>,
             TExclude<FTag_Pmg_Donut_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -143,7 +143,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_Pmg_Donut_Current& InCurrent)
+            const FFragment_Pmg_Donut& InPmgDonut)
             -> void;
     };
 

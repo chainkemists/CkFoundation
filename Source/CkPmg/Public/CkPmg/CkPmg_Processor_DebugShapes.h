@@ -18,7 +18,7 @@ namespace ck
             FProcessor_Pmg_DebugShape_LineSet_Setup,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadWrite<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadWrite<FFragment_Pmg_DebugShape>,
             FTag_Pmg_DebugShape_LineSet,
             FTag_Pmg_DebugShape_NeedsSetup,
             CK_IGNORE_PENDING_KILL>
@@ -35,7 +35,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InPmgDebugShape)
             -> void;
     };
 
@@ -106,7 +106,7 @@ namespace ck
             FProcessor_Pmg_DebugShape_ApplyRuntimeVisibility,
             FCk_Handle_Pmg_DebugShape,
             ck::TReadOnly<FFragment_Pmg_DebugShape_Common>,
-            ck::TReadOnly<FFragment_Pmg_DebugShape_Current>,
+            ck::TReadOnly<FFragment_Pmg_DebugShape>,
             TExclude<FTag_Pmg_DebugShape_NeedsSetup>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -121,7 +121,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            const FFragment_Pmg_DebugShape& InPmgDebugShape)
             -> void;
     };
 

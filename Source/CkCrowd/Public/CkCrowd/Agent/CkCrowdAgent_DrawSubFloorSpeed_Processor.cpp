@@ -42,8 +42,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_Velocity_Current& InVelocity)
+            const FFragment_CrowdAgent_Tunables& InTunables,
+            const FFragment_Velocity& InVelocity)
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawSubFloorSpeedProc);
@@ -63,7 +63,7 @@ namespace ck
         { return; }
 
         const auto Feet = InTransform.Get_Transform().GetLocation();
-        const auto MarkerBase = Feet + FVector{0.0, 0.0, InParams.Get_Height() + 20.0};
+        const auto MarkerBase = Feet + FVector{0.0, 0.0, InTunables.Get_Height() + 20.0};
         const auto Heading = FVector{Velocity.X, Velocity.Y, 0.0}.GetSafeNormal();
 
         constexpr auto Duration_OneFrame = 0.0f;
