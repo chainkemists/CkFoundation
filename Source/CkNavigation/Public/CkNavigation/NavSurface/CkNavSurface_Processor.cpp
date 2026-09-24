@@ -22,7 +22,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurfaceMarkup_Requests& InRequests,
-            FFragment_NavSurfaceMarkup_Current& InCurrent) const
+            FFragment_NavSurfaceMarkup& InNavSurfaceMarkup) const
         -> void
     {
         InHandle.CopyAndRemove(InRequests, [&](const FFragment_NavSurfaceMarkup_Requests& InSnapshot)
@@ -91,7 +91,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_NavSurfaceMarkup_Current& InCurrent)
+            FFragment_NavSurfaceMarkup& InNavSurfaceMarkup)
         -> void
     {
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -121,7 +121,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurface_LinkTraversal_Requests& InRequests,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent) const
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal) const
         -> void
     {
         InHandle.CopyAndRemove(InRequests, [&](const FFragment_NavSurface_LinkTraversal_Requests& InSnapshot)
@@ -132,7 +132,7 @@ namespace ck
                     auto Result = ECk_Request_OperationResult::Failed;
                     const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-                    Result = DoHandleRequest(InHandle, InCurrent, InRequest);
+                    Result = DoHandleRequest(InHandle, InNavSurfaceLinkTraversal, InRequest);
                 }), ck::policy::DontResetContainer{});
         });
     }
@@ -143,28 +143,28 @@ namespace ck
         FProcessor_NavSurface_LinkTraversal_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_BeginLinkTraversal& InRequest)
         -> ECk_Request_OperationResult
     {
-        if (InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing)
+        if (InNavSurfaceLinkTraversal._State == ECk_NavSurface_LinkTraversalState::Traversing)
         {
             // The crossing the caller asked for is the one already running, so its intent holds and
             // there is nothing to report: a second Begun would break the one-per-crossing count.
-            return InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId()
+            return InNavSurfaceLinkTraversal._ActiveCorrelatorId == InRequest.Get_CorrelatorId()
                 ? ECk_Request_OperationResult::Succeeded
                 : ECk_Request_OperationResult::Failed;
         }
 
-        InCurrent._ActiveLinkId = InRequest.Get_LinkId();
-        InCurrent._ActiveCorrelatorId = InRequest.Get_CorrelatorId();
-        InCurrent._EntryDirection = InRequest.Get_EntryDirection();
-        InCurrent._State = ECk_NavSurface_LinkTraversalState::Traversing;
+        InNavSurfaceLinkTraversal._ActiveLinkId = InRequest.Get_LinkId();
+        InNavSurfaceLinkTraversal._ActiveCorrelatorId = InRequest.Get_CorrelatorId();
+        InNavSurfaceLinkTraversal._EntryDirection = InRequest.Get_EntryDirection();
+        InNavSurfaceLinkTraversal._State = ECk_NavSurface_LinkTraversalState::Traversing;
 
         InHandle.AddOrGet<FTag_NavSurface_LinkTraversal_Active>();
 
         UUtils_Signal_NavSurface_OnLinkTraversalBegun::Broadcast(
-            InHandle, ck::MakePayload(InHandle, InCurrent._ActiveLinkId, InCurrent._ActiveCorrelatorId));
+            InHandle, ck::MakePayload(InHandle, InNavSurfaceLinkTraversal._ActiveLinkId, InNavSurfaceLinkTraversal._ActiveCorrelatorId));
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -173,19 +173,19 @@ namespace ck
         FProcessor_NavSurface_LinkTraversal_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest)
         -> ECk_Request_OperationResult
     {
-        const auto CorrelatorIsActive = InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing &&
-            InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
+        const auto CorrelatorIsActive = InNavSurfaceLinkTraversal._State == ECk_NavSurface_LinkTraversalState::Traversing &&
+            InNavSurfaceLinkTraversal._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
 
         // Not a no-op the caller can ignore: completing a crossing nobody is on means the caller's
         // model of which crossing it is driving is wrong, and retrying will not fix that.
         if (NOT CorrelatorIsActive)
         { return ECk_Request_OperationResult::Failed; }
 
-        DoEnd_Traversal(InHandle, InCurrent, ECk_Request_OperationResult::Succeeded);
+        DoEnd_Traversal(InHandle, InNavSurfaceLinkTraversal, ECk_Request_OperationResult::Succeeded);
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -194,19 +194,19 @@ namespace ck
         FProcessor_NavSurface_LinkTraversal_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_CancelLinkTraversal& InRequest)
         -> ECk_Request_OperationResult
     {
-        const auto CorrelatorIsActive = InCurrent._State == ECk_NavSurface_LinkTraversalState::Traversing &&
-            InCurrent._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
+        const auto CorrelatorIsActive = InNavSurfaceLinkTraversal._State == ECk_NavSurface_LinkTraversalState::Traversing &&
+            InNavSurfaceLinkTraversal._ActiveCorrelatorId == InRequest.Get_CorrelatorId();
 
         // Cancelling a crossing that is already over leaves the caller's intent holding afterwards,
         // which is what Succeeded means.
         if (NOT CorrelatorIsActive)
         { return ECk_Request_OperationResult::Succeeded; }
 
-        DoEnd_Traversal(InHandle, InCurrent, ECk_Request_OperationResult::Failed_Cancelled);
+        DoEnd_Traversal(InHandle, InNavSurfaceLinkTraversal, ECk_Request_OperationResult::Failed_Cancelled);
 
         return ECk_Request_OperationResult::Succeeded;
     }
@@ -215,16 +215,16 @@ namespace ck
         FProcessor_NavSurface_LinkTraversal_HandleRequests::
         DoEnd_Traversal(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             ECk_Request_OperationResult InResult)
         -> void
     {
-        const auto LinkId = InCurrent._ActiveLinkId;
-        const auto CorrelatorId = InCurrent._ActiveCorrelatorId;
+        const auto LinkId = InNavSurfaceLinkTraversal._ActiveLinkId;
+        const auto CorrelatorId = InNavSurfaceLinkTraversal._ActiveCorrelatorId;
 
-        InCurrent._ActiveLinkId = INDEX_NONE;
-        InCurrent._ActiveCorrelatorId = INDEX_NONE;
-        InCurrent._State = ECk_NavSurface_LinkTraversalState::None;
+        InNavSurfaceLinkTraversal._ActiveLinkId = INDEX_NONE;
+        InNavSurfaceLinkTraversal._ActiveCorrelatorId = INDEX_NONE;
+        InNavSurfaceLinkTraversal._State = ECk_NavSurface_LinkTraversalState::None;
 
         InHandle.Try_Remove<FTag_NavSurface_LinkTraversal_Active>();
 
@@ -244,7 +244,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent)
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal)
         -> void
     {
         if (InHandle.Has<FFragment_NavSurface_LinkTraversal_Requests>())
@@ -253,11 +253,11 @@ namespace ck
                 InHandle.Get<FFragment_NavSurface_LinkTraversal_Requests>().Get_Requests());
         }
 
-        if (InCurrent._State != ECk_NavSurface_LinkTraversalState::Traversing)
+        if (InNavSurfaceLinkTraversal._State != ECk_NavSurface_LinkTraversalState::Traversing)
         { return; }
 
         FProcessor_NavSurface_LinkTraversal_HandleRequests::DoEnd_Traversal(
-            InHandle, InCurrent, ECk_Request_OperationResult::Failed_Cancelled);
+            InHandle, InNavSurfaceLinkTraversal, ECk_Request_OperationResult::Failed_Cancelled);
     }
 }
 

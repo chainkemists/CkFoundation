@@ -29,7 +29,7 @@ namespace ck::groundnav::cook
 {
     namespace groundnav_cook_private
     {
-        auto Get_FieldFingerprint(const FCk_Fragment_GroundNavVolume_ParamsData& InParams) -> uint64
+        auto Get_FieldFingerprint(const FCk_GroundNavVolume_Spec& InParams) -> uint64
         {
             auto Variants = TArray<TPair<FName, FCk_GroundNav_AgentProfile>>{};
             Variants.Reserve(InParams.Get_ProfileVariants().Num());
@@ -341,7 +341,7 @@ namespace ck::groundnav::cook
         FCk_GroundNav_FieldCooker::
         Cook_Volume(
             UWorld&                                        InWorld,
-            const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+            const FCk_GroundNavVolume_Spec& InParams,
             FName                                          InSourceLevelPackage,
             ECk_GroundNav_CookMode                         InMode,
             TArray<FCk_GroundNav_CookFieldPlan>&           OutPlans,

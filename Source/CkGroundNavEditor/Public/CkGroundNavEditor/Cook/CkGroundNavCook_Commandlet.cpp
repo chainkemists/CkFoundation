@@ -37,7 +37,7 @@ namespace ck_groundnav_cook_commandlet
     struct FCookCandidate
     {
         FName _SpawnerName;
-        FCk_Fragment_GroundNavVolume_ParamsData _Params;
+        FCk_GroundNavVolume_Spec _Params;
         FName _SourceLevel;
         TArray<ck::groundnav::cook::FCk_GroundNav_CookFieldPlan> _Plans;
     };

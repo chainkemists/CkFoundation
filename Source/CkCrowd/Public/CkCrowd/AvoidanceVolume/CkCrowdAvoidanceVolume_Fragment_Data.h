@@ -152,12 +152,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKCROWD_API FCk_Fragment_CrowdAvoidanceVolume_ParamsData
+struct CKCROWD_API FCk_CrowdAvoidanceVolume_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_CrowdAvoidanceVolume_ParamsData);
+    CK_GENERATED_BODY(FCk_CrowdAvoidanceVolume_Spec);
 
 private:
     // The physical footprint. The owning Transform is the box centre; only its yaw is meaningful
@@ -187,7 +187,7 @@ public:
     CK_PROPERTY(_PathPlanningClearance);
     CK_PROPERTY(_TraversalPolicy);
 
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_CrowdAvoidanceVolume_ParamsData, _HalfExtents, _InfluenceRange);
+    CK_DEFINE_CONSTRUCTORS(FCk_CrowdAvoidanceVolume_Spec, _HalfExtents, _InfluenceRange);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

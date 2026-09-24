@@ -38,7 +38,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VisualLod_Params = FCk_Fragment_VisualLod_ParamsData;
+    using FFragment_VisualLod_Params = FCk_VisualLod_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,10 +52,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVISUALLOD_API FFragment_VisualLod_Current
+    struct CKVISUALLOD_API FFragment_VisualLod
     {
     public:
-        CK_GENERATED_BODY(FFragment_VisualLod_Current);
+        CK_GENERATED_BODY(FFragment_VisualLod);
 
     public:
         friend class FProcessor_VisualLod_Setup;

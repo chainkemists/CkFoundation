@@ -473,17 +473,17 @@ namespace ck
     auto
         FGroundNavPath_Episode::
         DoClear(
-            FFragment_GroundNavPath_Current& InCurrent)
+            FFragment_GroundNavPath& InGroundNavPath)
         -> void
     {
-        InCurrent._Search = groundnav::FCk_GroundNav_PathSearch{};
-        InCurrent._Field.Reset();
-        InCurrent._ActiveQueryForTimeoutReplay.Reset();
-        InCurrent._PendingRequest = FCk_Request_GroundNavPath_FindPath{};
-        InCurrent._HasBegun = false;
-        InCurrent._PendingSince = FCk_Time{};
-        InCurrent._SearchTimeSpent = FCk_Time{};
-        InCurrent._HasSearchDuration = false;
+        InGroundNavPath._Search = groundnav::FCk_GroundNav_PathSearch{};
+        InGroundNavPath._Field.Reset();
+        InGroundNavPath._ActiveQueryForTimeoutReplay.Reset();
+        InGroundNavPath._PendingRequest = FCk_Request_GroundNavPath_FindPath{};
+        InGroundNavPath._HasBegun = false;
+        InGroundNavPath._PendingSince = FCk_Time{};
+        InGroundNavPath._SearchTimeSpent = FCk_Time{};
+        InGroundNavPath._HasSearchDuration = false;
     }
 
     // The one line that proves this provider is alive: every published verdict, terminal or timed out.
@@ -507,17 +507,17 @@ namespace ck
         FGroundNavPath_Episode::
         DoPublish_Failure(
             FCk_Handle_GroundNavPath         InPathEntity,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result&  InResult,
             ECk_GroundNav_PathStatus         InStatus,
             int32                            InExpansionCount,
             int64                            InPlannedAgainstEpoch)
         -> void
     {
-        const auto Request = InCurrent._PendingRequest;
+        const auto Request = InGroundNavPath._PendingRequest;
 
         const auto SearchDurationMs =
-            static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
+            static_cast<float>(InGroundNavPath._SearchTimeSpent.Get_Milliseconds());
 
         // Waypoints are cleared here and NOT at the install boundary: this module answers what its own
         // search found, and a failed search found nothing. What a consumer does with the route it was
@@ -530,16 +530,16 @@ namespace ck
             .Set_LengthUu(0.0)
             .Set_ExpansionCount(InExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
-            .Set_HasSearchDuration(InCurrent._HasSearchDuration)
+            .Set_HasSearchDuration(InGroundNavPath._HasSearchDuration)
             .Set_PlannedAgainstEpoch(InPlannedAgainstEpoch)
-            .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
+            .Set_RepairVerdict(InGroundNavPath._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
         ++InResult._PublishSequence;
 
         DoLog_Published(InPathEntity, InResult._Result);
 
-        DoClear(InCurrent);
+        DoClear(InGroundNavPath);
         InPathEntity.Try_Remove<FTag_GroundNavPath_SearchInFlight>();
 
         Request.TryFireCompletion(InPathEntity, ECk_Request_OperationResult::Failed);
@@ -553,39 +553,39 @@ namespace ck
         DoPublish_Success(
             FCk_Handle_GroundNavPath              InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current&      InCurrent,
+            FFragment_GroundNavPath&      InGroundNavPath,
             FFragment_GroundNavPath_Result&       InResult)
         -> void
     {
         using namespace ck_groundnav_path_processor;
 
-        const auto& SearchResult = InCurrent._Search.Get_Result();
-        const auto Request = InCurrent._PendingRequest;
+        const auto& SearchResult = InGroundNavPath._Search.Get_Result();
+        const auto Request = InGroundNavPath._PendingRequest;
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InPathEntity);
         const auto Current = groundnav::world_fields::TryGet_FieldSnapshot(
             World, Request.Get_From(), Request.Get_ProfileTag());
         if (NOT Current.IsSet() ||
             (Current->_PublishNote._LastGeometryEpoch.Get_IsNewerThan(SearchResult._PlannedAgainstEpoch) &&
-                NOT Get_RouteRemainsBuilt(*InCurrent._Field, SearchResult, *Current->_Field)))
+                NOT Get_RouteRemainsBuilt(*InGroundNavPath._Field, SearchResult, *Current->_Field)))
         {
-            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Unbuilt,
+            DoPublish_Failure(InPathEntity, InGroundNavPath, InResult, ECk_GroundNav_PathStatus::Unbuilt,
                 SearchResult._ExpansionCount, SearchResult._PlannedAgainstEpoch._Value);
             return;
         }
 
         const auto SearchDurationMs =
-            static_cast<float>(InCurrent._SearchTimeSpent.Get_Milliseconds());
+            static_cast<float>(InGroundNavPath._SearchTimeSpent.Get_Milliseconds());
 
-        const auto PostParams = Get_PostParams(InParams, InCurrent._Field, Request, Request.Get_From());
+        const auto PostParams = Get_PostParams(InParams, InGroundNavPath._Field, Request, Request.Get_From());
         if (NOT PostParams.IsSet())
         {
-            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Blocked,
+            DoPublish_Failure(InPathEntity, InGroundNavPath, InResult, ECk_GroundNav_PathStatus::Blocked,
                 SearchResult._ExpansionCount, SearchResult._PlannedAgainstEpoch._Value);
             return;
         }
 
-        const auto Plan = groundnav::Get_PathPlan(SearchResult, *InCurrent._Field, PostParams.GetValue());
+        const auto Plan = groundnav::Get_PathPlan(SearchResult, *InGroundNavPath._Field, PostParams.GetValue());
 
         auto Locations = TArray<FVector>{};
         Locations.Reserve(Plan._Waypoints.Num());
@@ -620,9 +620,9 @@ namespace ck
             .Set_LengthUu(Plan._LengthUu)
             .Set_ExpansionCount(SearchResult._ExpansionCount)
             .Set_SearchDurationMs(SearchDurationMs)
-            .Set_HasSearchDuration(InCurrent._HasSearchDuration)
+            .Set_HasSearchDuration(InGroundNavPath._HasSearchDuration)
             .Set_PlannedAgainstEpoch(Plan._PlannedAgainstEpoch._Value)
-            .Set_RepairVerdict(InCurrent._Search.Get_RepairVerdict());
+            .Set_RepairVerdict(InGroundNavPath._Search.Get_RepairVerdict());
 
         InResult._HasFreshResult = true;
         ++InResult._PublishSequence;
@@ -632,22 +632,22 @@ namespace ck
         const auto CorridorInflationUu = InParams.Get_AgentRadiusUu() + kCorridorInflationMarginUu;
 
         const auto CorridorBounds =
-            Get_CorridorBounds(*InCurrent._Field, SearchResult, CorridorInflationUu);
+            Get_CorridorBounds(*InGroundNavPath._Field, SearchResult, CorridorInflationUu);
 
-        InCurrent._LastCorridorKeys = Get_CorridorKeys(SearchResult);
-        InCurrent._HasCachedRoute = true;
-        InCurrent._LastRouteKind = SearchResult._RouteKind;
-        InCurrent._LastCorridorLinkIds = Get_CorridorLinkIds(*InCurrent._Field, SearchResult);
-        InCurrent._LastCorridorFlatPlates = Get_CorridorFlatPlates(*InCurrent._Field, SearchResult);
-        InCurrent._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
-        InCurrent._ProfileTag = Request.Get_ProfileTag();
-        InCurrent._LastCorridorQueryFilter = Request.Get_QueryFilter();
-        InCurrent._LastCorridorQueryFilterOverlay = Request.Get_QueryFilterOverlay();
-        InCurrent._LastCorridorBounds = CorridorBounds;
-        InCurrent._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;
-        InCurrent._LastSourceFlatPlate = InCurrent._LastCorridorFlatPlates.IsEmpty()
+        InGroundNavPath._LastCorridorKeys = Get_CorridorKeys(SearchResult);
+        InGroundNavPath._HasCachedRoute = true;
+        InGroundNavPath._LastRouteKind = SearchResult._RouteKind;
+        InGroundNavPath._LastCorridorLinkIds = Get_CorridorLinkIds(*InGroundNavPath._Field, SearchResult);
+        InGroundNavPath._LastCorridorFlatPlates = Get_CorridorFlatPlates(*InGroundNavPath._Field, SearchResult);
+        InGroundNavPath._LastCorridorEpoch = SearchResult._PlannedAgainstEpoch;
+        InGroundNavPath._ProfileTag = Request.Get_ProfileTag();
+        InGroundNavPath._LastCorridorQueryFilter = Request.Get_QueryFilter();
+        InGroundNavPath._LastCorridorQueryFilterOverlay = Request.Get_QueryFilterOverlay();
+        InGroundNavPath._LastCorridorBounds = CorridorBounds;
+        InGroundNavPath._CorridorInflationUu = CorridorBounds.IsValid != 0 ? CorridorInflationUu : 0.0f;
+        InGroundNavPath._LastSourceFlatPlate = InGroundNavPath._LastCorridorFlatPlates.IsEmpty()
             ? INDEX_NONE
-            : InCurrent._LastCorridorFlatPlates[0];
+            : InGroundNavPath._LastCorridorFlatPlates[0];
 
         // A rebuild that landed while this search was in flight is ground the search never read: the
         // field snapshot was pinned at Request_Begin. The route publishes anyway - a half-answered
@@ -675,7 +675,7 @@ namespace ck
                 InPathEntity);
         }
 
-        DoClear(InCurrent);
+        DoClear(InGroundNavPath);
         InPathEntity.Try_Remove<FTag_GroundNavPath_SearchInFlight>();
 
         Request.TryFireCompletion(InPathEntity, ECk_Request_OperationResult::Succeeded);
@@ -689,16 +689,16 @@ namespace ck
         DoPublish_Terminal(
             FCk_Handle_GroundNavPath              InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current&      InCurrent,
+            FFragment_GroundNavPath&      InGroundNavPath,
             FFragment_GroundNavPath_Result&       InResult)
         -> void
     {
-        const auto& SearchResult = InCurrent._Search.Get_Result();
+        const auto& SearchResult = InGroundNavPath._Search.Get_Result();
         const auto Status = SearchResult._Status;
 
         if (Status == ECk_GroundNav_PathStatus::Ready || Status == ECk_GroundNav_PathStatus::Partial)
         {
-            DoPublish_Success(InPathEntity, InParams, InCurrent, InResult);
+            DoPublish_Success(InPathEntity, InParams, InGroundNavPath, InResult);
             return;
         }
 
@@ -706,7 +706,7 @@ namespace ck
             InPathEntity, SearchResult._StartPoint, SearchResult._GoalPoint, Status);
 
         DoPublish_Failure(
-            InPathEntity, InCurrent, InResult,
+            InPathEntity, InGroundNavPath, InResult,
             Status, SearchResult._ExpansionCount, SearchResult._PlannedAgainstEpoch._Value);
     }
 
@@ -722,7 +722,7 @@ namespace ck
         DoTry_Begin(
             FCk_Handle_GroundNavPath              InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current&      InCurrent,
+            FFragment_GroundNavPath&      InGroundNavPath,
             FFragment_GroundNavPath_Result&       InResult)
         -> void
     {
@@ -734,51 +734,51 @@ namespace ck
         // over that walker's field. A tag the world holds no field for is parked, not answered from
         // the untagged one - the same wait an unbuilt start gets, and for the same reason.
         const auto Field = groundnav::world_fields::TryGet_Field(
-            World, InCurrent._PendingRequest.Get_From(), InCurrent._PendingRequest.Get_ProfileTag());
+            World, InGroundNavPath._PendingRequest.Get_From(), InGroundNavPath._PendingRequest.Get_ProfileTag());
 
         if (NOT Field.IsValid())
         { return; }
 
         auto Search = groundnav::FCk_GroundNav_PathSearch{};
 
-        const auto Query = Get_Query(InParams, Field, InCurrent._PendingRequest);
+        const auto Query = Get_Query(InParams, Field, InGroundNavPath._PendingRequest);
         if (NOT Query.IsSet())
         {
             constexpr auto NoExpansions = 0;
-            DoPublish_Failure(InPathEntity, InCurrent, InResult, ECk_GroundNav_PathStatus::Blocked,
+            DoPublish_Failure(InPathEntity, InGroundNavPath, InResult, ECk_GroundNav_PathStatus::Blocked,
                 NoExpansions, Field->_Epoch._Value);
             return;
         }
 
         if (Get_ShouldCaptureStrictCrowdCostTimeoutReplay())
-        { InCurrent._ActiveQueryForTimeoutReplay = Query; }
+        { InGroundNavPath._ActiveQueryForTimeoutReplay = Query; }
         else
-        { InCurrent._ActiveQueryForTimeoutReplay.Reset(); }
+        { InGroundNavPath._ActiveQueryForTimeoutReplay.Reset(); }
 
         const auto RepairWasAsked =
-            InCurrent._PendingRequest.Get_PlanMode() == ECk_GroundNav_PlanMode::Repair;
+            InGroundNavPath._PendingRequest.Get_PlanMode() == ECk_GroundNav_PlanMode::Repair;
 
         // A repair of NOTHING is a cold plan, not a fallback: a warm start seeds the search from the
         // prefix of a corridor that still resolves, and the prefix of no corridor is the source node
         // alone - which is exactly what Request_Begin opens with. Said out loud rather than quietly
         // substituted, because the result's verdict reads None either way and this line is the only
         // thing that separates "asked for cold" from "asked for repair and had nothing to repair".
-        const auto HasStrictCellRoute = RepairWasAsked && InCurrent._HasCachedRoute &&
-            InCurrent._LastRouteKind == groundnav::ECk_GroundNav_PathRouteKind::StrictCell;
-        const auto CanRepair = RepairWasAsked && NOT InCurrent._LastCorridorKeys.IsEmpty();
+        const auto HasStrictCellRoute = RepairWasAsked && InGroundNavPath._HasCachedRoute &&
+            InGroundNavPath._LastRouteKind == groundnav::ECk_GroundNav_PathRouteKind::StrictCell;
+        const auto CanRepair = RepairWasAsked && NOT InGroundNavPath._LastCorridorKeys.IsEmpty();
 
         if (RepairWasAsked && NOT CanRepair && NOT HasStrictCellRoute)
         {
             groundnav::Verbose(
                 TEXT("GroundNav Path [{}] asked to repair rev [{}] with no corridor cached - planning cold"),
-                InPathEntity, InCurrent._PendingRequest.Get_RequestRevision());
+                InPathEntity, InGroundNavPath._PendingRequest.Get_RequestRevision());
         }
 
         const auto BeginBeganAt = FPlatformTime::Seconds();
 
         const auto Status = CanRepair || HasStrictCellRoute
             ? Search.Request_BeginRepair(
-                Field, Query.GetValue(), InCurrent._LastCorridorKeys, InCurrent._LastCorridorEpoch, HasStrictCellRoute)
+                Field, Query.GetValue(), InGroundNavPath._LastCorridorKeys, InGroundNavPath._LastCorridorEpoch, HasStrictCellRoute)
             : Search.Request_Begin(Field, Query.GetValue());
 
         // Ground the field itself has not baked. The episode stays parked and re-probes next tick,
@@ -786,16 +786,16 @@ namespace ck
         if (Status == ECk_GroundNav_PathStatus::Unbuilt)
         { return; }
 
-        InCurrent._SearchTimeSpent = InCurrent._SearchTimeSpent + FCk_Time{FPlatformTime::Seconds() - BeginBeganAt};
-        InCurrent._HasSearchDuration = true;
+        InGroundNavPath._SearchTimeSpent = InGroundNavPath._SearchTimeSpent + FCk_Time{FPlatformTime::Seconds() - BeginBeganAt};
+        InGroundNavPath._HasSearchDuration = true;
 
-        InCurrent._Field = Field;
-        InCurrent._Search = MoveTemp(Search);
-        InCurrent._HasBegun = true;
+        InGroundNavPath._Field = Field;
+        InGroundNavPath._Search = MoveTemp(Search);
+        InGroundNavPath._HasBegun = true;
     }
 
     auto
-        FFragment_GroundNavPath_Current::
+        FFragment_GroundNavPath::
         Try_RunStrictCrowdCostTimeoutReplay(
             UWorld*             InWorld,
             const FGameplayTag& InCrowdCostAreaTag,
@@ -942,7 +942,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             FFragment_GroundNavPath_Requests& InRequests) const
         -> void
@@ -956,7 +956,7 @@ namespace ck
         ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
             [&](const auto& InRequest) -> void
             {
-                DoHandleRequest(InPathEntity, InParams, InCurrent, InResult, InRequest);
+                DoHandleRequest(InPathEntity, InParams, InGroundNavPath, InResult, InRequest);
             }), policy::DontResetContainer{});
 
         // LOAD-BEARING, not bookkeeping. CkCrowd's OnGroundNavPathResolved reads a surviving queue as
@@ -973,7 +973,7 @@ namespace ck
         DoHandleRequest(
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             const FCk_Request_GroundNavPath_FindPath& InRequest)
         -> void
@@ -981,10 +981,10 @@ namespace ck
         // No completion guard here, unlike CkVoxelNav's synchronous search: the outcome is frames away,
         // so the delegate rides _PendingRequest and is fired by whoever publishes the terminal result.
         // A replaced episode strands whoever was waiting on it, so that one completes as cancelled.
-        InCurrent._PendingRequest.TryFireCompletion(
+        InGroundNavPath._PendingRequest.TryFireCompletion(
             InPathEntity, ECk_Request_OperationResult::Failed_Cancelled);
 
-        FGroundNavPath_Episode::DoClear(InCurrent);
+        FGroundNavPath_Episode::DoClear(InGroundNavPath);
 
         InResult._HasFreshResult = false;
 
@@ -992,15 +992,15 @@ namespace ck
         // as it is published NOW owes nothing to a rebuild that moved ground under the last one.
         InResult._RebuiltWhileInFlight = false;
 
-        InCurrent._PendingRequest = InRequest;
-        InCurrent._PendingSince = FCk_Time{FPlatformTime::Seconds()};
+        InGroundNavPath._PendingRequest = InRequest;
+        InGroundNavPath._PendingSince = FCk_Time{FPlatformTime::Seconds()};
 
         InPathEntity.AddOrGet<FTag_GroundNavPath_SearchInFlight>();
 
-        FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent, InResult);
+        FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InGroundNavPath, InResult);
 
-        if (InCurrent._HasBegun && InCurrent._Search.Get_IsTerminal())
-        { FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InCurrent, InResult); }
+        if (InGroundNavPath._HasBegun && InGroundNavPath._Search.Get_IsTerminal())
+        { FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InGroundNavPath, InResult); }
     }
 
     auto
@@ -1008,7 +1008,7 @@ namespace ck
         DoHandleRequest(
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             const FCk_Request_GroundNavPath_AbandonPath& InRequest)
         -> void
@@ -1016,10 +1016,10 @@ namespace ck
         auto RequestResult = ECk_Request_OperationResult::Succeeded;
         const auto Guard = MakeCompletionGuard(InRequest, InPathEntity, RequestResult);
 
-        InCurrent._PendingRequest.TryFireCompletion(
+        InGroundNavPath._PendingRequest.TryFireCompletion(
             InPathEntity, ECk_Request_OperationResult::Failed_Cancelled);
 
-        FGroundNavPath_Episode::DoClear(InCurrent);
+        FGroundNavPath_Episode::DoClear(InGroundNavPath);
 
         InPathEntity.Try_Remove<FTag_GroundNavPath_SearchInFlight>();
 
@@ -1118,7 +1118,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) const
         -> void
     {
@@ -1149,17 +1149,17 @@ namespace ck
 
         --_SearchesRemainingThisTick;
 
-        if (NOT InCurrent._HasBegun)
+        if (NOT InGroundNavPath._HasBegun)
         {
-            FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InCurrent, InResult);
+            FGroundNavPath_Episode::DoTry_Begin(InPathEntity, InParams, InGroundNavPath, InResult);
 
-            if (NOT InCurrent._HasBegun)
+            if (NOT InGroundNavPath._HasBegun)
             {
                 if (NOT InPathEntity.Has<FTag_GroundNavPath_SearchInFlight>())
                 { return; }
 
                 const auto DeferredForSeconds =
-                    FPlatformTime::Seconds() - InCurrent._PendingSince.Get_Seconds();
+                    FPlatformTime::Seconds() - InGroundNavPath._PendingSince.Get_Seconds();
 
                 const auto MaxDeferralSeconds =
                     static_cast<double>(CVarMaxDeferralSeconds.GetValueOnGameThread());
@@ -1169,22 +1169,22 @@ namespace ck
                     groundnav::Display(
                         TEXT("GroundNav Path [{}] deferral timed out after [{}]s with no field to plan ")
                         TEXT("over at [{}] - failing rev [{}] as Unbuilt"),
-                        InPathEntity, DeferredForSeconds, InCurrent._PendingRequest.Get_From(),
-                        InCurrent._PendingRequest.Get_RequestRevision());
+                        InPathEntity, DeferredForSeconds, InGroundNavPath._PendingRequest.Get_From(),
+                        InGroundNavPath._PendingRequest.Get_RequestRevision());
 
                     constexpr auto NoExpansions = 0;
                     constexpr auto NoEpoch = int64{0};
 
-                    FGroundNavPath_Episode::DoPublish_Failure(InPathEntity, InCurrent, InResult,
+                    FGroundNavPath_Episode::DoPublish_Failure(InPathEntity, InGroundNavPath, InResult,
                         ECk_GroundNav_PathStatus::Unbuilt, NoExpansions, NoEpoch);
                 }
 
                 return;
             }
 
-            if (InCurrent._Search.Get_IsTerminal())
+            if (InGroundNavPath._Search.Get_IsTerminal())
             {
-                FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InCurrent, InResult);
+                FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InGroundNavPath, InResult);
                 return;
             }
         }
@@ -1196,11 +1196,11 @@ namespace ck
 
         const auto SliceBeganAt = FPlatformTime::Seconds();
 
-        InCurrent._Search.ContinueSearch(Slice);
+        InGroundNavPath._Search.ContinueSearch(Slice);
 
         const auto SpentSeconds = FPlatformTime::Seconds() - SliceBeganAt;
 
-        InCurrent._SearchTimeSpent = InCurrent._SearchTimeSpent + FCk_Time{SpentSeconds};
+        InGroundNavPath._SearchTimeSpent = InGroundNavPath._SearchTimeSpent + FCk_Time{SpentSeconds};
 
         if (_SliceServiceWindow._IsActive)
         {
@@ -1216,8 +1216,8 @@ namespace ck
         _SliceRemainingThisTick = FCk_Time{
             FMath::Max(0.0, _SliceRemainingThisTick.Get_Seconds() - SpentSeconds)};
 
-        if (InCurrent._Search.Get_IsTerminal())
-        { FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InCurrent, InResult); }
+        if (InGroundNavPath._Search.Get_IsTerminal())
+        { FGroundNavPath_Episode::DoPublish_Terminal(InPathEntity, InParams, InGroundNavPath, InResult); }
     }
 
     // ----------------------------------------------------------------------------------------------------------------
@@ -1227,7 +1227,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InPathEntity,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             const FFragment_GroundNavPath_Requests& InRequests)
         -> void
     {
@@ -1236,11 +1236,11 @@ namespace ck
         // multi-frame search and is the one a caller is most likely actually waiting on.
         request::FireCancelledForPending(InPathEntity, InRequests.Get_Requests());
 
-        InCurrent._PendingRequest.TryFireCompletion(
+        InGroundNavPath._PendingRequest.TryFireCompletion(
             InPathEntity, ECk_Request_OperationResult::Failed_Cancelled);
 
         // Drops the field snapshot with the entity rather than leaving it to fragment teardown.
-        InCurrent._Field.Reset();
+        InGroundNavPath._Field.Reset();
     }
 }
 

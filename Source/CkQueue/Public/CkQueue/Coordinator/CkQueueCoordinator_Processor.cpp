@@ -119,11 +119,11 @@ namespace ck
         ForEachEntity(
             TimeType /*InDeltaT*/,
             HandleType InCoordinator,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
         -> void
     {
-        InCurrent._Revision = 1;
-        if (InCurrent._Services.IsEmpty())
+        InQueueCoordinator._Revision = 1;
+        if (InQueueCoordinator._Services.IsEmpty())
         { InCoordinator.Remove<MarkedDirtyBy>(); }
     }
 
@@ -135,14 +135,14 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             FFragment_QueueCoordinator_Requests& InRequests)
         -> void
     {
         const auto RequestsCopy = InRequests._Requests;
         InRequests._Requests.Reset();
         auto ProjectedAdmissions = TMap<FCk_Handle_Queue, int32>{};
-        for (const auto& Service : InCurrent._Services)
+        for (const auto& Service : InQueueCoordinator._Services)
         {
             const auto Queue = Service.Get_Queue();
             if (ck_queue_coordinator_processor::IsQueueValidForCoordinator(Queue, InCoordinator))
@@ -162,7 +162,7 @@ namespace ck
             if (DoHandleRequest(
                 InCoordinator,
                 InParams,
-                InCurrent,
+                InQueueCoordinator,
                 ProjectedAdmissions,
                 InRequest))
             { Completion = ECk_Request_OperationResult::Succeeded; }
@@ -177,7 +177,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& /*InOutProjectedAdmissions*/,
             const FCk_Request_QueueCoordinator_RegisterQueue& InRequest)
         -> bool
@@ -200,14 +200,14 @@ namespace ck
             Queue)
         { return false; }
 
-        const auto AlreadyRegistered = InCurrent._Services.ContainsByPredicate(
+        const auto AlreadyRegistered = InQueueCoordinator._Services.ContainsByPredicate(
             [&Queue](const FCk_QueueCoordinator_Service& InService)
             { return InService.Get_Queue() == Queue; });
         if (AlreadyRegistered)
         { return true; }
 
-        InCurrent._Services.Emplace(Queue, InCurrent._NextRegistrationOrdinal++);
-        ++InCurrent._Revision;
+        InQueueCoordinator._Services.Emplace(Queue, InQueueCoordinator._NextRegistrationOrdinal++);
+        ++InQueueCoordinator._Revision;
         return true;
     }
 
@@ -216,7 +216,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& /*InParams*/,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& /*InOutProjectedAdmissions*/,
             const FCk_Request_QueueCoordinator_UnregisterQueue& InRequest)
         -> bool
@@ -231,11 +231,11 @@ namespace ck
             Queue)
         { return false; }
 
-        const auto RemovedCount = InCurrent._Services.RemoveAll(
+        const auto RemovedCount = InQueueCoordinator._Services.RemoveAll(
             [&Queue](const FCk_QueueCoordinator_Service& InService)
             { return InService.Get_Queue() == Queue; });
         if (RemovedCount > 0)
-        { ++InCurrent._Revision; }
+        { ++InQueueCoordinator._Revision; }
         return true;
     }
 
@@ -244,7 +244,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& InOutProjectedAdmissions,
             const FCk_Request_QueueCoordinator_SelectQueue& InRequest)
         -> bool
@@ -264,7 +264,7 @@ namespace ck
                 ECk_QueueCoordinator_SelectOutcome::NoEligibleQueue,
                 InRequest.Get_Member(),
                 {},
-                InCurrent._Revision,
+                InQueueCoordinator._Revision,
                 0,
                 0,
                 0.0f,
@@ -272,7 +272,7 @@ namespace ck
             return false;
         }
 
-        const auto RemovedInvalidServices = InCurrent._Services.RemoveAll(
+        const auto RemovedInvalidServices = InQueueCoordinator._Services.RemoveAll(
             [&InCoordinator](const FCk_QueueCoordinator_Service& InService)
             {
                 return NOT ck_queue_coordinator_processor::IsQueueValidForCoordinator(
@@ -281,10 +281,10 @@ namespace ck
                     || NOT UCk_Utils_Queue_UE::Get_CanAcceptRequests(InService.Get_Queue());
             });
         if (RemovedInvalidServices > 0)
-        { ++InCurrent._Revision; }
+        { ++InQueueCoordinator._Revision; }
 
         auto ExistingQueues = TArray<FCk_Handle_Queue>{};
-        for (const auto& Service : InCurrent._Services)
+        for (const auto& Service : InQueueCoordinator._Services)
         {
             const auto Queue = Service.Get_Queue();
             if (ck_queue_coordinator_processor::IsQueueValidForCoordinator(Queue, InCoordinator)
@@ -304,7 +304,7 @@ namespace ck
                 ECk_QueueCoordinator_SelectOutcome::MemberInMultipleQueues,
                 InRequest.Get_Member(),
                 {},
-                InCurrent._Revision,
+                InQueueCoordinator._Revision,
                 0,
                 0,
                 0.0f,
@@ -324,8 +324,8 @@ namespace ck
                 ECk_QueueCoordinator_SelectOutcome::AlreadyQueued,
                 InRequest.Get_Member(),
                 Queue,
-                InCurrent._Revision,
-                ck_queue_coordinator_processor::GetRegistrationOrdinal(InCurrent._Services, Queue),
+                InQueueCoordinator._Revision,
+                ck_queue_coordinator_processor::GetRegistrationOrdinal(InQueueCoordinator._Services, Queue),
                 Pressure.Get_MemberCount(),
                 DistanceUu,
                 {Queue}});
@@ -333,8 +333,8 @@ namespace ck
         }
 
         auto Candidates = TArray<ck_queue_coordinator_processor::FCandidate>{};
-        Candidates.Reserve(InCurrent._Services.Num());
-        for (const auto& Service : InCurrent._Services)
+        Candidates.Reserve(InQueueCoordinator._Services.Num());
+        for (const auto& Service : InQueueCoordinator._Services)
         {
             const auto Queue = Service.Get_Queue();
             if (InRequest.Get_ExcludedQueues().Contains(Queue)
@@ -386,12 +386,12 @@ namespace ck
         if (Candidates.IsEmpty())
         {
             ResultDelegate.Execute(FCk_QueueCoordinator_SelectResult{
-                InCurrent._Services.IsEmpty()
+                InQueueCoordinator._Services.IsEmpty()
                     ? ECk_QueueCoordinator_SelectOutcome::NoRegisteredQueues
                     : ECk_QueueCoordinator_SelectOutcome::NoEligibleQueue,
                 InRequest.Get_Member(),
                 {},
-                InCurrent._Revision,
+                InQueueCoordinator._Revision,
                 0,
                 0,
                 0.0f,
@@ -405,7 +405,7 @@ namespace ck
             ECk_QueueCoordinator_SelectOutcome::Selected,
             InRequest.Get_Member(),
             Selected.Queue,
-            InCurrent._Revision,
+            InQueueCoordinator._Revision,
             Selected.RegistrationOrdinal,
             Selected.ProjectedMemberCount,
             Selected.DistanceUu,
@@ -420,10 +420,10 @@ namespace ck
         ForEachEntity(
             TimeType /*InDeltaT*/,
             HandleType InCoordinator,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
         -> void
     {
-        const auto RemovedCount = InCurrent._Services.RemoveAll(
+        const auto RemovedCount = InQueueCoordinator._Services.RemoveAll(
             [&InCoordinator](const FCk_QueueCoordinator_Service& InService)
             {
                 return NOT ck_queue_coordinator_processor::IsQueueValidForCoordinator(
@@ -432,7 +432,7 @@ namespace ck
                     || NOT UCk_Utils_Queue_UE::Get_CanAcceptRequests(InService.Get_Queue());
             });
         if (RemovedCount > 0)
-        { ++InCurrent._Revision; }
+        { ++InQueueCoordinator._Revision; }
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -442,11 +442,11 @@ namespace ck
         ForEachEntity(
             TimeType /*InDeltaT*/,
             HandleType /*InCoordinator*/,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
         -> void
     {
-        ++InCurrent._Revision;
-        InCurrent._Services.Reset();
+        ++InQueueCoordinator._Revision;
+        InQueueCoordinator._Services.Reset();
     }
 
     auto
