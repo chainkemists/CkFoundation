@@ -37,7 +37,7 @@ namespace ck
         DoTry_Begin(
             FCk_Handle_GroundNavPath InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) -> void;
 
         // Routes a terminal search onto the success or the failure publish.
@@ -45,21 +45,21 @@ namespace ck
         DoPublish_Terminal(
             FCk_Handle_GroundNavPath InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) -> void;
 
         static auto
         DoPublish_Success(
             FCk_Handle_GroundNavPath InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) -> void;
 
         // Also the deferral timeout's exit, which has no search to read a count or an epoch off.
         static auto
         DoPublish_Failure(
             FCk_Handle_GroundNavPath InPathEntity,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             ECk_GroundNav_PathStatus InStatus,
             int32 InExpansionCount,
@@ -67,7 +67,7 @@ namespace ck
 
         static auto
         DoClear(
-            FFragment_GroundNavPath_Current& InCurrent) -> void;
+            FFragment_GroundNavPath& InGroundNavPath) -> void;
 
         // The one line that proves the provider answered, on every publish path.
         static auto
@@ -88,7 +88,7 @@ namespace ck
         FProcessor_GroundNavPath_HandleRequests,
         FCk_Handle_GroundNavPath,
         ck::TReadOnly<FFragment_GroundNavPath_Params>,
-        ck::TReadWrite<FFragment_GroundNavPath_Current>,
+        ck::TReadWrite<FFragment_GroundNavPath>,
         ck::TReadWrite<FFragment_GroundNavPath_Result>,
         ck::TReadWrite<FFragment_GroundNavPath_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -107,7 +107,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             FFragment_GroundNavPath_Requests& InRequests) const -> void;
 
@@ -116,7 +116,7 @@ namespace ck
         DoHandleRequest(
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             const FCk_Request_GroundNavPath_FindPath& InRequest) -> void;
 
@@ -124,7 +124,7 @@ namespace ck
         DoHandleRequest(
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult,
             const FCk_Request_GroundNavPath_AbandonPath& InRequest) -> void;
     };
@@ -145,7 +145,7 @@ namespace ck
         FProcessor_GroundNavPath_Slice,
         FCk_Handle_GroundNavPath,
         ck::TReadOnly<FFragment_GroundNavPath_Params>,
-        ck::TReadWrite<FFragment_GroundNavPath_Current>,
+        ck::TReadWrite<FFragment_GroundNavPath>,
         ck::TReadWrite<FFragment_GroundNavPath_Result>,
         FTag_GroundNavPath_SearchInFlight,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -166,7 +166,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) const -> void;
 
     private:
@@ -210,7 +210,7 @@ namespace ck
     class CKGROUNDNAV_API FProcessor_GroundNavPath_CancelPendingRequests : public ck_exp::TProcessor<
         FProcessor_GroundNavPath_CancelPendingRequests,
         FCk_Handle_GroundNavPath,
-        ck::TReadWrite<FFragment_GroundNavPath_Current>,
+        ck::TReadWrite<FFragment_GroundNavPath>,
         ck::TReadOnly<FFragment_GroundNavPath_Requests>,
         CK_IF_END_PLAY>
     {
@@ -225,7 +225,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InPathEntity,
-            FFragment_GroundNavPath_Current& InCurrent,
+            FFragment_GroundNavPath& InGroundNavPath,
             const FFragment_GroundNavPath_Requests& InRequests) -> void;
     };
 }

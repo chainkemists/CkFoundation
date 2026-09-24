@@ -77,7 +77,7 @@ auto
     UCk_Utils_GroundNavPath_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_GroundNavPath_ParamsData& InParams)
+        const FCk_GroundNavPath_Spec& InParams)
     -> FCk_Handle_GroundNavPath
 {
     const auto HandleIsValid = ck::IsValid(InHandle);
@@ -93,7 +93,7 @@ auto
     { return Cast(InHandle); }
 
     InHandle.Add<ck::FFragment_GroundNavPath_Params>(InParams);
-    InHandle.Add<ck::FFragment_GroundNavPath_Current>();
+    InHandle.Add<ck::FFragment_GroundNavPath>();
     InHandle.Add<ck::FFragment_GroundNavPath_Result>();
 
     ck::groundnav::Verbose(TEXT("GroundNav Path added to [{}] (agent radius [{}]uu)"),
@@ -260,7 +260,7 @@ auto
     if (ck::Is_NOT_Valid(InPath))
     { return FBox{ForceInit}; }
 
-    return InPath.Get<ck::FFragment_GroundNavPath_Current>().Get_LastCorridorBounds();
+    return InPath.Get<ck::FFragment_GroundNavPath>().Get_LastCorridorBounds();
 }
 
 auto

@@ -129,7 +129,7 @@ public:
     static FCk_Handle_GroundNavPath
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_GroundNavPath_ParamsData& InParams);
+        const FCk_GroundNavPath_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GroundNavPath",

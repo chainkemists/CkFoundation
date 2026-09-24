@@ -40,7 +40,7 @@ namespace ck
     class CKGROUNDNAV_API FProcessor_GroundNavPath_Diagnostics : public ck_exp::TProcessor<
         FProcessor_GroundNavPath_Diagnostics,
         FCk_Handle_GroundNavPath,
-        ck::TReadOnly<FFragment_GroundNavPath_Current>,
+        ck::TReadOnly<FFragment_GroundNavPath>,
         ck::TReadOnly<FFragment_GroundNavPath_Result>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -61,7 +61,7 @@ namespace ck
         ForEachEntity(
             TimeType                               InDeltaT,
             HandleType                             InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             const FFragment_GroundNavPath_Result&  InResult) -> void;
     };
 }

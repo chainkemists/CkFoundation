@@ -61,7 +61,7 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    using FFragment_GroundNavPath_Params = FCk_Fragment_GroundNavPath_ParamsData;
+    using FFragment_GroundNavPath_Params = FCk_GroundNavPath_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
@@ -94,10 +94,10 @@ namespace ck
      * they were found on. If this fragment ever gains a persistence or replication handler, it has to
      * be excluded whole - there is nothing here to rebase.
      */
-    struct CKGROUNDNAV_API FFragment_GroundNavPath_Current
+    struct CKGROUNDNAV_API FFragment_GroundNavPath
     {
     public:
-        CK_GENERATED_BODY(FFragment_GroundNavPath_Current);
+        CK_GENERATED_BODY(FFragment_GroundNavPath);
 
         friend class FProcessor_GroundNavPath_HandleRequests;
         friend class FProcessor_GroundNavPath_Slice;

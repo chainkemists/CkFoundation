@@ -18,9 +18,9 @@ namespace ck::groundnav
 {
     auto
         Get_PlacedVolumeParams(
-            const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+            const FCk_GroundNavVolume_Spec& InParams,
             const FTransform& InPlacement)
-        -> FCk_Fragment_GroundNavVolume_ParamsData
+        -> FCk_GroundNavVolume_Spec
     {
         auto Placed = InParams;
         Placed.Set_VolumeBounds(InParams.Get_VolumeBounds().ShiftBy(InPlacement.GetTranslation()));

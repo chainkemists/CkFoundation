@@ -42,7 +42,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_VisualLodArbiter_Params = FCk_Fragment_VisualLodArbiter_ParamsData;
+    using FFragment_VisualLodArbiter_Params = FCk_VisualLodArbiter_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -76,10 +76,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKVISUALLOD_API FFragment_VisualLodArbiter_Current
+    struct CKVISUALLOD_API FFragment_VisualLodArbiter
     {
     public:
-        CK_GENERATED_BODY(FFragment_VisualLodArbiter_Current);
+        CK_GENERATED_BODY(FFragment_VisualLodArbiter);
 
     public:
         friend class FProcessor_VisualLodArbiter_Setup;

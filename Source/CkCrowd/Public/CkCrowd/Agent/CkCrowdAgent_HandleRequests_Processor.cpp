@@ -479,7 +479,7 @@ namespace ck
             if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
             {
                 UCk_Utils_GroundNavPath_UE::Add(
-                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InTunables.Get_Radius()});
+                    InHandle, FCk_GroundNavPath_Spec{InTunables.Get_Radius()});
             }
 
             auto Path = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);
@@ -581,7 +581,7 @@ namespace ck
             if (NOT UCk_Utils_GroundNavPath_UE::Has(InHandle))
             {
                 UCk_Utils_GroundNavPath_UE::Add(
-                    InHandle, FCk_Fragment_GroundNavPath_ParamsData{InTunables.Get_Radius()});
+                    InHandle, FCk_GroundNavPath_Spec{InTunables.Get_Radius()});
             }
 
             auto ShadowPath = UCk_Utils_GroundNavPath_UE::CastChecked(InHandle);

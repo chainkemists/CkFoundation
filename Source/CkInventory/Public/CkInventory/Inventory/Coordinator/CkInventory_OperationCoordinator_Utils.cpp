@@ -26,7 +26,7 @@ namespace ck::inventory_operation_coordinator
             TEXT("Cannot resolve the inventory operation coordinator from handle [{}]"), InAnyHandle)
         { return 0; }
 
-        return Coordinator.AddOrGet<FFragment_Inventory_OperationCoordinator_Current>()
+        return Coordinator.AddOrGet<FFragment_Inventory_OperationCoordinator>()
             .ReserveSubmissionOrdinal();
     }
 
@@ -49,7 +49,7 @@ namespace ck::inventory_operation_coordinator
 
         if (InSubmission.Ordinal == 0)
         {
-            InSubmission.Ordinal = Coordinator.AddOrGet<FFragment_Inventory_OperationCoordinator_Current>()
+            InSubmission.Ordinal = Coordinator.AddOrGet<FFragment_Inventory_OperationCoordinator>()
                 .ReserveSubmissionOrdinal();
         }
 

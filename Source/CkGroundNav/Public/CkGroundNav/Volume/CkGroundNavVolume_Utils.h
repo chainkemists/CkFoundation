@@ -36,7 +36,7 @@ public:
     static FCk_Handle_GroundNavVolume
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_GroundNavVolume_ParamsData& InParams);
+        const FCk_GroundNavVolume_Spec& InParams);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|GroundNavVolume",
@@ -591,7 +591,7 @@ namespace ck::groundnav
      */
     CKGROUNDNAV_API auto
     Get_VolumeFieldParams(
-        const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+        const FCk_GroundNavVolume_Spec& InParams,
         TConstArrayView<FCk_GroundNav_MarkupRecord>    InMarkupRecords,
         TConstArrayView<FCk_GroundNav_LinkRecord>      InLinkRecords)
         -> FCk_GroundNav_FieldParams;

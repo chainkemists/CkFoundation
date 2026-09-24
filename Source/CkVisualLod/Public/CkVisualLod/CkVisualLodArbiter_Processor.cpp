@@ -43,7 +43,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent)
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent)
         -> void
     {
         if (NOT InVisualLodArbiterCurrent._LoadedAssets.Get_IsRequested())
@@ -126,8 +126,8 @@ namespace ck
 
         // Two live arbiters with one domain tag would both claim the same members — catch the
         // misconfiguration at the second arbiter's setup, when both configs are resolvable
-        InHandle.View<FFragment_VisualLodArbiter_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](FCk_Entity InOtherEntity, const FFragment_VisualLodArbiter_Current& InOtherCurrent)
+        InHandle.View<FFragment_VisualLodArbiter, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InOtherEntity, const FFragment_VisualLodArbiter& InOtherCurrent)
         {
             if (InOtherEntity == InHandle.Get_Entity())
             { return; }
@@ -151,7 +151,7 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_HandleRequests::
         DoTryApply_RuntimeTunerProfiles(
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_VisualLodArbiter_RuntimeTuners& InCandidate)
         -> bool
     {
@@ -210,7 +210,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             FFragment_VisualLodArbiter_Requests& InRequests) const
         -> void
     {
@@ -235,7 +235,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetObserver& InRequest)
         -> bool
     {
@@ -247,7 +247,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_ClearObserver& InRequest)
         -> bool
     {
@@ -259,7 +259,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetFrozen& InRequest)
         -> bool
     {
@@ -274,7 +274,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest)
         -> bool
     {
@@ -301,7 +301,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest)
         -> bool
     {
@@ -334,7 +334,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent)
+            FFragment_VisualLodArbiter& InVisualLodArbiterCurrent)
         -> void
     {
         CK_TRIGGER_ENSURE(TEXT("FProcessor_VisualLodArbiter_Update::ForEachEntity dispatched — the DoTick shadow was removed, "
@@ -350,8 +350,8 @@ namespace ck
         auto Visited = 0;
 
         auto ArbiterScratch = TArray<FCk_Handle_VisualLodArbiter>{};
-        this->_TransientEntity.View<FFragment_VisualLodArbiter_Params, FFragment_VisualLodArbiter_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](FCk_Entity InEntity, const FFragment_VisualLodArbiter_Params&, FFragment_VisualLodArbiter_Current&)
+        this->_TransientEntity.View<FFragment_VisualLodArbiter_Params, FFragment_VisualLodArbiter, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_VisualLodArbiter_Params&, FFragment_VisualLodArbiter&)
         {
             auto Generic = ck::MakeHandle(InEntity, this->_TransientEntity);
             if (Generic.Has<FTag_VisualLodArbiter_NeedsSetup>())
@@ -373,7 +373,7 @@ namespace ck
             FCk_Handle_VisualLodArbiter& InArbiter)
         -> int32
     {
-        auto& Current = InArbiter.Get<FFragment_VisualLodArbiter_Current>();
+        auto& Current = InArbiter.Get<FFragment_VisualLodArbiter>();
 
         const auto Config = Current._Config.Get();
         CK_ENSURE_IF_NOT(ck::IsValid(Config),
@@ -420,7 +420,7 @@ namespace ck
         FProcessor_VisualLodArbiter_Update::
         DoResolve_View(
             const FCk_Handle_VisualLodArbiter& InArbiter,
-            const FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
+            const FFragment_VisualLodArbiter& InVisualLodArbiterCurrent,
             const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners)
         -> FVisualLod_LocalView
     {
@@ -465,8 +465,8 @@ namespace ck
     {
         const auto MyTag = InCtx._Config->Get_DomainTag();
 
-        InCtx._Arbiter.View<FFragment_VisualLod_Params, FFragment_VisualLod_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](FCk_Entity InEntity, const FFragment_VisualLod_Params& InParams, FFragment_VisualLod_Current& InMemberCurrent)
+        InCtx._Arbiter.View<FFragment_VisualLod_Params, FFragment_VisualLod, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_VisualLod_Params& InParams, FFragment_VisualLod& InMemberCurrent)
         {
             auto Generic = ck::MakeHandle(InEntity, InCtx._Arbiter);
 
@@ -496,8 +496,8 @@ namespace ck
     {
         // Deliberately NOT DoGather_Members: that pass also claims unowned members by domain tag,
         // which is a resolution a frozen arbiter must not make. Only entities it already owns
-        InCtx._Arbiter.View<FFragment_VisualLod_Params, FFragment_VisualLod_Current, CK_IGNORE_PENDING_KILL>().ForEach(
-        [&](FCk_Entity InEntity, const FFragment_VisualLod_Params&, const FFragment_VisualLod_Current& InMemberCurrent)
+        InCtx._Arbiter.View<FFragment_VisualLod_Params, FFragment_VisualLod, CK_IGNORE_PENDING_KILL>().ForEach(
+        [&](FCk_Entity InEntity, const FFragment_VisualLod_Params&, const FFragment_VisualLod& InMemberCurrent)
         {
             auto Generic = ck::MakeHandle(InEntity, InCtx._Arbiter);
 
@@ -524,7 +524,7 @@ namespace ck
             FCk_Handle_VisualLod InMember)
         -> void
     {
-        auto& MemberCurrent = InMember.Get<FFragment_VisualLod_Current>();
+        auto& MemberCurrent = InMember.Get<FFragment_VisualLod>();
         const auto& MemberParams = InMember.Get<FFragment_VisualLod_Params>();
         const auto& Config = *InCtx._Config;
 
@@ -715,7 +715,7 @@ namespace ck
             FCk_Handle_VisualLod InMember)
         -> void
     {
-        auto& MemberCurrent = InMember.Get<FFragment_VisualLod_Current>();
+        auto& MemberCurrent = InMember.Get<FFragment_VisualLod>();
 
         // Freeze holds decisions, not correctness: an externally torn-down proxy still has to fail
         // closed to the far representation rather than be ticked as a corpse for the whole hold
@@ -762,7 +762,7 @@ namespace ck
         for (const auto ScratchIdx : Selection._PromoteIndices)
         {
             auto Member = InCtx._Members[ScratchIdx];
-            auto& MemberCurrent = Member.Get<FFragment_VisualLod_Current>();
+            auto& MemberCurrent = Member.Get<FFragment_VisualLod>();
 
             const auto XfHandle = UCk_Utils_Transform_UE::Cast(Member);
             if (ck::Is_NOT_Valid(XfHandle))
@@ -775,7 +775,7 @@ namespace ck
         for (const auto ScratchIdx : Selection._PreemptDemoteIndices)
         {
             auto Member = InCtx._Members[ScratchIdx];
-            auto& MemberCurrent = Member.Get<FFragment_VisualLod_Current>();
+            auto& MemberCurrent = Member.Get<FFragment_VisualLod>();
 
             const auto XfHandle = UCk_Utils_Transform_UE::Cast(Member);
             if (ck::Is_NOT_Valid(XfHandle))
@@ -958,7 +958,7 @@ namespace ck
         DoTryAcquire_Member(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf)
         -> void
     {
@@ -1007,7 +1007,7 @@ namespace ck
         DoRelease_Member(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent)
+            FFragment_VisualLod& InMemberCurrent)
         -> void
     {
         const auto Index = InMemberCurrent._MemberIndex;
@@ -1040,7 +1040,7 @@ namespace ck
         DoPromote(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf,
             EChargeClass InChargeClass)
         -> void
@@ -1164,7 +1164,7 @@ namespace ck
         DoDemote_Begin(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf)
         -> void
     {
@@ -1222,7 +1222,7 @@ namespace ck
         DoDemote_Finish(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent)
+            FFragment_VisualLod& InMemberCurrent)
         -> void
     {
         // The proxy is still live: the game detaches its socket followers, parks attach points,
@@ -1256,7 +1256,7 @@ namespace ck
         DoRecover_FailClosed(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent)
+            FFragment_VisualLod& InMemberCurrent)
         -> void
     {
         // Fail closed to the retained far representation. A partial near path never keeps an
@@ -1300,7 +1300,7 @@ namespace ck
         DoTick_Fade(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf,
             float InDistance,
             bool InLockHeld,
@@ -1404,7 +1404,7 @@ namespace ck
         DoUpdate_FarMember(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf)
         -> void
     {
@@ -1438,7 +1438,7 @@ namespace ck
         DoUpdate_RenderBand(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             float InDistance)
         -> void
     {
@@ -1492,7 +1492,7 @@ namespace ck
         DoDrive_ProxyAnim(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent)
+            FFragment_VisualLod& InMemberCurrent)
         -> void
     {
         auto Proxy = InMemberCurrent._Proxy;
@@ -1586,7 +1586,7 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_Update::
         DoWrite_ProxyFade(
-            const FFragment_VisualLod_Current& InMemberCurrent,
+            const FFragment_VisualLod& InMemberCurrent,
             int32 InNearSlot,
             float InAlpha)
         -> void
@@ -1659,9 +1659,9 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_Update::
         DoRefund_Charge(
-            FFragment_VisualLodArbiter_Current& InArbiterCurrent,
+            FFragment_VisualLodArbiter& InArbiterCurrent,
             FCk_Handle_VisualLod InMember,
-            const FFragment_VisualLod_Current& InMemberCurrent)
+            const FFragment_VisualLod& InMemberCurrent)
         -> void
     {
         if (InMemberCurrent._PromotedViaLock)
@@ -1715,7 +1715,7 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_Update::
         DoRecycle_Slot(
-            FFragment_VisualLodArbiter_Current& InArbiterCurrent,
+            FFragment_VisualLodArbiter& InArbiterCurrent,
             int32 InCrowdIndex,
             FCk_Handle_VisualLod InMember,
             int32 InMemberIndex)

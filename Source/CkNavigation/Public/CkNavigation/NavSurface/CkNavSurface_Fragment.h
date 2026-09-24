@@ -103,9 +103,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKNAVIGATION_API FFragment_NavSurfaceMarkup_Current
+    struct CKNAVIGATION_API FFragment_NavSurfaceMarkup
     {
-        CK_GENERATED_BODY(FFragment_NavSurfaceMarkup_Current);
+        CK_GENERATED_BODY(FFragment_NavSurfaceMarkup);
 
         friend class FProcessor_NavSurfaceMarkup_HandleRequests;
         friend class FProcessor_NavSurfaceMarkup_EndPlay;
@@ -156,9 +156,9 @@ namespace ck
 
     // The crossing this entity is in, if any. Composed on the first traversal request rather than at
     // spawn: any entity may traverse a link, and most never do.
-    struct CKNAVIGATION_API FFragment_NavSurface_LinkTraversal_Current
+    struct CKNAVIGATION_API FFragment_NavSurface_LinkTraversal
     {
-        CK_GENERATED_BODY(FFragment_NavSurface_LinkTraversal_Current);
+        CK_GENERATED_BODY(FFragment_NavSurface_LinkTraversal);
 
         friend class FProcessor_NavSurface_LinkTraversal_HandleRequests;
         friend class FProcessor_NavSurface_LinkTraversal_EndPlay;

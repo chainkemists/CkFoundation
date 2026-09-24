@@ -19,14 +19,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_QueueCoordinator_Params = FCk_Fragment_QueueCoordinator_ParamsData;
+    using FFragment_QueueCoordinator_Params = FCk_QueueCoordinator_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKQUEUE_API FFragment_QueueCoordinator_Current
+    struct CKQUEUE_API FFragment_QueueCoordinator
     {
     public:
-        CK_GENERATED_BODY(FFragment_QueueCoordinator_Current);
+        CK_GENERATED_BODY(FFragment_QueueCoordinator);
 
     public:
         friend class FProcessor_QueueCoordinator_Setup;

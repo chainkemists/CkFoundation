@@ -29,9 +29,9 @@ namespace ck::groundnav
      */
     CKGROUNDNAV_API auto
     Get_PlacedVolumeParams(
-        const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+        const FCk_GroundNavVolume_Spec& InParams,
         const FTransform&                              InPlacement)
-        -> FCk_Fragment_GroundNavVolume_ParamsData;
+        -> FCk_GroundNavVolume_Spec;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_GroundNavVolume_ParamsData _Params;
+    FCk_GroundNavVolume_Spec _Params;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FTransform _SpawnTransform = FTransform::Identity;
@@ -91,7 +91,7 @@ private:
      *  axis-aligned. An identity transform leaves the bounds exactly as authored. */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ground Nav Volume",
         meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
-    FCk_Fragment_GroundNavVolume_ParamsData _Params;
+    FCk_GroundNavVolume_Spec _Params;
 
     // EntitySpawner injects its actor transform here for level placement (the default-name fallback in
     // ck::entityspawner::TryResolveDefaultTransformProperty resolves this property). Runtime callers
@@ -108,7 +108,7 @@ public:
 
 #if WITH_EDITOR
     /** Editor fixture/authoring helpers may replace the complete value params, then request a preview rebuild. */
-    auto EditorOnly_SetParams(const FCk_Fragment_GroundNavVolume_ParamsData& InParams) -> void
+    auto EditorOnly_SetParams(const FCk_GroundNavVolume_Spec& InParams) -> void
     { _Params = InParams; }
 #endif
 

@@ -968,7 +968,7 @@ namespace ck::nav_surface_recast
             const FCk_Request_NavSurface_AreaMarkup& InRequest)
         -> bool
     {
-        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup>();
 
         if (Current.Get_Markup().IsValid())
         { UCk_Utils_NavAreaMarkup_UE::Request_Destroy(Current.Get_Markup().Get()); }
@@ -1024,7 +1024,7 @@ namespace ck::nav_surface_recast
             const FCk_Handle& InMarkupEntity)
         -> bool
     {
-        const auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+        const auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup>();
 
         if (NOT Current.Get_Markup().IsValid())
         { return false; }
@@ -1041,7 +1041,7 @@ namespace ck::nav_surface_recast
             FCk_Handle& InMarkupEntity)
         -> void
     {
-        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup_Current>();
+        auto& Current = InMarkupEntity.Get<FFragment_NavSurfaceMarkup>();
 
         if (Current.Get_Markup().IsValid())
         { UCk_Utils_NavAreaMarkup_UE::Request_Destroy(Current.Get_Markup().Get()); }

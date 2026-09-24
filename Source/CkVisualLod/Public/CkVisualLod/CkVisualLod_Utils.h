@@ -36,7 +36,7 @@ public:
     static FCk_Handle_VisualLod
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VisualLod_ParamsData& InParams);
+        const FCk_VisualLod_Spec& InParams);
 
 public:
     static bool

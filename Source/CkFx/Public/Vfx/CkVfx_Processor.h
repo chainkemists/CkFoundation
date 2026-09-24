@@ -31,7 +31,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent)
+            FFragment_Vfx& InVfx)
             -> void;
     };
 
@@ -61,7 +61,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             FFragment_Vfx_Requests& InRequestsComp) const -> void;
 
     private:
@@ -69,14 +69,14 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             const FCk_Request_Vfx_PlayAttached& InRequest) -> ECk_Request_OperationResult;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             const FCk_Request_Vfx_PlayAtLocation& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -125,7 +125,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Vfx& InCurrent)
+            FFragment_Vfx& InVfx)
             -> void;
     };
 }

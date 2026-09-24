@@ -58,7 +58,7 @@ auto
     UCk_Utils_QueueCoordinator_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_QueueCoordinator_ParamsData& InParams)
+        const FCk_QueueCoordinator_Spec& InParams)
     -> FCk_Handle_QueueCoordinator
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);
@@ -89,7 +89,7 @@ auto
     { return {}; }
 
     InOwner.Add<ck::FFragment_QueueCoordinator_Params>(InParams);
-    InOwner.Add<ck::FFragment_QueueCoordinator_Current>();
+    InOwner.Add<ck::FFragment_QueueCoordinator>();
     InOwner.Add<ck::FTag_QueueCoordinator_NeedsSetup>();
     return CastChecked(InOwner);
 }
@@ -100,7 +100,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_QueueCoordinator_UE,
     FCk_Handle_QueueCoordinator,
     ck::FFragment_QueueCoordinator_Params,
-    ck::FFragment_QueueCoordinator_Current)
+    ck::FFragment_QueueCoordinator)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -127,7 +127,7 @@ auto
         InCoordinator)
     { return {}; }
 
-    return InCoordinator.Get<ck::FFragment_QueueCoordinator_Current>().Get_Services();
+    return InCoordinator.Get<ck::FFragment_QueueCoordinator>().Get_Services();
 }
 
 auto
@@ -142,7 +142,7 @@ auto
         InCoordinator)
     { return 0; }
 
-    return InCoordinator.Get<ck::FFragment_QueueCoordinator_Current>().Get_Revision();
+    return InCoordinator.Get<ck::FFragment_QueueCoordinator>().Get_Revision();
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -38,12 +38,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent)
+            FFragment_Vfx& InVfx)
             -> void
     {
         const auto& Params = InParams;
 
-        if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+        if (NOT InVfx._LoadedAssets.Get_IsRequested())
         {
             // An unset system is a legal composition (mirrors Sfx's unset-cue semantics): the vfx
             // composes inert and the PLAY path is where an unset/unresolved system gets loud.
@@ -54,24 +54,24 @@ namespace ck
                 return;
             }
 
-            InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            InVfx._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("Vfx.Setup"), {Params.Get_ParticleSystem().ToSoftObjectPath()});
         }
 
-        if (NOT InCurrent._LoadedAssets.Get_IsReady())
+        if (NOT InVfx._LoadedAssets.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_Vfx_PendingAssetLoad>();
             return;
         }
 
         const auto ResolvedSystem = Cast<UNiagaraSystem>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
-        const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSystem);
+            InVfx._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
+        const auto AssetsAreLoaded = NOT InVfx._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSystem);
 
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup Vfx [{}] - loading its ParticleSystem [{}] through CkResourceLoader failed"),
             InHandle, Params.Get_ParticleSystem().ToSoftObjectPath())
-        { InCurrent._LoadedAssets = {}; }
+        { InVfx._LoadedAssets = {}; }
 
         InHandle.Try_Remove<FTag_Vfx_PendingAssetLoad>();
         InHandle.Remove<MarkedDirtyBy>();
@@ -85,7 +85,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             FFragment_Vfx_Requests& InRequestsComp) const
         -> void
     {
@@ -98,7 +98,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            Result = DoHandleRequest(InHandle, InParams, InCurrent, InRequest);
+            Result = DoHandleRequest(InHandle, InParams, InVfx, InRequest);
         }), policy::DontResetContainer{});
 
         if (InRequestsComp._Requests.IsEmpty())
@@ -112,7 +112,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             const FCk_Request_Vfx_PlayAttached& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -121,7 +121,7 @@ namespace ck
         const auto& Params = InParams;
 
         const auto ResolvedSystem = Cast<UNiagaraSystem>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
+            InVfx._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
         const auto SystemIsResolved = ck::IsValid(ResolvedSystem);
 
         CK_ENSURE_IF_NOT(SystemIsResolved, TEXT("Vfx [{}] cannot play - its ParticleSystem is not resolved "
@@ -175,7 +175,7 @@ namespace ck
         DoHandleRequest(
             HandleType InHandle,
             const FFragment_Vfx_Params& InParams,
-            FFragment_Vfx& InCurrent,
+            FFragment_Vfx& InVfx,
             const FCk_Request_Vfx_PlayAtLocation& InRequest)
         -> ECk_Request_OperationResult
     {
@@ -184,7 +184,7 @@ namespace ck
         const auto& Params = InParams;
 
         const auto ResolvedSystem = Cast<UNiagaraSystem>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
+            InVfx._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
         const auto SystemIsResolved = ck::IsValid(ResolvedSystem);
 
         CK_ENSURE_IF_NOT(SystemIsResolved, TEXT("Vfx [{}] cannot play - its ParticleSystem is not resolved "
@@ -248,10 +248,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_Vfx& InCurrent)
+            FFragment_Vfx& InVfx)
             -> void
     {
-        InCurrent._LoadedAssets = {};
+        InVfx._LoadedAssets = {};
     }
 }
 

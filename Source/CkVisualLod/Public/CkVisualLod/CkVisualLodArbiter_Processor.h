@@ -13,7 +13,7 @@ namespace ck
 {
     class CKVISUALLOD_API FProcessor_VisualLodArbiter_Setup
         : public ck_exp::TProcessor<FProcessor_VisualLodArbiter_Setup, FCk_Handle_VisualLodArbiter,
-            ck::TReadOnly<FFragment_VisualLodArbiter_Params>, ck::TReadWrite<FFragment_VisualLodArbiter_Current>,
+            ck::TReadOnly<FFragment_VisualLodArbiter_Params>, ck::TReadWrite<FFragment_VisualLodArbiter>,
             FTag_VisualLodArbiter_NeedsSetup, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -29,7 +29,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InCurrent)
+            FFragment_VisualLodArbiter& InVisualLodArbiter)
             -> void;
     };
 
@@ -37,7 +37,7 @@ namespace ck
 
     class CKVISUALLOD_API FProcessor_VisualLodArbiter_HandleRequests
         : public ck_exp::TProcessor<FProcessor_VisualLodArbiter_HandleRequests, FCk_Handle_VisualLodArbiter,
-            ck::TReadWrite<FFragment_VisualLodArbiter_Current>, ck::TReadWrite<FFragment_VisualLodArbiter_Requests>,
+            ck::TReadWrite<FFragment_VisualLodArbiter>, ck::TReadWrite<FFragment_VisualLodArbiter_Requests>,
             TExclude<FTag_VisualLodArbiter_NeedsSetup>, TExclude<FTag_DestroyEntity_Initiate>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -53,44 +53,44 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             FFragment_VisualLodArbiter_Requests& InRequests) const
             -> void;
 
     private:
         static auto
         DoTryApply_RuntimeTunerProfiles(
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_VisualLodArbiter_RuntimeTuners& InCandidate) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_Request_VisualLodArbiter_SetObserver& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_Request_VisualLodArbiter_ClearObserver& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_Request_VisualLodArbiter_SetFrozen& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest) -> bool;
 
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest) -> bool;
     };
 
@@ -107,7 +107,7 @@ namespace ck
     // The shadow writes _LastVisitedCount so the pump accounting stays truthful
     class CKVISUALLOD_API FProcessor_VisualLodArbiter_Update
         : public ck_exp::TProcessor<FProcessor_VisualLodArbiter_Update, FCk_Handle_VisualLodArbiter,
-            ck::TReadOnly<FFragment_VisualLodArbiter_Params>, ck::TReadWrite<FFragment_VisualLodArbiter_Current>,
+            ck::TReadOnly<FFragment_VisualLodArbiter_Params>, ck::TReadWrite<FFragment_VisualLodArbiter>,
             TExclude<FTag_VisualLodArbiter_NeedsSetup>, CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -129,7 +129,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InCurrent)
+            FFragment_VisualLodArbiter& InVisualLodArbiter)
             -> void;
 
     private:
@@ -146,7 +146,7 @@ namespace ck
         {
             FCk_Time _DeltaT = FCk_Time::ZeroSecond();
             FCk_Handle_VisualLodArbiter _Arbiter;
-            FFragment_VisualLodArbiter_Current* _Current = nullptr;
+            FFragment_VisualLodArbiter* _Current = nullptr;
             const UCk_VisualLodArbiter_Data* _Config = nullptr;
             FCk_VisualLodArbiter_RuntimeTuners _RuntimeTuners;
             FVisualLod_LocalView _View;
@@ -163,7 +163,7 @@ namespace ck
         static auto
         DoResolve_View(
             const FCk_Handle_VisualLodArbiter& InArbiter,
-            const FFragment_VisualLodArbiter_Current& InCurrent,
+            const FFragment_VisualLodArbiter& InVisualLodArbiter,
             const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners) -> FVisualLod_LocalView;
 
         static auto
@@ -201,20 +201,20 @@ namespace ck
         DoTryAcquire_Member(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf) -> void;
 
         static auto
         DoRelease_Member(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent) -> void;
+            FFragment_VisualLod& InMemberCurrent) -> void;
 
         static auto
         DoPromote(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf,
             EChargeClass InChargeClass) -> void;
 
@@ -222,20 +222,20 @@ namespace ck
         DoDemote_Begin(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf) -> void;
 
         static auto
         DoDemote_Finish(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent) -> void;
+            FFragment_VisualLod& InMemberCurrent) -> void;
 
         static auto
         DoRecover_FailClosed(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent) -> void;
+            FFragment_VisualLod& InMemberCurrent) -> void;
 
         // InAllowReversal gates the band/lock re-aim that lets a fade turn around mid-flight. That
         // re-aim IS a promote/demote decision, so a frozen arbiter passes false and the fade runs
@@ -244,7 +244,7 @@ namespace ck
         DoTick_Fade(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf,
             float InDistance,
             bool InLockHeld,
@@ -254,7 +254,7 @@ namespace ck
         DoUpdate_FarMember(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             const FTransform& InMemberXf) -> void;
 
         // Changes only the batched renderer profile assignment. It deliberately has no authority
@@ -263,7 +263,7 @@ namespace ck
         DoUpdate_RenderBand(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent,
+            FFragment_VisualLod& InMemberCurrent,
             float InDistance) -> void;
 
         // Mirrors the member's resolved far-anim onto the promoted proxy as a single looping
@@ -275,7 +275,7 @@ namespace ck
         DoDrive_ProxyAnim(
             FUpdateContext& InCtx,
             FCk_Handle_VisualLod InMember,
-            FFragment_VisualLod_Current& InMemberCurrent) -> void;
+            FFragment_VisualLod& InMemberCurrent) -> void;
 
         static auto
         DoCompute_FarAnim(
@@ -304,7 +304,7 @@ namespace ck
         // No release-path reset needed: proxy Setup zeroes declared slots on every (re)acquire
         static auto
         DoWrite_ProxyFade(
-            const FFragment_VisualLod_Current& InMemberCurrent,
+            const FFragment_VisualLod& InMemberCurrent,
             int32 InNearSlot,
             float InAlpha) -> void;
 
@@ -312,16 +312,16 @@ namespace ck
         // Shared with FProcessor_VisualLod_EndPlay (deterministic death-path release + refund)
         static auto
         DoRecycle_Slot(
-            FFragment_VisualLodArbiter_Current& InArbiterCurrent,
+            FFragment_VisualLodArbiter& InArbiterCurrent,
             int32 InCrowdIndex,
             FCk_Handle_VisualLod InMember,
             int32 InMemberIndex) -> void;
 
         static auto
         DoRefund_Charge(
-            FFragment_VisualLodArbiter_Current& InArbiterCurrent,
+            FFragment_VisualLodArbiter& InArbiterCurrent,
             FCk_Handle_VisualLod InMember,
-            const FFragment_VisualLod_Current& InMemberCurrent) -> void;
+            const FFragment_VisualLod& InMemberCurrent) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

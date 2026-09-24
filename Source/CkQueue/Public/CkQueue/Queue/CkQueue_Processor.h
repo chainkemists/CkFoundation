@@ -18,7 +18,7 @@ namespace ck
         FProcessor_Queue_Setup,
         FCk_Handle_Queue,
         ck::TReadOnly<FFragment_Queue_Params>,
-        ck::TReadWrite<FFragment_Queue_Current>,
+        ck::TReadWrite<FFragment_Queue>,
         FTag_Queue_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -35,7 +35,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
     };
 
@@ -45,7 +45,7 @@ namespace ck
         FProcessor_Queue_HandleRequests,
         FCk_Handle_Queue,
         ck::TReadOnly<FFragment_Queue_Params>,
-        ck::TReadWrite<FFragment_Queue_Current>,
+        ck::TReadWrite<FFragment_Queue>,
         ck::TReadWrite<FFragment_Queue_Requests>,
         TExclude<FTag_Queue_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -65,7 +65,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             FFragment_Queue_Requests& InRequests)
             -> void;
 
@@ -78,7 +78,7 @@ namespace ck
         TryApplyReachedClaim(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             int32 InMemberIndex,
             TOptional<int32> InExpectedAssignmentRevision)
             -> bool;
@@ -87,7 +87,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Join& InRequest)
             -> bool;
 
@@ -95,7 +95,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_RestoreJoin& InRequest)
             -> bool;
 
@@ -103,7 +103,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Leave& InRequest)
             -> bool;
 
@@ -111,7 +111,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Advance& InRequest)
             -> bool;
 
@@ -119,7 +119,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_SetLayout& InRequest)
             -> bool;
 
@@ -127,7 +127,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_SetMovementSuppressed& InRequest)
             -> bool;
 
@@ -135,13 +135,13 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_ReportMovementOutcome& InRequest)
             -> bool;
 
         static auto
         FindMemberIndex(
-            const FFragment_Queue_Current& InCurrent,
+            const FFragment_Queue& InQueue,
             const FCk_Handle& InMember)
             -> int32;
 
@@ -149,13 +149,13 @@ namespace ck
         InvalidateAssignmentsForReflow(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
 
         static auto
         RebuildRanks(
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason)
             -> void;
 
@@ -163,7 +163,7 @@ namespace ck
         RefreshPressure(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
 
         static auto
@@ -178,7 +178,7 @@ namespace ck
         static auto
         MarkFormationDirty(
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason)
             -> void;
     };
@@ -189,7 +189,7 @@ namespace ck
         FProcessor_Queue_Reconcile,
         FCk_Handle_Queue,
         ck::TReadOnly<FFragment_Queue_Params>,
-        ck::TReadWrite<FFragment_Queue_Current>,
+        ck::TReadWrite<FFragment_Queue>,
         TExclude<FTag_Queue_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -206,7 +206,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
     };
 
@@ -239,7 +239,7 @@ namespace ck
     class CKQUEUE_API FProcessor_Queue_EndPlay : public ck_exp::TProcessor<
         FProcessor_Queue_EndPlay,
         FCk_Handle_Queue,
-        ck::TReadWrite<FFragment_Queue_Current>,
+        ck::TReadWrite<FFragment_Queue>,
         CK_IF_END_PLAY>
     {
     public:
@@ -253,7 +253,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
     };
 }

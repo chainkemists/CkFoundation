@@ -105,7 +105,7 @@ namespace ck::groundnav::cook
         static auto
         Cook_Volume(
             UWorld&                                        InWorld,
-            const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+            const FCk_GroundNavVolume_Spec& InParams,
             FName                                          InSourceLevelPackage,
             ECk_GroundNav_CookMode                         InMode,
             TArray<FCk_GroundNav_CookFieldPlan>&           OutPlans,

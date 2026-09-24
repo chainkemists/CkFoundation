@@ -56,7 +56,7 @@ auto
     UCk_Utils_GroundNavVolume_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_GroundNavVolume_ParamsData& InParams)
+        const FCk_GroundNavVolume_Spec& InParams)
     -> FCk_Handle_GroundNavVolume
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);
@@ -934,7 +934,7 @@ namespace ck::groundnav
 {
     auto
     Get_VolumeFieldParams(
-        const FCk_Fragment_GroundNavVolume_ParamsData& InParams,
+        const FCk_GroundNavVolume_Spec& InParams,
         TConstArrayView<FCk_GroundNav_MarkupRecord>    InMarkupRecords,
         TConstArrayView<FCk_GroundNav_LinkRecord>      InLinkRecords)
         -> FCk_GroundNav_FieldParams

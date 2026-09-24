@@ -30,7 +30,7 @@ public:
     static FCk_Handle_CrowdAvoidanceVolume
     Add(
         UPARAM(ref) FCk_Handle_Transform& InOwner,
-        const FCk_Fragment_CrowdAvoidanceVolume_ParamsData& InParams);
+        const FCk_CrowdAvoidanceVolume_Spec& InParams);
 
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|CrowdAvoidanceVolume",
         DisplayName = "[Ck][CrowdAvoidanceVolume] Has Feature")

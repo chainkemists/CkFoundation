@@ -37,7 +37,7 @@ namespace ck
         ForEachEntity(
             TimeType                               InDeltaT,
             HandleType                             InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             const FFragment_GroundNavPath_Result&  InResult)
         -> void
     {
@@ -54,9 +54,9 @@ namespace ck
         // provider that does not exist.
         Diagnostics._Provider = UCk_Utils_NavSurface_UE::Get_Provider(World);
 
-        Diagnostics._ProfileTag = InCurrent.Get_ProfileTag();
-        Diagnostics._CorridorLinkIds = InCurrent.Get_LastCorridorLinkIds();
-        Diagnostics._CorridorEpoch = InCurrent.Get_LastCorridorEpoch()._Value;
+        Diagnostics._ProfileTag = InGroundNavPath.Get_ProfileTag();
+        Diagnostics._CorridorLinkIds = InGroundNavPath.Get_LastCorridorLinkIds();
+        Diagnostics._CorridorEpoch = InGroundNavPath.Get_LastCorridorEpoch()._Value;
 
         Diagnostics._PublishedWaypointCount = InResult.Get_Result().Get_Waypoints().Num();
 

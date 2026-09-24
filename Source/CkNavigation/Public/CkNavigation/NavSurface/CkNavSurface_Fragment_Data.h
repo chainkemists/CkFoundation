@@ -495,7 +495,7 @@ private:
     // 0 = the provider's own agent - IGNORED ON RECAST, whose synchronous find always uses the
     // navmesh's own baked agent at any value. GroundNav clamps its clearance filtering to this
     // radius when it is set, and to none at zero (every walkable cell admitted, exactly as
-    // FCk_Fragment_GroundNavPath_ParamsData::_AgentRadiusUu already documents).
+    // FCk_GroundNavPath_Spec::_AgentRadiusUu already documents).
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     float _AgentRadiusUu = 0.0f;
 

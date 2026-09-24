@@ -48,7 +48,7 @@ public:
     static FCk_Handle_VisualLodArbiter
     Add(
         UPARAM(ref) FCk_Handle& InHandle,
-        const FCk_Fragment_VisualLodArbiter_ParamsData& InParams);
+        const FCk_VisualLodArbiter_Spec& InParams);
 
 public:
     static bool

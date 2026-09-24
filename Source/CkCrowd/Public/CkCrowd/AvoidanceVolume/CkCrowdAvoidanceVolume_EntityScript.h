@@ -13,7 +13,7 @@ struct CKCROWD_API FCk_CrowdAvoidanceVolume_SpawnParams
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
-    FCk_Fragment_CrowdAvoidanceVolume_ParamsData _Params;
+    FCk_CrowdAvoidanceVolume_Spec _Params;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = true))
     FTransform _SpawnTransform = FTransform::Identity;
@@ -36,7 +36,7 @@ protected:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crowd Avoidance Volume",
         meta = (AllowPrivateAccess = true, ExposeOnSpawn = true))
-    FCk_Fragment_CrowdAvoidanceVolume_ParamsData _Params;
+    FCk_CrowdAvoidanceVolume_Spec _Params;
 
     // EntitySpawner injects its actor transform here for level placement. Runtime callers pass
     // FCk_CrowdAvoidanceVolume_SpawnParams instead.

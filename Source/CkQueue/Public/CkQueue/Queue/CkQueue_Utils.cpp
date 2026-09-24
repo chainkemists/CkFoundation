@@ -88,7 +88,7 @@ namespace ck_queue_utils
     {
         return IsValidQueue(InQueue)
             && NOT InQueue.Has<ck::FTag_DestroyEntity_Initiate>()
-            && InQueue.Get<ck::FFragment_Queue_Current>().Get_State() != ECk_Queue_State::Invalidated;
+            && InQueue.Get<ck::FFragment_Queue>().Get_State() != ECk_Queue_State::Invalidated;
     }
 }
 
@@ -98,7 +98,7 @@ auto
     UCk_Utils_Queue_UE::
     Add(
         FCk_Handle& InOwner,
-        const FCk_Fragment_Queue_ParamsData& InParams)
+        const FCk_Queue_Spec& InParams)
     -> FCk_Handle_Queue
 {
     const auto OwnerIsValid = ck::IsValid(InOwner);
@@ -162,7 +162,7 @@ auto
     { return {}; }
 
     InOwner.Add<ck::FFragment_Queue_Params>(InParams);
-    InOwner.Add<ck::FFragment_Queue_Current>();
+    InOwner.Add<ck::FFragment_Queue>();
     InOwner.Add<ck::FTag_Queue_NeedsSetup>();
 
     if (InParams.Get_Category().IsValid())
@@ -177,7 +177,7 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(
     UCk_Utils_Queue_UE,
     FCk_Handle_Queue,
     ck::FFragment_Queue_Params,
-    ck::FFragment_Queue_Current)
+    ck::FFragment_Queue)
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -201,7 +201,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Members called with invalid Queue [{}]"), InQueue)
     { return {}; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_Members();
+    return InQueue.Get<ck::FFragment_Queue>().Get_Members();
 }
 
 auto
@@ -213,7 +213,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_MemberCount called with invalid Queue [{}]"), InQueue)
     { return 0; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_Members().Num();
+    return InQueue.Get<ck::FFragment_Queue>().Get_Members().Num();
 }
 
 auto
@@ -225,7 +225,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Pressure called with invalid Queue [{}]"), InQueue)
     { return {}; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_Pressure();
+    return InQueue.Get<ck::FFragment_Queue>().Get_Pressure();
 }
 
 auto
@@ -237,7 +237,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_State called with invalid Queue [{}]"), InQueue)
     { return ECk_Queue_State::Invalidated; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_State();
+    return InQueue.Get<ck::FFragment_Queue>().Get_State();
 }
 
 auto
@@ -259,7 +259,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_Revision called with invalid Queue [{}]"), InQueue)
     { return 0; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_Revision();
+    return InQueue.Get<ck::FFragment_Queue>().Get_Revision();
 }
 
 auto
@@ -290,10 +290,10 @@ auto
 
     const auto Registry = InAnyEntityInWorld.Get_RegistryView();
     auto Result = TArray<FCk_Queue_DebugSnapshot>{};
-    Registry.View<ck::FFragment_Queue_Params, ck::FFragment_Queue_Current, CK_IGNORE_PENDING_KILL>().ForEach(
+    Registry.View<ck::FFragment_Queue_Params, ck::FFragment_Queue, CK_IGNORE_PENDING_KILL>().ForEach(
         [&Result, Registry](FCk_Entity InQueueEntity,
                             const ck::FFragment_Queue_Params& InParams,
-                            const ck::FFragment_Queue_Current& InCurrent)
+                            const ck::FFragment_Queue& InQueue)
         {
             const auto Queue = FCk_Handle{InQueueEntity, Registry.Get_RegistryHandle()};
             const auto QueueTransform = UCk_Utils_Transform_UE::Cast(Queue);
@@ -303,8 +303,8 @@ auto
             const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
 
             auto Members = TArray<FCk_Queue_DebugMemberSnapshot>{};
-            Members.Reserve(InCurrent.Get_Members().Num());
-            for (const auto& Member : InCurrent.Get_Members())
+            Members.Reserve(InQueue.Get_Members().Num());
+            for (const auto& Member : InQueue.Get_Members())
             {
                 const auto MemberHandle = Member.Get_Member();
                 const auto Mover = Member.Get_Mover();
@@ -334,18 +334,18 @@ auto
                 Queue.Get_DebugName(),
                 InParams.Get_Category(),
                 OwnerWorldTransform,
-                InCurrent.Get_State(),
-                InCurrent.Get_Revision(),
-                InCurrent.Get_RetryEpisode(),
-                InCurrent.Get_LayoutAlgorithm(),
+                InQueue.Get_State(),
+                InQueue.Get_Revision(),
+                InQueue.Get_RetryEpisode(),
+                InQueue.Get_LayoutAlgorithm(),
                 InParams.Get_SlotSpacingUu(),
                 InParams.Get_SlotClaimPolicy(),
                 FCk_Queue_FormationState{
-                    InCurrent.Get_State(),
+                    InQueue.Get_State(),
                     ECk_Queue_EventReason::None,
-                    InCurrent.Get_Revision(),
-                    InCurrent.Get_RetryEpisode()},
-                InCurrent.Get_Pressure(),
+                    InQueue.Get_Revision(),
+                    InQueue.Get_RetryEpisode()},
+                InQueue.Get_Pressure(),
                 MoveTemp(Members));
         });
     return Result;
@@ -389,7 +389,7 @@ auto
     const auto QueueIsValid = ck_queue_utils::IsValidQueue(InQueue);
     CK_ENSURE_IF_NOT(QueueIsValid, TEXT("Get_LayoutAlgorithm called with invalid Queue [{}]"), InQueue)
     { return ECk_Queue_LayoutAlgorithm::OrthogonalSnake; }
-    return InQueue.Get<ck::FFragment_Queue_Current>().Get_LayoutAlgorithm();
+    return InQueue.Get<ck::FFragment_Queue>().Get_LayoutAlgorithm();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -491,7 +491,7 @@ auto
     if (NOT ck_queue_utils::IsValidQueue(InQueue) || ck::Is_NOT_Valid(InMember))
     { return false; }
 
-    for (const auto& Snapshot : InQueue.Get<ck::FFragment_Queue_Current>().Get_Members())
+    for (const auto& Snapshot : InQueue.Get<ck::FFragment_Queue>().Get_Members())
     {
         if (Snapshot.Get_Member() == InMember)
         {

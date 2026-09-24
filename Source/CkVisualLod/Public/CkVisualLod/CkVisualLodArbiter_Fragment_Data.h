@@ -204,7 +204,7 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_VisualLodArbit
 // --------------------------------------------------------------------------------------------------------------------
 
 // One batched crowd the arbiter can park far entities in. Members reference a config by index
-// (FCk_Fragment_VisualLod_ParamsData::_CrowdIndex)
+// (FCk_VisualLod_Spec::_CrowdIndex)
 USTRUCT(BlueprintType)
 struct CKVISUALLOD_API FCk_VisualLod_RenderBand
 {
@@ -485,12 +485,12 @@ namespace ck::visual_lod
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVISUALLOD_API FCk_Fragment_VisualLodArbiter_ParamsData
+struct CKVISUALLOD_API FCk_VisualLodArbiter_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VisualLodArbiter_ParamsData);
+    CK_GENERATED_BODY(FCk_VisualLodArbiter_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -501,7 +501,7 @@ public:
     CK_PROPERTY_GET(_Config);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VisualLodArbiter_ParamsData, _Config);
+    CK_DEFINE_CONSTRUCTORS(FCk_VisualLodArbiter_Spec, _Config);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

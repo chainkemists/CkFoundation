@@ -29,7 +29,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLod_Params& InParams,
-            FFragment_VisualLod_Current& InCurrent)
+            FFragment_VisualLod& InVisualLod)
         -> void
     {
         // Arbiter resolution (tag -> live arbiter entity) is the arbiter update's job — it owns
@@ -45,7 +45,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             FFragment_VisualLod_Requests& InRequests) const
         -> void
     {
@@ -58,7 +58,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            DoHandleRequest(InHandle, InCurrent, InRequest);
+            DoHandleRequest(InHandle, InVisualLod, InRequest);
 
             Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
@@ -71,56 +71,56 @@ namespace ck
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_SetArbiter& InRequest)
         -> void
     {
-        InCurrent._Arbiter = InRequest.Get_Arbiter();
+        InVisualLod._Arbiter = InRequest.Get_Arbiter();
     }
 
     auto
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_SetVisibility& InRequest)
         -> void
     {
         // The latch is the contract; the arbiter's next update applies it to whichever
         // representation is live (hide member / hide proxy / release the slot)
-        InCurrent._Hidden = InRequest.Get_ShowHide() == ECk_VisualLod_ShowHide::Hide;
+        InVisualLod._Hidden = InRequest.Get_ShowHide() == ECk_VisualLod_ShowHide::Hide;
     }
 
     auto
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_SetFarAnim& InRequest)
         -> void
     {
-        InCurrent._FarAnim = InRequest.Get_FarAnim();
+        InVisualLod._FarAnim = InRequest.Get_FarAnim();
     }
 
     auto
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_SetRenderer& InRequest)
         -> void
     {
-        InCurrent._RendererOverride = InRequest.Get_Renderer();
+        InVisualLod._RendererOverride = InRequest.Get_Renderer();
 
         // The rooted batch pins the PREVIOUS renderer; the next promote must load the new one
-        InCurrent._LoadedAssets = {};
+        InVisualLod._LoadedAssets = {};
     }
 
     auto
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_Suspend& InRequest)
         -> void
     {
@@ -131,7 +131,7 @@ namespace ck
         FProcessor_VisualLod_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent,
+            FFragment_VisualLod& InVisualLod,
             const FCk_Request_VisualLod_Resume& InRequest)
         -> void
     {
@@ -145,43 +145,43 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisualLod_Current& InCurrent)
+            FFragment_VisualLod& InVisualLod)
         -> void
     {
-        const auto Crowd = InCurrent._Crowd.Get();
-        if (ck::IsValid(Crowd) && InCurrent._MemberIndex != INDEX_NONE)
+        const auto Crowd = InVisualLod._Crowd.Get();
+        if (ck::IsValid(Crowd) && InVisualLod._MemberIndex != INDEX_NONE)
         {
-            UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, InCurrent._MemberIndex, false);
-            UCk_Utils_IskmBatched_UE::Clear_CrowdMemberCosmetics(Crowd, InCurrent._MemberIndex);
+            UCk_Utils_IskmBatched_UE::Set_CrowdMemberVisible(Crowd, InVisualLod._MemberIndex, false);
+            UCk_Utils_IskmBatched_UE::Clear_CrowdMemberCosmetics(Crowd, InVisualLod._MemberIndex);
         }
 
-        auto Arbiter = InCurrent._Arbiter;
+        auto Arbiter = InVisualLod._Arbiter;
         if (ck::IsValid(Arbiter) && UCk_Utils_VisualLodArbiter_UE::Has(Arbiter))
         {
-            auto& ArbiterCurrent = Arbiter.Get<FFragment_VisualLodArbiter_Current>();
+            auto& ArbiterCurrent = Arbiter.Get<FFragment_VisualLodArbiter>();
 
-            if (InCurrent._MemberIndex != INDEX_NONE)
+            if (InVisualLod._MemberIndex != INDEX_NONE)
             {
                 FProcessor_VisualLodArbiter_Update::DoRecycle_Slot(ArbiterCurrent,
                     InHandle.Get<FFragment_VisualLod_Params>().Get_CrowdIndex(),
-                    InHandle, InCurrent._MemberIndex);
+                    InHandle, InVisualLod._MemberIndex);
             }
 
-            if (InCurrent._Promoted)
-            { FProcessor_VisualLodArbiter_Update::DoRefund_Charge(ArbiterCurrent, InHandle, InCurrent); }
+            if (InVisualLod._Promoted)
+            { FProcessor_VisualLodArbiter_Update::DoRefund_Charge(ArbiterCurrent, InHandle, InVisualLod); }
         }
 
         // The node is a lifetime descendant and would cascade anyway; the explicit request makes
         // the pooled-SKMC release deterministic rather than cascade-ordered
-        if (ck::IsValid(InCurrent._VisualNode))
+        if (ck::IsValid(InVisualLod._VisualNode))
         {
-            auto Node = InCurrent._VisualNode;
+            auto Node = InVisualLod._VisualNode;
             UCk_Utils_EntityLifetime_UE::Request_DestroyEntity(Node);
         }
 
-        InCurrent._MemberIndex = INDEX_NONE;
-        InCurrent._Crowd       = nullptr;
-        InCurrent._Promoted    = false;
+        InVisualLod._MemberIndex = INDEX_NONE;
+        InVisualLod._Crowd       = nullptr;
+        InVisualLod._Promoted    = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

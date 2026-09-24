@@ -33,7 +33,7 @@ public:
     static FCk_Handle_Queue
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_Queue_ParamsData& InParams);
+        const FCk_Queue_Spec& InParams);
 
 public:
     static bool

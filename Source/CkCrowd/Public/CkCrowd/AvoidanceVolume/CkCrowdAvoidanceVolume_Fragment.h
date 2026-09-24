@@ -9,7 +9,7 @@
 
 namespace ck
 {
-    using FFragment_CrowdAvoidanceVolume_Params = FCk_Fragment_CrowdAvoidanceVolume_ParamsData;
+    using FFragment_CrowdAvoidanceVolume_Params = FCk_CrowdAvoidanceVolume_Spec;
 
     CK_DEFINE_ECS_TAG(FTag_CrowdAvoidanceVolume_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_CrowdAvoidanceVolume_HasRuntime);
