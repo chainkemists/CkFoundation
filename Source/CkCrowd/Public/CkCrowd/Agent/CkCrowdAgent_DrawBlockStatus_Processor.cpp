@@ -79,12 +79,12 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams) const
+            const FFragment_CrowdAgent_Tunables& InTunables) const
         -> void
     {
         SCOPE_CYCLE_COUNTER(STAT_CkCrowd_DrawBlockStatus_SetupProc);
 
-        const auto Radius = InParams.Get_Radius();
+        const auto Radius = InTunables.Get_Radius();
         if (Radius <= 0.0f)
         { return; }
 

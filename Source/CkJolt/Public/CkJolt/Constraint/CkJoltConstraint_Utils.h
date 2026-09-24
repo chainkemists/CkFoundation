@@ -89,7 +89,7 @@ public:
      * world-anchored constraint (Get_IsBodyBWorldAnchor tells that apart from a body whose entity died,
      * which the liveness reaper is about to act on).
      *
-     * A read accessor rather than a widened friend list: the keys live on FFragment_JoltConstraint_Current,
+     * A read accessor rather than a widened friend list: the keys live on FFragment_JoltConstraint,
      * whose friends are its own processors, and a presentation consumer that only wants to NAME the two
      * bodies has no business reaching into the fragment (P8-D55 / P5-D61 S8).
      */

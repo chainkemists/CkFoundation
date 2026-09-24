@@ -70,7 +70,7 @@ namespace ck::pmg
         Common.Set_RenderMode(InRenderMode);
         pmg_debug_shape::AddCommon(NewEntity, Common);
 
-        NewEntity.Add<FFragment_Pmg_DebugShape_Current>();
+        NewEntity.Add<FFragment_Pmg_DebugShape>();
         NewEntity.Add<FTag_Pmg_DebugShape_LineSet>();
         NewEntity.Add<FTag_Pmg_DebugShape_NeedsSetup>();
         UCk_Utils_Transform_UE::Add(NewEntity, InTransform, ECk_Replication::DoesNotReplicate);

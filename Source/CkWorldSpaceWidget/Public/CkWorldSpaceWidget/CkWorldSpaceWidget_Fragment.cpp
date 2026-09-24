@@ -26,7 +26,7 @@ namespace ck
     }
 
     auto
-        FFragment_WorldSpaceWidget_Current::
+        FFragment_WorldSpaceWidget::
         Get_ResolvedOwningPlayer() const
         -> APlayerController*
     {
@@ -39,7 +39,7 @@ namespace ck
     }
 
     auto
-        FFragment_WorldSpaceWidget_Current::
+        FFragment_WorldSpaceWidget::
         Get_IsRenderViewEjected() const
         -> bool
     {

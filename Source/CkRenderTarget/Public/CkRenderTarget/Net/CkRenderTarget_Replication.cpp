@@ -130,7 +130,7 @@ namespace ck_render_target_replication
                         if (Channels.IsEmpty())
                         { return ECk_Persistence_ApplyResult::Applied; }
 
-                        if (NOT Entity.Has<ck::FFragment_RenderTarget_Current>())
+                        if (NOT Entity.Has<ck::FFragment_RenderTarget>())
                         { return ECk_Persistence_ApplyResult::NotReady; }
 
                         Entity.AddOrGet<ck::FFragment_RenderTarget_HydrationReplay>().Populate(Channels[0]);

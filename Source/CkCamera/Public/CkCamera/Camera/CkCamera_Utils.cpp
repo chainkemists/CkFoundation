@@ -66,14 +66,14 @@ auto
 
     InParams.Get_OutputComponent()->Set_DirectorEntity(Director);
 
-    // The composed view's attachable presence (FFragment_Camera_Current::_ViewAnchor): a plain child
+    // The composed view's attachable presence (FFragment_Camera::_ViewAnchor): a plain child
     // transform, seeded from the director's current pose so a first-frame attach composes from something
     // sane. Every later pose arrives as an ordinary transform request enqueued by the POV processor and
     // drained by the transform-local settle barrier.
     {
         const auto SeedPose = Director.Get<ck::FFragment_Transform>().Get_Transform();
 
-        auto& Current = Director.Get<ck::FFragment_Camera_Current>();
+        auto& Current = Director.Get<ck::FFragment_Camera>();
         Current._ViewAnchor = UCk_Utils_Transform_UE::Create(InHandle,
             FTransform{SeedPose.GetRotation(), SeedPose.GetLocation()}, ECk_Replication::DoesNotReplicate);
     }
@@ -181,7 +181,7 @@ auto
         const FCk_Handle_Camera& InCamera)
     -> FCk_Handle_Transform
 {
-    return InCamera.Get<ck::FFragment_Camera_Current>().Get_ViewAnchor();
+    return InCamera.Get<ck::FFragment_Camera>().Get_ViewAnchor();
 }
 
 auto
@@ -347,7 +347,7 @@ auto
     Request_SetProjectionMode(FCk_Handle_Camera& InCamera, const FCk_Request_Camera_SetProjectionMode& InRequest, const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_Camera
 {
-    auto& CurrentFrag = InCamera.Get<ck::FFragment_Camera_Current>();
+    auto& CurrentFrag = InCamera.Get<ck::FFragment_Camera>();
     CurrentFrag.Set_ProjectionMode(InRequest.Get_ProjectionMode());
 
     if (InRequest.Get_OrthoNearClipPlane().IsSet())

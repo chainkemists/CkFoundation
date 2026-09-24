@@ -16,7 +16,7 @@ bool FCkTest_ProbeContactFilter_RejectsCapacityExhaustion::RunTest(const FString
     auto Filter = JPH::Ref<ck::spatialquery::FCk_ProbeContactFilter>{
         new ck::spatialquery::FCk_ProbeContactFilter{1}};
 
-    const auto NotifyParams = FCk_Fragment_Probe_ParamsData{TAG_Probe};
+    const auto NotifyParams = FCk_Probe_Spec{TAG_Probe};
     auto SilentParams = NotifyParams;
     SilentParams.Set_ResponsePolicy(ECk_ProbeResponse_Policy::Silent);
 
@@ -56,7 +56,7 @@ bool FCkTest_ProbeContactFilter_ContactParticipationAdmission::RunTest(const FSt
     auto Filter = JPH::Ref<ck::spatialquery::FCk_ProbeContactFilter>{
         new ck::spatialquery::FCk_ProbeContactFilter{3}};
 
-    const auto NotifyParams = FCk_Fragment_Probe_ParamsData{TAG_Probe};
+    const auto NotifyParams = FCk_Probe_Spec{TAG_Probe};
     auto SilentParams = NotifyParams;
     SilentParams.Set_ResponsePolicy(ECk_ProbeResponse_Policy::Silent);
     auto QueryOnlyParams = NotifyParams;

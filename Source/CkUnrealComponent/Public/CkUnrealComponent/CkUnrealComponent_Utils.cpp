@@ -195,7 +195,7 @@ auto
         return InUnrealComponent;
     }
 
-    const auto HasCurrentFragment = InUnrealComponent.Has<ck::FFragment_UnrealComponent_Current>();
+    const auto HasCurrentFragment = InUnrealComponent.Has<ck::FFragment_UnrealComponent>();
     CK_ENSURE_IF_NOT(HasCurrentFragment,
         TEXT("Cannot enable transform-push on UnrealComponent [{}] without a Current fragment"), InUnrealComponent)
     {
@@ -203,7 +203,7 @@ auto
         return InUnrealComponent;
     }
 
-    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>();
+    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent>();
     auto* SceneComponent = ::Cast<USceneComponent>(Current.Get_Component().Get());
     const auto SceneComponentIsValid = ck::IsValid(SceneComponent);
     CK_ENSURE_IF_NOT(SceneComponentIsValid,
@@ -265,10 +265,10 @@ auto
         InUnrealComponent.Has<ck::FTag_UnrealComponent_NeedsSetup>() ||
         NOT InUnrealComponent.Has<ck::FTag_UnrealComponent_IsScene>() ||
         InUnrealComponent.Has<ck::FTag_UnrealComponent_BakedIntoStaticWorld>() ||
-        NOT InUnrealComponent.Has<ck::FFragment_UnrealComponent_Current>())
+        NOT InUnrealComponent.Has<ck::FFragment_UnrealComponent>())
     { return false; }
 
-    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent_Current>();
+    const auto& Current = InUnrealComponent.Get<ck::FFragment_UnrealComponent>();
     auto* SceneComponent = ::Cast<USceneComponent>(Current.Get_Component().Get());
     const auto SceneComponentIsValid = ck::IsValid(SceneComponent);
     if (NOT SceneComponentIsValid)

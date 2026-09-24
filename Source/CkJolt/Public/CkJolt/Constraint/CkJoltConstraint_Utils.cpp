@@ -101,7 +101,7 @@ auto
     { return {}; }
 
     return UCk_Utils_JoltBody_UE::CastChecked(
-        InConstraint.Get<ck::FFragment_JoltConstraint_Current>().Get_BodyA());
+        InConstraint.Get<ck::FFragment_JoltConstraint>().Get_BodyA());
 }
 
 auto
@@ -117,7 +117,7 @@ auto
     // CastChecked answers an empty handle for an invalid one, which is exactly what a world-anchored
     // constraint (and one whose body B has died) should report — no ensure for either.
     return UCk_Utils_JoltBody_UE::CastChecked(
-        InConstraint.Get<ck::FFragment_JoltConstraint_Current>().Get_BodyB());
+        InConstraint.Get<ck::FFragment_JoltConstraint>().Get_BodyB());
 }
 
 auto
@@ -130,7 +130,7 @@ auto
         TEXT("Invalid JoltConstraint Handle passed to Get_IsBodyBWorldAnchor"))
     { return false; }
 
-    return InConstraint.Get<ck::FFragment_JoltConstraint_Current>().Get_BodyBIsWorldAnchor();
+    return InConstraint.Get<ck::FFragment_JoltConstraint>().Get_BodyBIsWorldAnchor();
 }
 
 auto

@@ -24,7 +24,7 @@ namespace ck_tween_utils
         const auto HasTransformAnchor =
             InHandle.Has_Any<ck::FFragment_Transform_MeshSocket, ck::FFragment_Transform_RootComponent>();
 
-        return InHandle.Has<ck::FFragment_SceneNode_Current>()
+        return InHandle.Has<ck::FFragment_SceneNode>()
             && InHandle.Has<ck::SceneNodeParent>()
             && NOT InHandle.Has<ck::FFragment_SceneNode_UnrealAnchor>()
             && (NOT HasTransformAnchor || InHandle.Has<ck::FTag_Transform_ExternallyDriven>());

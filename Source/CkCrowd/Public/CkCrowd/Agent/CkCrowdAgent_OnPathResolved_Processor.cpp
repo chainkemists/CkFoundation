@@ -51,7 +51,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
+            const FFragment_CrowdAgent_Tunables& InTunables,
             FFragment_Nav_PathResult& InPathResult,
             FFragment_CrowdAgent_PathFollow& InPathFollow,
             FFragment_CrowdAgent_PathTrouble& InPathTrouble,
@@ -170,7 +170,7 @@ namespace ck
                 constexpr auto ForcePermissivePlan = true;
                 FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
                     InHandle,
-                    InHandle.Get<FFragment_CrowdAgent_Params>(),
+                    InHandle.Get<FFragment_CrowdAgent_Tunables>(),
                     InPathFollow,
                     InPathFollow.Get_ActiveGoal(),
                     ForcePermissivePlan);
@@ -266,7 +266,7 @@ namespace ck
                 auto* WorldForGate =
                     ck_crowd_agent_on_path_resolved_processor::Get_WorldForChordGate(InHandle);
                 const auto ChordQueryFilterTag =
-                    FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(InParams, InPathFollow);
+                    FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(InTunables, InPathFollow);
                 const auto ChordQueryFilterOverlay =
                     UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict

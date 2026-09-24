@@ -236,7 +236,7 @@ auto
     if (NOT InHandle.Has<ck::FTag_IskmProxy_Ragdolling>())
     { return false; }
 
-    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC().Get();
+    auto* SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC().Get();
     if (ck::Is_NOT_Valid(SKMC))
     { return false; }
 
@@ -335,7 +335,7 @@ auto
         InHandle)
     { return false; }
 
-    const auto HasCurrent = InHandle.Has<ck::FFragment_IskmProxy_Current>();
+    const auto HasCurrent = InHandle.Has<ck::FFragment_IskmProxy>();
     CK_ENSURE_IF_NOT(HasCurrent,
         TEXT("IskmProxy [{}] has no Current fragment in TryGet_SocketTransform_CurrentEntityWorld"),
         InHandle)
@@ -348,7 +348,7 @@ auto
         InHandle)
     { return false; }
 
-    const auto& SKMC = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_BaseSKMC();
+    const auto& SKMC = InHandle.Get<ck::FFragment_IskmProxy>().Get_BaseSKMC();
     // Current is published before renderer setup creates BaseSKMC and remains present while
     // EndPlay releases it. Both are ordinary TryGet-unavailable lifecycle windows.
     if (ck::Is_NOT_Valid(SKMC))
@@ -374,7 +374,7 @@ auto
         InHandle)
     { return false; }
 
-    const auto LocalOffset = InHandle.Get<ck::FFragment_IskmProxy_Current>().Get_LocalLocationOffset();
+    const auto LocalOffset = InHandle.Get<ck::FFragment_IskmProxy>().Get_LocalLocationOffset();
     const auto IsLocalOffsetFinite = NOT LocalOffset.ContainsNaN();
     CK_ENSURE_IF_NOT(IsLocalOffsetFinite,
         TEXT("IskmProxy [{}] has a non-finite local render offset"),

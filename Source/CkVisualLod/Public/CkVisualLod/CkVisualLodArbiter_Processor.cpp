@@ -43,31 +43,31 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InCurrent)
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent)
         -> void
     {
-        if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+        if (NOT InVisualLodArbiterCurrent._LoadedAssets.Get_IsRequested())
         {
-            InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            InVisualLodArbiterCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("VisualLodArbiter.Setup"), {InParams.Get_Config().ToSoftObjectPath()});
         }
 
-        if (NOT InCurrent._LoadedAssets.Get_IsReady())
+        if (NOT InVisualLodArbiterCurrent._LoadedAssets.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_VisualLodArbiter_PendingAssetLoad>();
             return;
         }
 
         const auto ResolvedConfig = Cast<UCk_VisualLodArbiter_Data>(
-            InCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Config().ToSoftObjectPath()));
-        const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedConfig);
+            InVisualLodArbiterCurrent._LoadedAssets.Get_ResolvedObject(InParams.Get_Config().ToSoftObjectPath()));
+        const auto AssetsAreLoaded = NOT InVisualLodArbiterCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedConfig);
 
         CK_ENSURE_IF_NOT(AssetsAreLoaded,
             TEXT("Cannot setup VisualLodArbiter [{}] - loading its Config [{}] through CkResourceLoader failed"),
             InHandle, InParams.Get_Config().ToSoftObjectPath())
         {
-            InCurrent._LoadedAssets = {};
-            InCurrent._RuntimeTunerAssets = {};
+            InVisualLodArbiterCurrent._LoadedAssets = {};
+            InVisualLodArbiterCurrent._RuntimeTunerAssets = {};
             InHandle.Try_Remove<FTag_VisualLodArbiter_PendingAssetLoad>();
             // Retain NeedsSetup: update processors must never admit a half-setup arbiter.
             return;
@@ -75,7 +75,7 @@ namespace ck
 
         // An empty arbiter has no crowd-owned assets to root; its empty runtime snapshot is valid.
         if (NOT ResolvedConfig->Get_CrowdConfigs().IsEmpty()
-            && NOT InCurrent._RuntimeTunerAssets.Get_IsRequested())
+            && NOT InVisualLodArbiterCurrent._RuntimeTunerAssets.Get_IsRequested())
         {
             auto ProfilePaths = TArray<FSoftObjectPath>{};
             for (const auto& CrowdConfig : ResolvedConfig->Get_CrowdConfigs())
@@ -85,24 +85,24 @@ namespace ck
                 { ProfilePaths.Emplace(RenderBand.Get_RendererProfile().ToSoftObjectPath()); }
             }
 
-            InCurrent._RuntimeTunerAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+            InVisualLodArbiterCurrent._RuntimeTunerAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
                 TEXT("VisualLodArbiter.RuntimeTuners"), ProfilePaths);
         }
 
         if (NOT ResolvedConfig->Get_CrowdConfigs().IsEmpty()
-            && NOT InCurrent._RuntimeTunerAssets.Get_IsReady())
+            && NOT InVisualLodArbiterCurrent._RuntimeTunerAssets.Get_IsReady())
         {
             InHandle.AddOrGet<FTag_VisualLodArbiter_PendingAssetLoad>();
             return;
         }
 
         const auto RuntimeTunerAssetsAreLoaded = ResolvedConfig->Get_CrowdConfigs().IsEmpty()
-            || NOT InCurrent._RuntimeTunerAssets.Get_HasFailed();
+            || NOT InVisualLodArbiterCurrent._RuntimeTunerAssets.Get_HasFailed();
         CK_ENSURE_IF_NOT(RuntimeTunerAssetsAreLoaded,
             TEXT("Cannot setup VisualLodArbiter [{}] - loading its runtime tuner profiles failed"), InHandle)
         {
-            InCurrent._LoadedAssets = {};
-            InCurrent._RuntimeTunerAssets = {};
+            InVisualLodArbiterCurrent._LoadedAssets = {};
+            InVisualLodArbiterCurrent._RuntimeTunerAssets = {};
             InHandle.Try_Remove<FTag_VisualLodArbiter_PendingAssetLoad>();
             // Retain NeedsSetup: update processors must never admit a half-setup arbiter.
             return;
@@ -120,9 +120,9 @@ namespace ck
             return;
         }
 
-        InCurrent._Config = ResolvedConfig;
-        InCurrent._RuntimeTuners = RuntimeTuners;
-        InCurrent._Crowds.SetNum(ResolvedConfig->Get_CrowdConfigs().Num());
+        InVisualLodArbiterCurrent._Config = ResolvedConfig;
+        InVisualLodArbiterCurrent._RuntimeTuners = RuntimeTuners;
+        InVisualLodArbiterCurrent._Crowds.SetNum(ResolvedConfig->Get_CrowdConfigs().Num());
 
         // Two live arbiters with one domain tag would both claim the same members — catch the
         // misconfiguration at the second arbiter's setup, when both configs are resolvable
@@ -151,14 +151,14 @@ namespace ck
     auto
         FProcessor_VisualLodArbiter_HandleRequests::
         DoTryApply_RuntimeTunerProfiles(
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_VisualLodArbiter_RuntimeTuners& InCandidate)
         -> bool
     {
         auto LiveCrowdIndices = TArray<int32>{};
-        for (auto CrowdIndex = 0; CrowdIndex < InCurrent._Crowds.Num(); ++CrowdIndex)
+        for (auto CrowdIndex = 0; CrowdIndex < InVisualLodArbiterCurrent._Crowds.Num(); ++CrowdIndex)
         {
-            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            const auto Crowd = InVisualLodArbiterCurrent._Crowds[CrowdIndex]._Crowd.Get();
             if (ck::Is_NOT_Valid(Crowd))
             { continue; }
 
@@ -176,14 +176,14 @@ namespace ck
         PreviousProfiles.Reserve(LiveCrowdIndices.Num());
         for (const auto CrowdIndex : LiveCrowdIndices)
         {
-            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            const auto Crowd = InVisualLodArbiterCurrent._Crowds[CrowdIndex]._Crowd.Get();
             PreviousProfiles.Add(Crowd->Get_RuntimeProfileTuners());
         }
 
         for (auto AppliedIndex = 0; AppliedIndex < LiveCrowdIndices.Num(); ++AppliedIndex)
         {
             const auto CrowdIndex = LiveCrowdIndices[AppliedIndex];
-            const auto Crowd = InCurrent._Crowds[CrowdIndex]._Crowd.Get();
+            const auto Crowd = InVisualLodArbiterCurrent._Crowds[CrowdIndex]._Crowd.Get();
             auto CandidateProfiles = TArray<FCk_IskmRenderer_RuntimeProfileTuners>{};
             for (const auto& BandTuners : InCandidate.Get_CrowdTuners()[CrowdIndex].Get_RenderBands())
             { CandidateProfiles.Add(BandTuners.Get_ProfileTuners()); }
@@ -193,7 +193,7 @@ namespace ck
 
             for (auto RollbackIndex = 0; RollbackIndex < AppliedIndex; ++RollbackIndex)
             {
-                const auto RollbackCrowd = InCurrent._Crowds[LiveCrowdIndices[RollbackIndex]]._Crowd.Get();
+                const auto RollbackCrowd = InVisualLodArbiterCurrent._Crowds[LiveCrowdIndices[RollbackIndex]]._Crowd.Get();
                 if (ck::IsValid(RollbackCrowd))
                 { RollbackCrowd->Set_RuntimeProfileTuners(PreviousProfiles[RollbackIndex]); }
             }
@@ -210,7 +210,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             FFragment_VisualLodArbiter_Requests& InRequests) const
         -> void
     {
@@ -223,7 +223,7 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InHandle, Result);
 
-            if (DoHandleRequest(InHandle, InCurrent, InRequest))
+            if (DoHandleRequest(InHandle, InVisualLodArbiterCurrent, InRequest))
             { Result = ECk_Request_OperationResult::Succeeded; }
         }), policy::DontResetContainer{});
 
@@ -235,11 +235,11 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetObserver& InRequest)
         -> bool
     {
-        InCurrent._Observer = InRequest.Get_Observer();
+        InVisualLodArbiterCurrent._Observer = InRequest.Get_Observer();
         return true;
     }
 
@@ -247,11 +247,11 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_ClearObserver& InRequest)
         -> bool
     {
-        InCurrent._Observer = FCk_Handle{};
+        InVisualLodArbiterCurrent._Observer = FCk_Handle{};
         return true;
     }
 
@@ -259,7 +259,7 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetFrozen& InRequest)
         -> bool
     {
@@ -274,11 +274,11 @@ namespace ck
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_SetRuntimeTuners& InRequest)
         -> bool
     {
-        const auto Config = InCurrent._Config.Get();
+        const auto Config = InVisualLodArbiterCurrent._Config.Get();
         const auto ConfigIsValid = ck::IsValid(Config);
         CK_ENSURE_IF_NOT(ConfigIsValid,
             TEXT("VisualLodArbiter [{}] cannot set runtime tuners without its resolved config"), InHandle)
@@ -289,23 +289,23 @@ namespace ck
             TEXT("VisualLodArbiter [{}] rejected invalid runtime tuners atomically"), InHandle)
         { return false; }
 
-        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, InRequest.Get_RuntimeTuners());
+        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InVisualLodArbiterCurrent, InRequest.Get_RuntimeTuners());
         CK_ENSURE_IF_NOT(RendererAccepted,
             TEXT("VisualLodArbiter [{}] rejected runtime profile tuner transaction atomically"), InHandle)
         { return false; }
 
-        return visual_lod::TrySetRuntimeTuners(InCurrent._RuntimeTuners, InRequest.Get_RuntimeTuners(), *Config);
+        return visual_lod::TrySetRuntimeTuners(InVisualLodArbiterCurrent._RuntimeTuners, InRequest.Get_RuntimeTuners(), *Config);
     }
 
     auto
         FProcessor_VisualLodArbiter_HandleRequests::
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_VisualLodArbiter_Current& InCurrent,
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_Request_VisualLodArbiter_ResetRuntimeTuners& InRequest)
         -> bool
     {
-        const auto Config = InCurrent._Config.Get();
+        const auto Config = InVisualLodArbiterCurrent._Config.Get();
         const auto ConfigIsValid = ck::IsValid(Config);
         CK_ENSURE_IF_NOT(ConfigIsValid,
             TEXT("VisualLodArbiter [{}] cannot reset runtime tuners without its resolved config"), InHandle)
@@ -317,12 +317,12 @@ namespace ck
             TEXT("VisualLodArbiter [{}] cannot reset to malformed authored runtime tuners"), InHandle)
         { return false; }
 
-        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InCurrent, RuntimeTuners);
+        const auto RendererAccepted = DoTryApply_RuntimeTunerProfiles(InVisualLodArbiterCurrent, RuntimeTuners);
         CK_ENSURE_IF_NOT(RendererAccepted,
             TEXT("VisualLodArbiter [{}] rejected runtime profile reset transaction atomically"), InHandle)
         { return false; }
 
-        InCurrent._RuntimeTuners = RuntimeTuners;
+        InVisualLodArbiterCurrent._RuntimeTuners = RuntimeTuners;
         return true;
     }
 
@@ -334,7 +334,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_VisualLodArbiter_Params& InParams,
-            FFragment_VisualLodArbiter_Current& InCurrent)
+            FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent)
         -> void
     {
         CK_TRIGGER_ENSURE(TEXT("FProcessor_VisualLodArbiter_Update::ForEachEntity dispatched — the DoTick shadow was removed, "
@@ -420,7 +420,7 @@ namespace ck
         FProcessor_VisualLodArbiter_Update::
         DoResolve_View(
             const FCk_Handle_VisualLodArbiter& InArbiter,
-            const FFragment_VisualLodArbiter_Current& InCurrent,
+            const FFragment_VisualLodArbiter_Current& InVisualLodArbiterCurrent,
             const FCk_VisualLodArbiter_RuntimeTuners& InRuntimeTuners)
         -> FVisualLod_LocalView
     {
@@ -431,7 +431,7 @@ namespace ck
 
         // An explicit observer wins (split-screen-proof, test-wireable); unset falls back to
         // local-view discovery. No view either way (dedicated server, editor world) ⇒ no-op
-        if (const auto Observer = InCurrent.Get_Observer();
+        if (const auto Observer = InVisualLodArbiterCurrent.Get_Observer();
             ck::IsValid(Observer))
         {
             const auto Camera = UCk_Utils_Camera_UE::Cast(Observer);
@@ -1088,7 +1088,7 @@ namespace ck
         const auto RendererHandle = UCk_Utils_IskmRenderer_UE::Add(NodeGeneric, RendererData);
 
         auto NodeXfHandle = UCk_Utils_Transform_UE::CastChecked(NodeGeneric);
-        const auto ProxyParams = FCk_Fragment_IskmProxy_ParamsData{}
+        const auto ProxyParams = FCk_IskmProxy_Spec{}
             .Set_Renderer(RendererHandle)
             .Set_SpawnTransform(InMemberXf);
         auto Proxy = UCk_Utils_IskmProxy_UE::Add(NodeXfHandle, ProxyParams);

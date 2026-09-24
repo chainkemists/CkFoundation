@@ -94,7 +94,7 @@ namespace ck_jolt_debugdraw_capture
         if (ck::Is_NOT_Valid(Handle))
         { return false; }
 
-        return Handle.Has<ck::FFragment_JoltStaticActor_Current>();
+        return Handle.Has<ck::FFragment_JoltStaticActor>();
     }
 
     auto
@@ -1168,10 +1168,10 @@ namespace ck_jolt_debugdraw_capture
             // because FCk_Handle::View() has no usable const overload.
             auto TransientEntity = InCtx._TransientEntity;
 
-            TransientEntity.View<ck::FFragment_JoltCharacter_Current>().ForEach(
-            [&](FCk_Entity InEntity, const ck::FFragment_JoltCharacter_Current& InCurrent) -> void
+            TransientEntity.View<ck::FFragment_JoltCharacter>().ForEach(
+            [&](FCk_Entity InEntity, const ck::FFragment_JoltCharacter& InJoltCharacter) -> void
             {
-                const auto* Character = InCurrent.Get_Character().GetPtr();
+                const auto* Character = InJoltCharacter.Get_Character().GetPtr();
                 if (Character == nullptr)
                 { return; }
 

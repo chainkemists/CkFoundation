@@ -110,7 +110,7 @@ namespace ck
     class CKISKMRENDERER_API FProcessor_IskmProxy_HandleLateCustomDataRequests : public ck_exp::TProcessor<
         FProcessor_IskmProxy_HandleLateCustomDataRequests,
         FCk_Handle_IskmProxy,
-        TReadWrite<FFragment_IskmProxy_Current>,
+        TReadWrite<FFragment_IskmProxy>,
         TReadWrite<FFragment_IskmProxy_CustomData>,
         TReadWrite<FFragment_IskmProxy_LateCustomDataRequests>,
         TExclude<FTag_IskmProxy_NeedsSetup>,
@@ -128,7 +128,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_CustomData& InCustomData,
             FFragment_IskmProxy_LateCustomDataRequests& InRequests) const -> void;
 
@@ -136,7 +136,7 @@ namespace ck
         auto
         DoHandleRequest(
             HandleType& InHandle,
-            FFragment_IskmProxy_Current& InCurrent,
+            FFragment_IskmProxy& InIskmProxy,
             FFragment_IskmProxy_CustomData& InCustomData,
             const FCk_Request_IskmProxy_SetCustomDataFloat& InRequest) const -> bool;
     };

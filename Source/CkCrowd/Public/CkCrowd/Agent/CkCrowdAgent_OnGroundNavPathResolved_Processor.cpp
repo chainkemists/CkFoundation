@@ -69,7 +69,7 @@ namespace ck_crowd_agent_on_ground_nav_path_resolved
 
     auto Get_DoesStrictRouteCrossStandingCrowd(
         FCk_Handle_CrowdAgent                        InHandle,
-        const ck::FFragment_CrowdAgent_Params&       InParams,
+        const ck::FFragment_CrowdAgent_Tunables&       InTunables,
         const ck::FFragment_CrowdAgent_PathFollow&   InPathFollow,
         const FVector&                                InStart,
         const FCk_GroundNavPath_Result&              InResult,
@@ -111,7 +111,7 @@ namespace ck_crowd_agent_on_ground_nav_path_resolved
         }
 
         auto Discs = TArray<FConfirmedDisc, TInlineAllocator<32>>{};
-        const auto GoalExemptionPad = InPathFollow.Get_ActiveArrivalRadius() + InParams.Get_Radius();
+        const auto GoalExemptionPad = InPathFollow.Get_ActiveArrivalRadius() + InTunables.Get_Radius();
 
         InHandle.View<ck::FFragment_CrowdAgent_NavMarkup>().ForEach(
             [&](FCk_Entity InEntity, const ck::FFragment_CrowdAgent_NavMarkup& InMarkup)
@@ -152,7 +152,7 @@ namespace ck_crowd_agent_on_ground_nav_path_resolved
                 // the disc's vertical interval.
                 if (Get_DoesSegmentCrossConfirmedDisc(
                     SegmentStart, Waypoint, FConfirmedDisc{
-                        Disc._Center, Disc._Radius + InParams.Get_Radius(), Disc._VerticalHalfExtent}))
+                        Disc._Center, Disc._Radius + InTunables.Get_Radius(), Disc._VerticalHalfExtent}))
                 { return true; }
             }
             SegmentStart = Waypoint;
@@ -293,7 +293,7 @@ namespace ck
                     const auto CrossesStandingCrowd =
                         ck_crowd_agent_on_ground_nav_path_resolved::Get_DoesStrictRouteCrossStandingCrowd(
                             InHandle,
-                            InHandle.Get<FFragment_CrowdAgent_Params>(),
+                            InHandle.Get<FFragment_CrowdAgent_Tunables>(),
                             InPathFollow,
                             InTransform.Get_Transform().GetLocation(),
                             Result,

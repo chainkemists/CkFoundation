@@ -173,7 +173,7 @@ auto
         if (ck::Is_NOT_Valid(Current))
         { return false; }
 
-        if (NOT Current.Has_All<ck::FFragment_Sm_Current, ck::FFragment_Sm_Params>())
+        if (NOT Current.Has_All<ck::FFragment_Sm, ck::FFragment_Sm_Params>())
         { return false; }
 
         if (UCk_Utils_EntityLifetime_UE::Get_IsPendingDestroy(Current,

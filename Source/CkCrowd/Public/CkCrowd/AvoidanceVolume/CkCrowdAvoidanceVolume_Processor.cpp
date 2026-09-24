@@ -125,12 +125,12 @@ namespace ck
             InParams.Get_HalfExtents().X + Influence,
             InParams.Get_HalfExtents().Y + Influence,
             InParams.Get_HalfExtents().Z}};
-        const auto ProbeShape = UCk_Utils_ShapeBox_UE::Add(ProbeChild, FCk_Fragment_ShapeBox_ParamsData{ProbeDimensions});
+        const auto ProbeShape = UCk_Utils_ShapeBox_UE::Add(ProbeChild, FCk_ShapeBox_Spec{ProbeDimensions});
         const auto HasProbeShape = ck::IsValid(ProbeShape);
         CK_ENSURE_IF_NOT(HasProbeShape, TEXT("CrowdAvoidanceVolume [{}] failed to add its probe box."), Volume)
         { Cleanup({}); return; }
 
-        auto ProbeParams = FCk_Fragment_Probe_ParamsData{TAG_Crowd_AvoidanceVolume};
+        auto ProbeParams = FCk_Probe_Spec{TAG_Crowd_AvoidanceVolume};
         ProbeParams.Set_Filter(FGameplayTagContainer{TAG_Crowd_Agent});
         ProbeParams.Set_ContextOverlapPolicy(ECk_Probe_ContextOverlapPolicy::Any);
         ProbeParams.Set_MotionType(ECk_MotionType::Static);

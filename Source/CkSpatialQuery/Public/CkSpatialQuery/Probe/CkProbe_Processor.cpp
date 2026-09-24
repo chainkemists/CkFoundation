@@ -1284,7 +1284,7 @@ namespace ck
             {
                 const auto EntityScriptHandle = UCk_Utils_EntityScript_UE::CastChecked(EntityScriptEntity);
                 if (ck::IsValid(EntityScriptHandle)
-                    && EntityScriptHandle.Get<ck::FFragment_EntityScript_Current>().Get_Script().IsValid())
+                    && EntityScriptHandle.Get<ck::FFragment_EntityScript>().Get_Script().IsValid())
                 {
                     const auto EntityScriptClass = UCk_Utils_EntityScript_UE::Get_ScriptClass(EntityScriptHandle);
                     if (EntityScriptClass)

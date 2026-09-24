@@ -37,7 +37,7 @@ namespace ck
             FProcessor_CrowdAgent_DrawBlockStatus_Setup,
             FCk_Handle_CrowdAgent,
             FTag_CrowdAgent_GoalBlocked,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
             TExclude<FFragment_CrowdAgent_DebugBlockMarker>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -49,7 +49,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_CrowdAgent_Params& InParams) const -> void;
+            const FFragment_CrowdAgent_Tunables& InTunables) const -> void;
     };
 
     // Per-tick refresh: disc visibility follows (toggle AND currently-blocked), disc colour follows

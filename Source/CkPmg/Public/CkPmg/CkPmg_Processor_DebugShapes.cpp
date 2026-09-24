@@ -89,7 +89,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            FFragment_Pmg_DebugShape_Current& InCurrent)
+            FFragment_Pmg_DebugShape& InPmgDebugShape)
         -> void
     {
         const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
@@ -139,7 +139,7 @@ namespace ck
         if (InHandle.Has<FFragment_Transform>())
         { MeshComponent->SetWorldTransform(InHandle.Get<FFragment_Transform>().Get_Transform()); }
 
-        InCurrent = FFragment_Pmg_DebugShape_Current{MeshComponent, FCk_Time{InDeltaT.Get_Seconds()}};
+        InPmgDebugShape = FFragment_Pmg_DebugShape{MeshComponent, FCk_Time{InDeltaT.Get_Seconds()}};
         InHandle.Remove<MarkedDirtyBy>();
     }
 
@@ -170,10 +170,10 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Pmg_DebugShape_Common& InCommon,
-            const FFragment_Pmg_DebugShape_Current& InCurrent)
+            const FFragment_Pmg_DebugShape& InPmgDebugShape)
             -> void
     {
-        auto* MeshComponent = InCurrent._MeshComponent.Get();
+        auto* MeshComponent = InPmgDebugShape._MeshComponent.Get();
         if (ck::Is_NOT_Valid(MeshComponent))
         { return; }
 

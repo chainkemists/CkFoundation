@@ -49,7 +49,7 @@ namespace ck::spatialquery
         /** Game thread only. Returns JPH::CollisionGroup::cInvalidSubGroup on capacity exhaustion. */
         auto
         Get_OrRegisterSignature(
-            const FCk_Fragment_Probe_ParamsData& InParams) -> uint32;
+            const FCk_Probe_Spec& InParams) -> uint32;
 
         /** Lock-free Jolt-worker read. */
         auto
@@ -88,7 +88,7 @@ namespace ck::spatialquery
         /** Game thread only. */
         auto
         Get_OrRegisterSignature(
-            const FCk_Fragment_Probe_ParamsData& InParams) const -> uint32;
+            const FCk_Probe_Spec& InParams) const -> uint32;
     };
 }
 
