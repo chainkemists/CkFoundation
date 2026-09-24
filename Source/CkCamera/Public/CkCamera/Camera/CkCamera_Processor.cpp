@@ -319,9 +319,9 @@ namespace ck
         // Publish the composed pose to the view anchor through the ordinary deferred request path. The
         // enqueue happens in FGroup_Transform_Derived, so the transform-local settle barrier drains it and
         // composes any scene-node children of the anchor before components are pushed.
-        if (ck::IsValid(InCurrent._ViewAnchor))
+        if (ck::IsValid(InCamera._ViewAnchor))
         {
-            UCk_Utils_Transform_UE::Request_SetTransform(InCurrent._ViewAnchor,
+            UCk_Utils_Transform_UE::Request_SetTransform(InCamera._ViewAnchor,
                 FCk_Request_Transform_SetTransform{FTransform{ViewInfo.Rotation, ViewInfo.Location}}, {});
         }
 
