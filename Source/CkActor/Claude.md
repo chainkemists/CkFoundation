@@ -21,7 +21,7 @@ CkActor/Public/CkActor/
 
 ## Owning actor pattern
 
-Entities that are driven by an actor store an `FFragment_OwningActor_Current` fragment (defined in `CkEcs/OwningActor/`). `CkActor` extends this with actor-specific modifiers and tag associations.
+Entities that are driven by an actor store an `FFragment_OwningActor` fragment (defined in `CkEcs/OwningActor/`). `CkActor` extends this with actor-specific modifiers and tag associations.
 
 Typical creation pattern (through a feature module's Utils):
 
@@ -52,5 +52,5 @@ Actor utilities (for getting the actor from an entity or vice versa) live in `Ck
 
 ## See also
 - `CkEcsExt/Claude.md` — EntityHolder lifecycle binding (actor destroyed → entity destroyed).
-- `CkEcs/Claude.md` — `FFragment_OwningActor_Current` in `CkEcs/OwningActor/`.
+- `CkEcs/Claude.md` — `FFragment_OwningActor` in `CkEcs/OwningActor/`.
 - `CkCore/Actor/README.md` — `UCk_Utils_Actor_UE` spawn/find helpers.

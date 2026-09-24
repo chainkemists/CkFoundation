@@ -19,7 +19,7 @@ ribbon widget only), `CkVisibleRange`.
 - `Create(InLifetimeOwner, InParams)` — creates a NEW Compass child entity under `InLifetimeOwner`
   (Compass has no record — no record wiring). Observer defaults to the created child entity itself;
   redirect via `Request_SetObserver`.
-- `FCk_Fragment_Compass_ParamsData` — `_ArcDegrees` (essential), `_MaxEntries`, `_CategoryFilter`
+- `FCk_Compass_Spec` — `_ArcDegrees` (essential), `_MaxEntries`, `_CategoryFilter`
   (`FGameplayTagQuery`; **empty accepts everything**), `_HeadingSource`
   (`Auto`/`CameraView`/`EntityTransform`/`Manual`), `_UpdateInterval` (projection throttle; heading is
   NEVER throttled).

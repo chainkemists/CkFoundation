@@ -96,7 +96,7 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
   live on the `Static_World` object layer — pairs with NOTHING until the Phase-2 layer table
   (query targets only; probes never see them).
 - **ECS-first attribution (JoltStaticActor feature):** ONE entity per source actor that contributes
-  ≥1 baked body (`ck::FFragment_JoltStaticActor_Current`, transient-owned, DebugName = actor FName).
+  ≥1 baked body (`ck::FFragment_JoltStaticActor`, transient-owned, DebugName = actor FName).
   Each baked body is stamped with its source actor's entity id as Jolt user-data, so a static-world
   hit resolves back to the entity through the SAME `TryResolve_Entity` path a dynamic JoltBody hit
   uses — there is no FName attribution table. Lifecycle is bidirectional: level-streaming /
@@ -228,7 +228,7 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
 ### Dynamic bodies + characters (Phases 3-4)
 
 - **JoltBody quartet** (`Body/`): `UCk_Utils_JoltBody_UE::Add` with
-  `FCk_Fragment_JoltBody_ParamsData` (shape source explicit/from-actor, motion type
+  `FCk_JoltBody_Spec` (shape source explicit/from-actor, motion type
   Static/Kinematic/Dynamic, mass source, surface friction/restitution, collision profile →
   object layer, CCD). Requests (deferred, drained by `FProcessor_JoltBody_HandleRequests`
   BEFORE the step): SetSleepState, AddForce(/AtLocation), AddTorque, AddImpulse(/AtLocation),
@@ -244,7 +244,7 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
   root). Baked statics now carry their source actor's JoltStaticActor entity id (not 0), so a
   dynamic-vs-baked-floor contact resolves `_OtherEntity` to that attribution entity. A baked
   static's JoltStaticActor entity arriving as the *self* side of a contact is benign — it has no
-  `FFragment_JoltBody_Current`, so the router's first guard drops it; only the JoltBody's own body
+  `FFragment_JoltBody`, so the router's first guard drops it; only the JoltBody's own body
   id (index+seq) may drive that entity's signals.
 - **JoltCharacter quartet** (`Character/`): `JPH::CharacterVirtual`-backed (no broadphase
   body, no BodyID). Params: capsule radius/half-height (CENTERED capsule — total half
@@ -287,14 +287,14 @@ resolve their soft mesh through a rooted batch, consumer id `JoltBody.Setup`), `
   Distance_SetRange, Hinge_SetMotor.
   **Read surface for the two bodies** (P8-D55): `Get_BodyA` / `Get_BodyB` return them as
   `FCk_Handle_JoltBody`, and `Get_IsBodyBWorldAnchor` tells "anchored to the world by design" apart
-  from "body B's entity died". They exist because `FFragment_JoltConstraint_Current::_BodyA/_BodyB`
+  from "body B's entity died". They exist because `FFragment_JoltConstraint::_BodyA/_BodyB`
   are private behind a friend list of the constraint's OWN processors, and a presentation consumer
   that only wants to NAME the pair has no business being added to it — a read accessor on the utils
   is the doctrine-conformant spot, and widening the friend list was the alternative that was rejected.
   Body B is an empty handle for a world anchor and for a dead body alike; the flag is what separates
   them.
 - **Rope builder** (`Constraint/CkJoltRope_Utils.h`): `UCk_Utils_JoltRope_UE::Create_Rope(Owner,
-  FCk_JoltRope_ParamsData)` — N Dynamic sphere segments (children of Owner) linked Rigid (point
+  FCk_JoltRope_Spec)` — N Dynamic sphere segments (children of Owner) linked Rigid (point
   constraints at boundaries) or Springy (auto-distance + spring between centers), anchored to the
   world or an `_AnchorBody` (e.g. a kinematic head — the "hair" pattern is many short Springy
   strands on a moving anchor). Returns `FCk_JoltRope_Result` (segment bodies + links; cutting =
@@ -338,7 +338,7 @@ when no registered target is demanding, so a closed debugger costs one map walk.
 - `ReleaseDestroyedSleepingBodies` — a sleeping body is invisible to both passes, so its slots would
   outlive its destruction; one bounds-checked `TryGetBody` per sleeping body, no draw. **Gated on the
   body-removed revision** — an unchanged token means no body has died, so the walk is skipped whole.
-- `DrawCharacters` — `ck::FFragment_JoltCharacter_Current` via the registry view; each
+- `DrawCharacters` — `ck::FFragment_JoltCharacter` via the registry view; each
   `CharacterVirtual`'s own shape drawn through the shared cache (no per-frame geometry). Characters
   have no BodyID, so their slot keys are lifted clear of the BodyID keyspace.
 
@@ -392,7 +392,7 @@ Three things deliberately defeat the skip, because each would otherwise show sta
   that need repainting.
 
 One colour input is deliberately NOT in the record: BakedStatic attribution, which is resolved through
-the body's `FFragment_JoltStaticActor_Current` entity. It can only flip when that entity dies, and that
+the body's `FFragment_JoltStaticActor` entity. It can only flip when that entity dies, and that
 already routes the body through the static-revision funnel — an accepted, documented gap rather than a
 per-body registry lookup on every comparison.
 
@@ -581,7 +581,7 @@ the runtime Game build contains no cook-API dependency.
 `Set_RenderMode` swaps each bucket's material 0 between the two MIDs — zero geometry rebuild.
 BakedStatic is distinguished from a Static-motion JoltBody by attribution entity, not by layer: both
 share the Static object-layer DOMAIN, and only a baked body's user-data resolves to a
-`FFragment_JoltStaticActor_Current`.
+`FFragment_JoltStaticActor`.
 
 ⚠ **`[PACKAGED-VERIFY]` — live rendering of all three shared debug materials.** The cook dependency is
 explicit, but only a running packaged viewport can prove the final material appearance. Exact acceptance step:
@@ -1115,7 +1115,7 @@ saved.
   the 0.02 cm penetration slop keeps stacked bodies in permanent micro-jitter and the 0.03 cm/s
   sleep threshold makes stacks effectively unable to sleep — exposed by the Ck.Jolt
   BoxStackOfFiveSettlesAndStays test once it gated on real velocity quiescence.
-- Character feel: `FCk_Fragment_JoltCharacter_ParamsData` knobs (MaxStrengthNewtons,
+- Character feel: `FCk_JoltCharacter_Spec` knobs (MaxStrengthNewtons,
   MaxSlopeAngleDegrees, mass) + the cm-converted ExtendedUpdate settings in
   `DoStepCharacters_AnyThread` (stick-to-floor 50, step-up 40).
 - Benchmarks + engine comparison: `docs/campaigns/jolt-collision-world/VALIDATION.md`
