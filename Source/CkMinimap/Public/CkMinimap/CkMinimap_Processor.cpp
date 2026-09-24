@@ -518,7 +518,7 @@ namespace ck
 
         if (MembershipIsUnchanged)
         {
-            Swap(InCurrent._Entries, InCurrent._ScratchEntries);
+            Swap(InMinimap._Entries, InScratch._Entries);
             return;
         }
 
