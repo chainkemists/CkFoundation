@@ -489,7 +489,7 @@ namespace ck
 
         if (MembershipIsUnchanged)
         {
-            Swap(InCurrent._Entries, InCurrent._ScratchEntries);
+            Swap(InCompass._Entries, InScratch._Entries);
             return;
         }
 
