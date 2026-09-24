@@ -26,10 +26,10 @@ namespace ck
 {
     auto FProcessor_UnrealComponent_Outline_Sync::ForEachEntity(
         TimeType InDeltaT, HandleType InHandle,
-        const FFragment_UnrealComponent_Current& InCurrent,
+        const FFragment_UnrealComponent& InUnrealComponent,
         const FFragment_Usf_OutlineResolved& InResolved) -> void
     {
-        auto* Component = Cast<UPrimitiveComponent>(InCurrent.Get_Component().Get());
+        auto* Component = Cast<UPrimitiveComponent>(InUnrealComponent.Get_Component().Get());
         auto* Preset = InResolved.Get_Preset().Get();
         if (ck::Is_NOT_Valid(Component) || ck::Is_NOT_Valid(Preset)) { return; }
 

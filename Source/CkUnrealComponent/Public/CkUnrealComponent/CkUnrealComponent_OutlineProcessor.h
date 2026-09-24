@@ -12,7 +12,7 @@ namespace ck
     class CKUNREALCOMPONENT_API FProcessor_UnrealComponent_Outline_Sync : public ck_exp::TProcessor<
         FProcessor_UnrealComponent_Outline_Sync,
         FCk_Handle_UnrealComponent,
-        TReadOnly<FFragment_UnrealComponent_Current>,
+        TReadOnly<FFragment_UnrealComponent>,
         TReadOnly<FFragment_Usf_OutlineResolved>,
         TExclude<FTag_UnrealComponent_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -24,7 +24,7 @@ namespace ck
         using TProcessor::TProcessor;
 
         static auto ForEachEntity(TimeType InDeltaT, HandleType InHandle,
-                                  const FFragment_UnrealComponent_Current& InCurrent,
+                                  const FFragment_UnrealComponent& InUnrealComponent,
                                   const FFragment_Usf_OutlineResolved& InResolved) -> void;
     };
 

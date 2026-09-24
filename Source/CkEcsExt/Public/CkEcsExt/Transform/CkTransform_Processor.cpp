@@ -345,7 +345,7 @@ namespace ck
         const auto HasTransformAnchor =
             InHandle.Has_Any<FFragment_Transform_MeshSocket, FFragment_Transform_RootComponent>();
         const auto IsParentDrivenSceneNode =
-            InHandle.Has<FFragment_SceneNode_Current>()
+            InHandle.Has<FFragment_SceneNode>()
             && InHandle.Has<SceneNodeParent>()
             && NOT InHandle.Has<FFragment_SceneNode_UnrealAnchor>()
             && (NOT HasTransformAnchor || InHandle.Has<FTag_Transform_ExternallyDriven>());

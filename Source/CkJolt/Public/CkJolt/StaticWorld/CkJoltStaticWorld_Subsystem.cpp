@@ -662,7 +662,7 @@ auto
     if (NOT Desired.IsSet())
     { return; }
 
-    const auto& Fragment = Entity.Get<ck::FFragment_JoltStaticActor_Current>();
+    const auto& Fragment = Entity.Get<ck::FFragment_JoltStaticActor>();
     if (Fragment.Get_BodiesInScene() == *Desired)
     { return; }
 
@@ -721,7 +721,7 @@ auto
         const UPrimitiveComponent& InSourceComponent)
         -> void
 {
-    auto& Fragment = InComponentEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InComponentEntity.Get<ck::FFragment_JoltStaticActor>();
     Fragment._SourceComponent = &InSourceComponent;
 
     // Binding mutates only the delegate's invocation list, never the component's collision state —
@@ -739,7 +739,7 @@ auto
     InComponent.OnComponentCollisionSettingsChangedEvent.AddUniqueDynamic(
         this, &ThisType::OnTrackedComponentCollisionSettingsChanged);
 
-    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor>();
     Fragment._BoundComponents.Emplace(&InComponent);
 
     // Last-wins by design, but never silently: two attributions over one component means it was baked
@@ -762,7 +762,7 @@ auto
         FCk_Handle_JoltStaticActor& InEntity)
         -> void
 {
-    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor>();
 
     for (const auto& WeakComponent : Fragment._BoundComponents)
     {
@@ -783,7 +783,7 @@ auto
         bool InInScene)
         -> void
 {
-    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor>();
 
     if (Fragment.Get_BodiesInScene() == InInScene)
     { return; }
@@ -833,7 +833,7 @@ auto
         const FCk_Handle_JoltStaticActor& InEntity) const
         -> TOptional<bool>
 {
-    const auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor_Current>();
+    const auto& Fragment = InEntity.Get<ck::FFragment_JoltStaticActor>();
 
     auto AnyAlive = false;
 
@@ -1128,10 +1128,10 @@ auto
         const FCk_Handle_JoltStaticActor& InActorEntity)
         -> void
 {
-    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor>())
     { return; }
 
-    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActor();
+    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor>().Get_SourceActor();
 
     if (SourceActor.Get() == nullptr)
     { return; }
@@ -1150,12 +1150,12 @@ auto
         const FCk_Handle_JoltStaticActor& InActorEntity)
         -> void
 {
-    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor_Current>())
+    if (ck::Is_NOT_Valid(InActorEntity) || NOT InActorEntity.Has<ck::FFragment_JoltStaticActor>())
     { return; }
 
     // The weak key hashes by index+serial, so this still finds (and removes) the entry of an actor that is
     // already dead — the same rule _ComponentEventRoutes relies on.
-    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor_Current>().Get_SourceActor();
+    const auto& SourceActor = InActorEntity.Get<ck::FFragment_JoltStaticActor>().Get_SourceActor();
 
     if (const auto* FiledEntity = _ActorEntities.Find(SourceActor);
         FiledEntity != nullptr && *FiledEntity == InActorEntity)

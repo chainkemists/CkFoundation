@@ -204,7 +204,7 @@ auto
         if (ck::Is_NOT_Valid(Probe))
         { return {}; }
 
-        if (Probe.Get<ck::FFragment_Probe_Current>().Get_BodyId().GetIndexAndSequenceNumber() != InBodyIndexAndSeq)
+        if (Probe.Get<ck::FFragment_Probe>().Get_BodyId().GetIndexAndSequenceNumber() != InBodyIndexAndSeq)
         { return {}; }
 
         return Probe;
