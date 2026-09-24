@@ -38,8 +38,8 @@ namespace ck_entity_replication_driver_utils
     // it. An ASSET archetype is skipped: a NetGUID already carries that reference, so the path is pure wire cost.
     auto
         DoStamp_ArchetypeIdentity(
-            TArray<FCk_EntityReplicationDriver_ConstructionInfo> InConstructionInfos)
-        -> TArray<FCk_EntityReplicationDriver_ConstructionInfo>
+            TArray<FCk_EntityReplicationDriver_Spec> InConstructionInfos)
+        -> TArray<FCk_EntityReplicationDriver_Spec>
     {
         for (auto& ConstructionInfo : InConstructionInfos)
         {
@@ -673,7 +673,7 @@ auto
 auto
     ck::entity_replication_driver::
     Construct_FromInfo(
-        const FCk_EntityReplicationDriver_ConstructionInfo& InInfo,
+        const FCk_EntityReplicationDriver_Spec& InInfo,
         FCk_Handle& InEntity)
     -> void
 {

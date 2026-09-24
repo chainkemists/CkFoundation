@@ -157,7 +157,7 @@ namespace ck::entity_replication_driver
     // a step that legitimately carries no archetype at all is the ordinary case.
     CKECS_API auto
     Construct_FromInfo(
-        const FCk_EntityReplicationDriver_ConstructionInfo& InInfo,
+        const FCk_EntityReplicationDriver_Spec& InInfo,
         FCk_Handle& InEntity) -> void;
 }
 
