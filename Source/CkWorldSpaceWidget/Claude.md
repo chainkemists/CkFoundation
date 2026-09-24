@@ -12,7 +12,7 @@ Extracted from `CkUI` — it was the only true ECS feature quartet living inside
 ## Key API
 
 - `UCk_Utils_WorldSpaceWidget_UE::Add` — compose the feature onto an entity.
-- `FCk_Fragment_WorldSpaceWidget_ParamsData` — location / scaling / fading / occlusion sub-structs.
+- `FCk_WorldSpaceWidget_Spec` — location / scaling / fading / occlusion sub-structs.
 - Reconfiguration requests: `FCk_Request_WorldSpaceWidget_SetLocationInfo` / `SetScalingInfo` /
   `SetFadingInfo` / `SetOcclusionInfo`.
 - `ECk_WorldSpaceWidget_RenderMode` — `Viewport` (wrapper widget) vs `WorldComponent` (`UWidgetComponent`).

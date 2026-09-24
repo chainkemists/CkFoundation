@@ -39,7 +39,7 @@ non-negotiable #9.
 `Request_SetVisibility(Hide)`. Either alone is enough to hide the entity; both must clear before
 it's visible again. A plain tag cannot express this — one source's "clear" would silently wipe the
 other source's still-active vote. Each source tracks whether it currently holds a vote
-(`_IsOutOfRange`, `_IsExplicitlyHidden` on `FFragment_VisibleRange_Current`) so a repeated identical
+(`_IsOutOfRange`, `_IsExplicitlyHidden` on `FFragment_VisibleRange`) so a repeated identical
 call never leaks an extra increment.
 
 `OnHiddenChanged` fires only on an actual 0↔>0 transition of the tag's presence (checked via

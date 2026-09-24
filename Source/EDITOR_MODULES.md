@@ -67,7 +67,7 @@ Base cue graph editor — the shared editing infrastructure that `CkAudioEditor`
 ### `CkAudioEditor`
 **Runtime twin:** `CkAudio`. **Depends on:** `CkAudio`, `CkCore`, `CkCue`, `CkCueEditor`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`.
 
-Audio cue asset graph editor. Authors create audio cues by connecting nodes (SoundBase, conditions, modifiers) in a visual graph. Compiles to `FCk_Fragment_AudioTrack_ParamsData`.
+Audio cue asset graph editor. Authors create audio cues by connecting nodes (SoundBase, conditions, modifiers) in a visual graph. Compiles to `FCk_AudioTrack_Spec`.
 
 ### `CkVfxEditor`
 **Runtime twin:** `CkVfx`. **Depends on:** `CkCore`, `CkCue`, `CkCueEditor`, `CkEcs`, `CkEditorGraph`, `CkEditorStyle`, `CkLog`, `CkVfx`.
