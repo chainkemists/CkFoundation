@@ -47,7 +47,7 @@ For live-tracking overlays (e.g. a debugger capsule following a selected entity)
 | `FFragment_Pmg_DebugShape_Common` | Color, thickness, draw-lines toggle, render mode, duration. **Required** by every render path. | `Add_*` and `Create_DebugLineSet`; also defaulted by `Append_Debug*_World`. |
 | `FFragment_Pmg_<Shape>_Params` | Per-shape geometry (radius, half-height, segments, axis…). | `Add_*` calls only. |
 | `FFragment_Pmg_DebugShape_Lines` | Cached wireframe segments in entity-local space. | `Append_Debug*_World` (and indirectly by `Add_*` when `InDrawLines=true`). |
-| `FFragment_Pmg_DebugShape_Current` | Owns the live `UProceduralMeshComponent`. | `Add_*` and `Create_DebugLineSet`. |
+| `FFragment_Pmg_DebugShape` | Owns the live `UProceduralMeshComponent`. | `Add_*` and `Create_DebugLineSet`. |
 | `FFragment_Transform` | Required by every render path. | `Add_*` calls; otherwise call site. |
 | `FTag_Pmg_DebugShape_NeedsSetup` | One-shot Setup gate; cleared after Setup runs. | `Add_*` and `Create_DebugLineSet`. |
 

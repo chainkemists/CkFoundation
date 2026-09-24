@@ -106,7 +106,7 @@ Deliberately fenced OUT of the barrier — do not add them:
 
 ## Replication
 
-State machines are replicatable. Opt in by setting `FCk_Fragment_StateMachine_ParamsData::_Replication = Replicates`; the default is `DoesNotReplicate` and local-only SMs cost nothing extra.
+State machines are replicatable. Opt in by setting `FCk_StateMachine_Spec::_Replication = Replicates`; the default is `DoesNotReplicate` and local-only SMs cost nothing extra.
 
 ### Two-channel transport
 
@@ -167,9 +167,9 @@ Residual gap: a class's FIRST-EVER instantiation misses the cache and publishes 
 
 ### Stash-and-flush precedence (spec §5.4)
 
-Rep payloads can arrive before the client's `FProcessor_Sm_Setup` has populated `FFragment_Sm_Current`. The OnChange/OnAdd handlers route to `FFragment_Sm_PendingReplicationEntries` when either:
+Rep payloads can arrive before the client's `FProcessor_Sm_Setup` has populated `FFragment_Sm`. The OnChange/OnAdd handlers route to `FFragment_Sm_PendingReplicationEntries` when either:
 
-1. `FFragment_Sm_Current` is absent (Setup hasn't run), OR
+1. `FFragment_Sm` is absent (Setup hasn't run), OR
 2. `FFragment_Sm_PendingReplicationEntries` is already non-empty (preserves arrival order under back-to-back deliveries — without this, a later OnChange could land ahead of earlier stashed entries on the next pump).
 
 `FProcessor_Sm_FlushPendingReplication_Drain` releases stash → `FFragment_Sm_ReplayQueue` in arrival order once Setup completes, then mirrors any stashed `_RunStatus`.
@@ -225,7 +225,7 @@ The root's WithHistory container can carry a MIX of root-level transition events
 
 ### Sub-SM net identity
 
-`FFragment_Sm_NetIdentity` exists because a sub-SM entity is created detached from the pawn (`Request_CreateEntity` under the task entity) and so never carries `FFragment_OwningActor_Current`. Live `ComputeNetContext` / `Get_EffectiveAuthorityModel` need the owning pawn via a non-recursive lookup and therefore misresolve on a sub-SM — it would see itself as `NonOwningClient` on the owning client and AutoDetect to ServerAuthoritative. `UCk_SmTask_SubStateMachine` snapshots the PARENT SM's live-resolved identity at `EnterTask`; EnterTask runs on every machine with the parent already resolved, so each machine captures its own correct per-machine role, and nesting chains automatically. Caveat: the NetContext half is frozen at EnterTask, so a mid-life re-possession would leave it stale (sub-SMs are expected not to outlive a possession change); the EffectiveAuthority half is machine-independent and never stale.
+`FFragment_Sm_NetIdentity` exists because a sub-SM entity is created detached from the pawn (`Request_CreateEntity` under the task entity) and so never carries `FFragment_OwningActor`. Live `ComputeNetContext` / `Get_EffectiveAuthorityModel` need the owning pawn via a non-recursive lookup and therefore misresolve on a sub-SM — it would see itself as `NonOwningClient` on the owning client and AutoDetect to ServerAuthoritative. `UCk_SmTask_SubStateMachine` snapshots the PARENT SM's live-resolved identity at `EnterTask`; EnterTask runs on every machine with the parent already resolved, so each machine captures its own correct per-machine role, and nesting chains automatically. Caveat: the NetContext half is frozen at EnterTask, so a mid-life re-possession would leave it stale (sub-SMs are expected not to outlive a possession change); the EffectiveAuthority half is machine-independent and never stale.
 
 ### SM graph entities never replicate independently
 
@@ -259,7 +259,7 @@ Both handlers emit a CANONICAL payload rather than the live one: WithHistory per
 
 ### Params and state save opt-in
 
-Every persisted field on `FCk_Fragment_StateMachine_ParamsData` carries the SaveGame **specifier** — the flag that sets `CPF_SaveGame`, which the `ArIsSaveGame` tagged-property gate checks. `meta=(SaveGame)` is inert metadata and round-trips NOTHING (empirically: every field restored to its default). Fields serialize through the reflected `SerializeItem` path; the proxy archive writes `_InitialStateClass` by path string.
+Every persisted field on `FCk_StateMachine_Spec` carries the SaveGame **specifier** — the flag that sets `CPF_SaveGame`, which the `ArIsSaveGame` tagged-property gate checks. `meta=(SaveGame)` is inert metadata and round-trips NOTHING (empirically: every field restored to its default). Fields serialize through the reflected `SerializeItem` path; the proxy archive writes `_InitialStateClass` by path string.
 
 `_ShouldPersistCurrentState` defaults to true, preserving the existing save behavior. Set it false on the live reconstructed Params when an SM's current runtime state is derived from authored/rebuilt behavior: Produce emits no state-machine payload, and HydrationApply answers `Applied` without touching an older payload if one is present. This gates save transport only; `NetApply` and live replication retain their existing behavior.
 
@@ -277,7 +277,7 @@ Nothing scripts it directly, but the parent RepData shapes' generated `Set_`/`Ge
 
 Even in the degenerate single-batch case, FIFO order within one drain applies the earlier-enqueued AddOverrideState first. No synchronous mirrored fragment write is needed. Only the class is needed for the re-add (apply re-derives `_CachedStatesToOverride` from the override-class CDO); the saved tags ride along for save-file fidelity only.
 
-`Sm_StashHydrationResume` observes NotReady-before-any-mutation: the `FFragment_Sm_Current` guard MUST precede the override re-add, because both the override re-install and the resume stash are single-shot and enqueuing override requests on a NotReady retry would stack duplicates. Gate first, then overrides, then resume.
+`Sm_StashHydrationResume` observes NotReady-before-any-mutation: the `FFragment_Sm` guard MUST precede the override re-add, because both the override re-install and the resume stash are single-shot and enqueuing override requests on a NotReady retry would stack duplicates. Gate first, then overrides, then resume.
 
 ### HydrationResume Option-A cost (accepted, v1)
 

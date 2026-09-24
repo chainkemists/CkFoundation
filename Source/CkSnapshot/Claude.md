@@ -200,7 +200,7 @@ An **unreplicated** feature re-arms nothing — e.g. a Timer persisted this way 
 
 ### 5. Lazily-composed, data-defined features (reconstitute-by-request)
 
-Some features have no structural composition step: the fragment exists iff it holds data — composed lazily by the public `Add`, auto-removed at zero (EntityTag's `FFragment_EntityTag_Current`). For these, the §3 `Has<> → NotReady` gate never opens on a v3 load (Construct does not re-compose them) and the payload would drop at the hydration timeout. The sanctioned shape is **reconstitute via the feature's own public deferred requests** from `HydrationApply` (precedent: Grid Occupancy's `Request_AddPlacement` re-drive). ALL of the following must hold:
+Some features have no structural composition step: the fragment exists iff it holds data — composed lazily by the public `Add`, auto-removed at zero (EntityTag's `FFragment_EntityTag`). For these, the §3 `Has<> → NotReady` gate never opens on a v3 load (Construct does not re-compose them) and the payload would drop at the hydration timeout. The sanctioned shape is **reconstitute via the feature's own public deferred requests** from `HydrationApply` (precedent: Grid Occupancy's `Request_AddPlacement` re-drive). ALL of the following must hold:
 
 1. **Data IS existence** — composed by `Add`, removed at zero; no composed-but-empty state exists.
 2. **HydrationApply-only** — never assign a reconstituting lambda to the net `NetApply` slot (use `Register_SaveOnly`, or a `_SplitApply` whose `NetApply` does NOT reconstitute). On clients it races construct-time composition — the exact race anti-pattern #1 exists to prevent.

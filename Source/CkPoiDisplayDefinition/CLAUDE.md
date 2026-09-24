@@ -9,7 +9,7 @@ When the owner composes `CkVisibleRange` and goes hidden, every child definition
 `FTag_PoiDisplayDefinition_ParentHidden` (and loses it on show) — the cascade this module owns.
 
 **Params is the SEED; Current is the truth — for the MUTABLE half only.** `Add` copies `_Tint` and
-`_SizeHint` from Params into `FFragment_PoiDisplayDefinition_Current`, and every later change goes
+`_SizeHint` from Params into `FFragment_PoiDisplayDefinition`, and every later change goes
 through `Request_SetTint` / `Request_SetSizeHint`. Consumers read `Get_Tint` / `Get_SizeHint`
 (Current), never Params. This is what makes per-INSTANCE looks possible — a marker re-tinting when a
 rental goes overdue — without re-authoring shared config or swapping definitions.
