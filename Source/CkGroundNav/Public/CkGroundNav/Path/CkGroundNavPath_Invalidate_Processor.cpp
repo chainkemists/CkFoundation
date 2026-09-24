@@ -70,11 +70,11 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) const
         -> void
     {
-        const auto& Corridor = InCurrent.Get_LastCorridorBounds();
+        const auto& Corridor = InGroundNavPath.Get_LastCorridorBounds();
 
         // An agent holding no corridor has no route a rebuild can have moved - UNLESS it is midway
         // through finding one. A plan it has not begun reads the field as it is, and a flag raised
@@ -82,7 +82,7 @@ namespace ck
         // field it reads and cannot see this publish at all, which is the case below.
         if (Corridor.IsValid == 0)
         {
-            DoTry_ArmInFlightSearch(InPathEntity, InParams, InCurrent, InResult);
+            DoTry_ArmInFlightSearch(InPathEntity, InParams, InGroundNavPath, InResult);
             return;
         }
 
@@ -93,20 +93,20 @@ namespace ck
         // default here would measure a plan against ground it was never made on, and a change that
         // reached only the variant would read as no change at all.
         const auto Field = groundnav::world_fields::TryGet_Field(
-            World, Corridor.GetCenter(), InCurrent.Get_ProfileTag());
+            World, Corridor.GetCenter(), InGroundNavPath.Get_ProfileTag());
 
         // A corridor found on the epoch the world publishes NOW already postdates every rebuild this
         // queue can describe, however many boxes one burst pushed - so a route planned between the
         // publish and this pass is left alone. A world with no field has no epoch to postdate, and the
         // boxes below are then the whole answer.
         const auto CorridorIsCurrent =
-            Field.IsValid() && NOT Field->_Epoch.Get_IsNewerThan(InCurrent.Get_LastCorridorEpoch());
+            Field.IsValid() && NOT Field->_Epoch.Get_IsNewerThan(InGroundNavPath.Get_LastCorridorEpoch());
 
         if (CorridorIsCurrent)
         { return; }
 
         const auto PublishNote = groundnav::world_fields::TryGet_PublishNote(
-            World, Corridor.GetCenter(), InCurrent.Get_ProfileTag());
+            World, Corridor.GetCenter(), InGroundNavPath.Get_ProfileTag());
 
         // Narrowing needs the note to account for every publish THIS corridor has missed, not merely
         // for the newest one. What it accounts for is the run of link-only publishes since the last
@@ -120,12 +120,12 @@ namespace ck
         const auto NoteAccountsForEverythingSinceThePlan =
             PublishNote.IsSet() && Field.IsValid() &&
             PublishNote->_Epoch == Field->_Epoch &&
-            NOT PublishNote->_LastGeometryEpoch.Get_IsNewerThan(InCurrent.Get_LastCorridorEpoch());
+            NOT PublishNote->_LastGeometryEpoch.Get_IsNewerThan(InGroundNavPath.Get_LastCorridorEpoch());
 
         if (NoteAccountsForEverythingSinceThePlan)
         {
-            DoTry_FlagOnChangedLink(InPathEntity, InCurrent, *PublishNote);
-            DoTry_FlagOnDeniedPlate(InPathEntity, InCurrent, Field);
+            DoTry_FlagOnChangedLink(InPathEntity, InGroundNavPath, *PublishNote);
+            DoTry_FlagOnDeniedPlate(InPathEntity, InGroundNavPath, Field);
             return;
         }
 
@@ -155,15 +155,15 @@ namespace ck
         FProcessor_GroundNavPath_InvalidateOnRebuilt::
         DoTry_FlagOnChangedLink(
             HandleType                                                InPathEntity,
-            const FFragment_GroundNavPath_Current&                    InCurrent,
+            const FFragment_GroundNavPath&                    InGroundNavPath,
             const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const
         -> void
     {
-        const auto& CorridorLinkIds = InCurrent.Get_LastCorridorLinkIds();
+        const auto& CorridorLinkIds = InGroundNavPath.Get_LastCorridorLinkIds();
 
         for (const auto& ChangedLink : InNote._ChangedLinkEpochsSinceGeometry)
         {
-            if (NOT ChangedLink.Value.Get_IsNewerThan(InCurrent.Get_LastCorridorEpoch()))
+            if (NOT ChangedLink.Value.Get_IsNewerThan(InGroundNavPath.Get_LastCorridorEpoch()))
             { continue; }
 
             // Both lists are AUTHORED ids, so this comparison survives the renumbering of _ResolvedLinks
@@ -195,12 +195,12 @@ namespace ck
         FProcessor_GroundNavPath_InvalidateOnRebuilt::
         DoTry_FlagOnDeniedPlate(
             HandleType                             InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             const groundnav::FCk_GroundNav_FieldPtr& InField) const
         -> void
     {
         const auto* Tables = groundnav::TryGet_CompiledFilterTables(
-            InField, InCurrent.Get_LastCorridorQueryFilter(), InCurrent.Get_LastCorridorQueryFilterOverlay());
+            InField, InGroundNavPath.Get_LastCorridorQueryFilter(), InGroundNavPath.Get_LastCorridorQueryFilterOverlay());
 
         if (Tables == nullptr)
         {
@@ -211,7 +211,7 @@ namespace ck
             return;
         }
 
-        for (const auto FlatPlate : InCurrent.Get_LastCorridorFlatPlates())
+        for (const auto FlatPlate : InGroundNavPath.Get_LastCorridorFlatPlates())
         {
             if (NOT Tables->_Denied.Contains(FlatPlate))
             { continue; }
@@ -232,14 +232,14 @@ namespace ck
         DoTry_ArmInFlightSearch(
             HandleType                             InPathEntity,
             const FFragment_GroundNavPath_Params&  InParams,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result&        InResult) const
         -> void
     {
         // Nothing is pinned yet. An episode parked on unbuilt ground re-probes the registry on every
         // retry, so it will plan over whatever this publish leaves behind and owes it nothing; an
         // entity carrying no episode at all is the same answer for the same reason.
-        if (NOT InCurrent.Get_HasBegun())
+        if (NOT InGroundNavPath.Get_HasBegun())
         { return; }
 
         // Armed already, by an earlier box in this burst or by an earlier publish in this episode. One
@@ -247,7 +247,7 @@ namespace ck
         if (InResult.Get_RebuiltWhileInFlight())
         { return; }
 
-        const auto& Request = InCurrent.Get_PendingRequest();
+        const auto& Request = InGroundNavPath.Get_PendingRequest();
 
         /**
          * The corridor this search has not produced yet, stood in for by the box its two ends span and

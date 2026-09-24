@@ -59,7 +59,7 @@ namespace ck
         FProcessor_GroundNavPath_InvalidateOnRebuilt,
         FCk_Handle_GroundNavPath,
         ck::TReadOnly<FFragment_GroundNavPath_Params>,
-        ck::TReadOnly<FFragment_GroundNavPath_Current>,
+        ck::TReadOnly<FFragment_GroundNavPath>,
         ck::TReadWrite<FFragment_GroundNavPath_Result>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -81,7 +81,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InPathEntity,
             const FFragment_GroundNavPath_Params& InParams,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result& InResult) const -> void;
 
     private:
@@ -89,13 +89,13 @@ namespace ck
         auto
         DoTry_FlagOnChangedLink(
             HandleType                                                InPathEntity,
-            const FFragment_GroundNavPath_Current&                    InCurrent,
+            const FFragment_GroundNavPath&                    InGroundNavPath,
             const groundnav::world_fields::FCk_GroundNav_PublishNote& InNote) const -> void;
 
         auto
         DoTry_FlagOnDeniedPlate(
             HandleType                             InPathEntity,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             const groundnav::FCk_GroundNav_FieldPtr& InField) const -> void;
 
         // The corridor-less half: an episode whose search has BEGUN is measured against its request's
@@ -104,7 +104,7 @@ namespace ck
         DoTry_ArmInFlightSearch(
             HandleType                             InPathEntity,
             const FFragment_GroundNavPath_Params&  InParams,
-            const FFragment_GroundNavPath_Current& InCurrent,
+            const FFragment_GroundNavPath& InGroundNavPath,
             FFragment_GroundNavPath_Result&        InResult) const -> void;
 
     private:

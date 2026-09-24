@@ -26,7 +26,7 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
         auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InQueue);
@@ -37,18 +37,18 @@ namespace ck
 
         const auto NavigationRevision = static_cast<int32>(
             UCk_Utils_NavSurface_UE::Get_SurfaceRevision(World));
-        if (InCurrent._LastNavigationRevision == INDEX_NONE)
-        { InCurrent._LastNavigationRevision = NavigationRevision; }
-        const auto NavigationChanged = InCurrent._LastNavigationRevision != NavigationRevision;
+        if (InQueueComp._LastNavigationRevision == INDEX_NONE)
+        { InQueueComp._LastNavigationRevision = NavigationRevision; }
+        const auto NavigationChanged = InQueueComp._LastNavigationRevision != NavigationRevision;
         const auto WorldTimeSeconds = static_cast<double>(World->GetTimeSeconds());
         const auto DistanceAwareReservation = InParams.Get_SlotClaimPolicy()
                 == ECk_Queue_SlotClaimPolicy::ReserveOnFormation
             && InParams.Get_ReserveAssignmentPolicy()
                 == ECk_Queue_ReserveAssignmentPolicy::DistanceThenTicket;
 
-        const auto HasPartialWaiters = [&InCurrent]()
+        const auto HasPartialWaiters = [&InQueueComp]()
         {
-            for (const auto& Member : InCurrent._Members)
+            for (const auto& Member : InQueueComp._Members)
             {
                 if (Member.Get_State() == ECk_Queue_MemberState::WaitingForNavigationChange)
                 { return true; }
@@ -62,24 +62,24 @@ namespace ck
         // notices an obstacle appearing inside it -- a fixture dropped mid-queue otherwise leaves the
         // members walking to slots that now sit inside the new geometry. The subscription is the
         // mechanism; this early-out is what makes holding it every frame cheap.
-        const auto IsSettledFormation = InCurrent._State == ECk_Queue_State::Ready
-            && InCurrent._LastNavigationRevision == NavigationRevision
+        const auto IsSettledFormation = InQueueComp._State == ECk_Queue_State::Ready
+            && InQueueComp._LastNavigationRevision == NavigationRevision
             && NOT HasPartialWaiters()
-            && NOT InCurrent._HasPendingClaimOffer;
+            && NOT InQueueComp._HasPendingClaimOffer;
         if (IsSettledFormation)
         {
             if (NOT DistanceAwareReservation
-                || WorldTimeSeconds < InCurrent._NextReserveAssignmentRefreshWorldSeconds)
+                || WorldTimeSeconds < InQueueComp._NextReserveAssignmentRefreshWorldSeconds)
             { return; }
         }
 
         // A failed mover stays counted for admission pressure but has no slot. Once navigation changes, it is
         // deterministically rearmed behind the viable members that were allowed to reflow meanwhile.
-        if (HasPartialWaiters() && InCurrent._LastNavigationRevision != NavigationRevision)
+        if (HasPartialWaiters() && InQueueComp._LastNavigationRevision != NavigationRevision)
         {
-            InCurrent._LastNavigationRevision = NavigationRevision;
-            ++InCurrent._Revision;
-            for (auto& Member : InCurrent._Members)
+            InQueueComp._LastNavigationRevision = NavigationRevision;
+            ++InQueueComp._Revision;
+            for (auto& Member : InQueueComp._Members)
             {
                 if (Member.Get_State() != ECk_Queue_MemberState::WaitingForNavigationChange) { continue; }
                 const auto Previous = Member;
@@ -89,59 +89,59 @@ namespace ck
                 UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
                     InQueue,
                     MakePayload(InQueue, FCk_Queue_MemberEvent{
-                        InQueue, Member, Previous.Get_State(), ECk_Queue_EventReason::NavigationChanged, InCurrent._Revision}));
+                        InQueue, Member, Previous.Get_State(), ECk_Queue_EventReason::NavigationChanged, InQueueComp._Revision}));
             }
-            InCurrent._State = ECk_Queue_State::WaitingForFormation;
+            InQueueComp._State = ECk_Queue_State::WaitingForFormation;
             UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
                 InQueue,
                 MakePayload(InQueue, FCk_Queue_FormationState{
-                    InCurrent._State, ECk_Queue_EventReason::NavigationChanged, InCurrent._Revision, InCurrent._RetryEpisode}));
+                    InQueueComp._State, ECk_Queue_EventReason::NavigationChanged, InQueueComp._Revision, InQueueComp._RetryEpisode}));
         }
-        else if (HasPartialWaiters() && InCurrent._State == ECk_Queue_State::Ready
-            && NOT InCurrent._HasPendingClaimOffer)
+        else if (HasPartialWaiters() && InQueueComp._State == ECk_Queue_State::Ready
+            && NOT InQueueComp._HasPendingClaimOffer)
         {
             // Keep the tag as a cheap nav-revision listener, but do not rebuild the viable prefix every frame.
             return;
         }
 
-        if (InCurrent._State == ECk_Queue_State::WaitingForNavigationChange)
+        if (InQueueComp._State == ECk_Queue_State::WaitingForNavigationChange)
         {
-            if (InCurrent._LastNavigationRevision == NavigationRevision)
+            if (InQueueComp._LastNavigationRevision == NavigationRevision)
             { return; }
 
-            InCurrent._LastNavigationRevision = NavigationRevision;
-            InCurrent._RetryEpisode = 0;
-            InCurrent._NextFormationRetryWorldSeconds = 0.0;
-            InCurrent._State = ECk_Queue_State::WaitingForFormation;
-            ++InCurrent._Revision;
+            InQueueComp._LastNavigationRevision = NavigationRevision;
+            InQueueComp._RetryEpisode = 0;
+            InQueueComp._NextFormationRetryWorldSeconds = 0.0;
+            InQueueComp._State = ECk_Queue_State::WaitingForFormation;
+            ++InQueueComp._Revision;
 
             UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
                 InQueue,
                 MakePayload(
                     InQueue,
                     FCk_Queue_FormationState{
-                        InCurrent._State,
+                        InQueueComp._State,
                         ECk_Queue_EventReason::NavigationChanged,
-                        InCurrent._Revision,
-                        InCurrent._RetryEpisode}));
+                        InQueueComp._Revision,
+                        InQueueComp._RetryEpisode}));
         }
 
-        if (WorldTimeSeconds < InCurrent._NextFormationRetryWorldSeconds)
+        if (WorldTimeSeconds < InQueueComp._NextFormationRetryWorldSeconds)
         { return; }
 
-        if (InCurrent._RetryEpisode > 0 && InCurrent._NextFormationRetryWorldSeconds > 0.0)
+        if (InQueueComp._RetryEpisode > 0 && InQueueComp._NextFormationRetryWorldSeconds > 0.0)
         {
-            ++InCurrent._Revision;
-            InCurrent._NextFormationRetryWorldSeconds = 0.0;
+            ++InQueueComp._Revision;
+            InQueueComp._NextFormationRetryWorldSeconds = 0.0;
             UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
                 InQueue,
                 MakePayload(
                     InQueue,
                     FCk_Queue_FormationState{
-                        InCurrent._State,
+                        InQueueComp._State,
                         ECk_Queue_EventReason::NavigationRetryStarted,
-                        InCurrent._Revision,
-                        InCurrent._RetryEpisode}));
+                        InQueueComp._Revision,
+                        InQueueComp._RetryEpisode}));
         }
 
         const auto ProviderHealth = UCk_Utils_NavSurface_UE::Get_ProviderHealth(World);
@@ -152,7 +152,7 @@ namespace ck
             RecordRetryableFailure(
                 InQueue,
                 InParams,
-                InCurrent,
+                InQueueComp,
                 ECk_Queue_EventReason::NavigationUnavailable,
                 WorldTimeSeconds,
                 NavigationRevision);
@@ -212,9 +212,9 @@ namespace ck
 
         auto ActiveMemberIndices = TArray<int32>{};
         const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
         {
-            const auto& Member = InCurrent._Members[MemberIndex];
+            const auto& Member = InQueueComp._Members[MemberIndex];
             const auto IsClaimed = Member.Get_State() == ECk_Queue_MemberState::AtFront
                 || Member.Get_State() == ECk_Queue_MemberState::AtSlot;
             const auto IsSuppressedUnclaimed = ClaimOnReach && Member.Get_MovementSuppressed() && NOT IsClaimed;
@@ -229,53 +229,53 @@ namespace ck
 
         if (ActiveMemberIndices.IsEmpty())
         {
-            InCurrent._State = ECk_Queue_State::Ready;
-            InCurrent._HasPendingClaimOffer = false;
-            InCurrent._Pressure = FCk_Queue_Pressure{
-                InCurrent._Members.Num(), InParams.Get_SoftLimit(), InParams.Get_HardLimit(),
-                InParams.Get_SoftLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_SoftLimit(),
-                InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
-                InCurrent._Revision};
-            UUtils_Signal_OnQueuePressureChanged::Broadcast(InQueue, MakePayload(InQueue, InCurrent._Pressure));
+            InQueueComp._State = ECk_Queue_State::Ready;
+            InQueueComp._HasPendingClaimOffer = false;
+            InQueueComp._Pressure = FCk_Queue_Pressure{
+                InQueueComp._Members.Num(), InParams.Get_SoftLimit(), InParams.Get_HardLimit(),
+                InParams.Get_SoftLimit() > 0 && InQueueComp._Members.Num() >= InParams.Get_SoftLimit(),
+                InParams.Get_HardLimit() > 0 && InQueueComp._Members.Num() >= InParams.Get_HardLimit(),
+                InQueueComp._Revision};
+            UUtils_Signal_OnQueuePressureChanged::Broadcast(InQueue, MakePayload(InQueue, InQueueComp._Pressure));
             // Retained while the queue has members: the tag is this formation's nav-revision
             // subscription (see the settled early-out above), not just a "needs work now" flag.
-            if (InCurrent._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
+            if (InQueueComp._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
             else { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
             return;
         }
 
         const auto LayoutResult = queue::layout::Build(
-            InCurrent._LastOwnerWorldTransform,
+            InQueueComp._LastOwnerWorldTransform,
             ActiveMemberIndices.Num(),
             InParams.Get_SlotSpacingUu(),
             InParams.Get_MaxFormationSearchNodes(),
-            InCurrent._LayoutAlgorithm,
+            InQueueComp._LayoutAlgorithm,
             Validator);
 
         if (NOT LayoutResult.IsSuccess())
         {
             if (LayoutResult.Outcome == queue::layout::EBuildOutcome::SearchBudgetExhausted)
             {
-                ++InCurrent._Revision;
-                InCurrent._State = ECk_Queue_State::WaitingForNavigationChange;
-                InCurrent._NextFormationRetryWorldSeconds = 0.0;
-                InCurrent._LastNavigationRevision = NavigationRevision;
+                ++InQueueComp._Revision;
+                InQueueComp._State = ECk_Queue_State::WaitingForNavigationChange;
+                InQueueComp._NextFormationRetryWorldSeconds = 0.0;
+                InQueueComp._LastNavigationRevision = NavigationRevision;
                 UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
                     InQueue,
                     MakePayload(
                         InQueue,
                         FCk_Queue_FormationState{
-                            InCurrent._State,
+                            InQueueComp._State,
                             ECk_Queue_EventReason::SearchBudgetExhausted,
-                            InCurrent._Revision,
-                            InCurrent._RetryEpisode}));
+                            InQueueComp._Revision,
+                            InQueueComp._RetryEpisode}));
                 return;
             }
 
             RecordRetryableFailure(
                 InQueue,
                 InParams,
-                InCurrent,
+                InQueueComp,
                 ECk_Queue_EventReason::NoViableFormation,
                 WorldTimeSeconds,
                 NavigationRevision);
@@ -290,15 +290,15 @@ namespace ck
             ActiveMemberIndices.Num())
         { return; }
 
-        const auto PreviousMembers = InCurrent._Members;
-        const auto AssignmentRevision = InCurrent._Revision + 1;
+        const auto PreviousMembers = InQueueComp._Members;
+        const auto AssignmentRevision = InQueueComp._Revision + 1;
 
         auto PlacementByMember = TArray<int32>{};
-        PlacementByMember.Init(INDEX_NONE, InCurrent._Members.Num());
+        PlacementByMember.Init(INDEX_NONE, InQueueComp._Members.Num());
         auto PlacementIsUsed = TArray<bool>{};
         PlacementIsUsed.Init(false, LayoutResult.Placements.Num());
         auto MemberAssignmentChanged = TArray<bool>{};
-        MemberAssignmentChanged.Init(false, InCurrent._Members.Num());
+        MemberAssignmentChanged.Init(false, InQueueComp._Members.Num());
         auto NextUnclaimedPlacement = int32{INDEX_NONE};
         if (ClaimOnReach)
         {
@@ -356,14 +356,14 @@ namespace ck
         else if (DistanceAwareReservation)
         {
             auto MemberIsUsed = TArray<bool>{};
-            MemberIsUsed.Init(false, InCurrent._Members.Num());
+            MemberIsUsed.Init(false, InQueueComp._Members.Num());
 
             // Read every active mover once. The matching pass is intentionally O(M^2), but querying an
             // entity transform inside that inner loop magnifies the cost and can mix locations from frames.
             auto MoverLocations = TArray<FVector>{};
-            MoverLocations.Init(FVector::ZeroVector, InCurrent._Members.Num());
+            MoverLocations.Init(FVector::ZeroVector, InQueueComp._Members.Num());
             auto MoverHasTransform = TArray<bool>{};
-            MoverHasTransform.Init(false, InCurrent._Members.Num());
+            MoverHasTransform.Init(false, InQueueComp._Members.Num());
             for (const auto MemberIndex : ActiveMemberIndices)
             {
                 const auto Mover = PreviousMembers[MemberIndex].Get_Mover();
@@ -519,13 +519,13 @@ namespace ck
                 PlacementByMember[ActiveMemberIndices[PlacementIndex]] = PlacementIndex;
             }
         }
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
         {
             const auto& Previous = PreviousMembers[MemberIndex];
             const auto PlacementIndex = PlacementByMember[MemberIndex];
             if (PlacementIndex == INDEX_NONE)
             {
-                InCurrent._Members[MemberIndex] = Previous;
+                InQueueComp._Members[MemberIndex] = Previous;
                 continue;
             }
 
@@ -552,7 +552,7 @@ namespace ck
                 // still needs a fresh assignment revision so Crowd replans a possibly invalid corridor.
                 // Preserving the arrived state prevents a settled mover from reporting SlotReached
                 // again every time its own stationary nav markup finishes rebuilding.
-                InCurrent._Members[MemberIndex] = Previous;
+                InQueueComp._Members[MemberIndex] = Previous;
                 continue;
             }
             const auto RetainedClaim = ClaimOnReach
@@ -560,7 +560,7 @@ namespace ck
                 && Previous.Get_Rank() == Placement.Rank;
             if (RetainedClaim)
             {
-                InCurrent._Members[MemberIndex] = Previous;
+                InQueueComp._Members[MemberIndex] = Previous;
                 continue;
             }
 
@@ -572,11 +572,11 @@ namespace ck
                 && Previous.Get_TargetWorldTransform().Equals(ProvisionalPlacement.TargetWorldTransform);
             if (RetainedProvisional)
             {
-                InCurrent._Members[MemberIndex] = Previous;
+                InQueueComp._Members[MemberIndex] = Previous;
                 continue;
             }
 
-            InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+            InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(), Previous.Get_Mover(), Previous.Get_Ticket(),
                 ClaimOnReach ? ProvisionalPlacement.Rank : Placement.Rank,
                 ClaimOnReach ? ProvisionalPlacement.TargetWorldTransform : Placement.TargetWorldTransform,
@@ -591,39 +591,39 @@ namespace ck
         ScheduleNextReserveAssignmentRefresh(
             InQueue,
             InParams,
-            InCurrent,
+            InQueueComp,
             WorldTimeSeconds,
             IsSettledFormation && DistanceAwareReservation);
         if (IsSettledFormation && DistanceAwareReservation && NOT AnyMemberAssignmentChanged)
         { return; }
 
-        ++InCurrent._Revision;
-        check(InCurrent._Revision == AssignmentRevision);
+        ++InQueueComp._Revision;
+        check(InQueueComp._Revision == AssignmentRevision);
 
-        InCurrent._State = ECk_Queue_State::Ready;
-        InCurrent._RetryEpisode = 0;
-        InCurrent._NextFormationRetryWorldSeconds = 0.0;
-        InCurrent._LastNavigationRevision = NavigationRevision;
-        InCurrent._HasPendingClaimOffer = false;
-        InCurrent._Pressure = FCk_Queue_Pressure{
-            InCurrent._Members.Num(),
+        InQueueComp._State = ECk_Queue_State::Ready;
+        InQueueComp._RetryEpisode = 0;
+        InQueueComp._NextFormationRetryWorldSeconds = 0.0;
+        InQueueComp._LastNavigationRevision = NavigationRevision;
+        InQueueComp._HasPendingClaimOffer = false;
+        InQueueComp._Pressure = FCk_Queue_Pressure{
+            InQueueComp._Members.Num(),
             InParams.Get_SoftLimit(),
             InParams.Get_HardLimit(),
-            InParams.Get_SoftLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_SoftLimit(),
-            InParams.Get_HardLimit() > 0 && InCurrent._Members.Num() >= InParams.Get_HardLimit(),
-            InCurrent._Revision};
+            InParams.Get_SoftLimit() > 0 && InQueueComp._Members.Num() >= InParams.Get_SoftLimit(),
+            InParams.Get_HardLimit() > 0 && InQueueComp._Members.Num() >= InParams.Get_HardLimit(),
+            InQueueComp._Revision};
         // Retained while the queue has members: the tag is this formation's nav-revision
         // subscription (see the settled early-out above), not just a "needs work now" flag.
-        if (InCurrent._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
+        if (InQueueComp._Members.IsEmpty()) { InQueue.Remove<MarkedDirtyBy>(); }
         else { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
 
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
         {
             if (NOT MemberAssignmentChanged[MemberIndex])
             { continue; }
 
             const auto& Previous = PreviousMembers[MemberIndex];
-            const auto& Current = InCurrent._Members[MemberIndex];
+            const auto& Current = InQueueComp._Members[MemberIndex];
             UUtils_Signal_OnQueueMemberStateChanged::Broadcast(
                 InQueue,
                 MakePayload(
@@ -633,21 +633,21 @@ namespace ck
                         Current,
                         Previous.Get_State(),
                         ECk_Queue_EventReason::Reflowed,
-                        InCurrent._Revision}));
+                        InQueueComp._Revision}));
         }
 
         UUtils_Signal_OnQueuePressureChanged::Broadcast(
             InQueue,
-            MakePayload(InQueue, InCurrent._Pressure));
+            MakePayload(InQueue, InQueueComp._Pressure));
         UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
             InQueue,
             MakePayload(
                 InQueue,
                 FCk_Queue_FormationState{
-                    InCurrent._State,
+                    InQueueComp._State,
                     ECk_Queue_EventReason::Reflowed,
-                    InCurrent._Revision,
-                    InCurrent._RetryEpisode}));
+                    InQueueComp._Revision,
+                    InQueueComp._RetryEpisode}));
     }
 
     auto
@@ -655,7 +655,7 @@ namespace ck
         ScheduleNextReserveAssignmentRefresh(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             double InWorldTimeSeconds,
             bool InWasSettledRefresh)
         -> void
@@ -664,7 +664,7 @@ namespace ck
         if (RefreshSeconds <= 0.0)
         {
             // Zero intentionally means one atomic distance reassignment per frame.
-            InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds;
+            InQueueComp._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds;
             return;
         }
 
@@ -672,20 +672,20 @@ namespace ck
             == ECk_EnableDisable::Enable;
         if (NOT PhaseSpreadEnabled)
         {
-            InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + RefreshSeconds;
+            InQueueComp._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + RefreshSeconds;
             return;
         }
 
         if (InWasSettledRefresh)
         {
-            const auto PreviousDeadline = InCurrent._NextReserveAssignmentRefreshWorldSeconds;
+            const auto PreviousDeadline = InQueueComp._NextReserveAssignmentRefreshWorldSeconds;
             const auto DeadlineIsUsable = FMath::IsFinite(PreviousDeadline)
                 && PreviousDeadline <= InWorldTimeSeconds;
             if (DeadlineIsUsable)
             {
                 const auto MissedPeriods = FMath::FloorToDouble(
                     (InWorldTimeSeconds - PreviousDeadline) / RefreshSeconds) + 1.0;
-                InCurrent._NextReserveAssignmentRefreshWorldSeconds = PreviousDeadline
+                InQueueComp._NextReserveAssignmentRefreshWorldSeconds = PreviousDeadline
                     + MissedPeriods * RefreshSeconds;
                 return;
             }
@@ -701,7 +701,7 @@ namespace ck
         PhaseHash ^= PhaseHash >> 16;
         constexpr auto Uint32Range = 4294967296.0;
         const auto PhaseFraction = static_cast<double>(PhaseHash) / Uint32Range;
-        InCurrent._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + PhaseFraction * RefreshSeconds;
+        InQueueComp._NextReserveAssignmentRefreshWorldSeconds = InWorldTimeSeconds + PhaseFraction * RefreshSeconds;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -711,27 +711,27 @@ namespace ck
         RecordRetryableFailure(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason,
             double InWorldTimeSeconds,
             int32 InNavigationRevision)
         -> void
     {
-        ++InCurrent._Revision;
-        ++InCurrent._RetryEpisode;
-        InCurrent._LastNavigationRevision = InNavigationRevision;
+        ++InQueueComp._Revision;
+        ++InQueueComp._RetryEpisode;
+        InQueueComp._LastNavigationRevision = InNavigationRevision;
 
-        const auto RetryBudgetRemains = InCurrent._RetryEpisode < InParams.Get_MaxNavigationRetries();
+        const auto RetryBudgetRemains = InQueueComp._RetryEpisode < InParams.Get_MaxNavigationRetries();
         if (RetryBudgetRemains)
         {
-            InCurrent._State = ECk_Queue_State::WaitingForFormation;
-            InCurrent._NextFormationRetryWorldSeconds = InWorldTimeSeconds
+            InQueueComp._State = ECk_Queue_State::WaitingForFormation;
+            InQueueComp._NextFormationRetryWorldSeconds = InWorldTimeSeconds
                 + static_cast<double>(InParams.Get_NavigationRetryDelaySeconds());
         }
         else
         {
-            InCurrent._State = ECk_Queue_State::WaitingForNavigationChange;
-            InCurrent._NextFormationRetryWorldSeconds = 0.0;
+            InQueueComp._State = ECk_Queue_State::WaitingForNavigationChange;
+            InQueueComp._NextFormationRetryWorldSeconds = 0.0;
         }
 
         UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
@@ -739,12 +739,12 @@ namespace ck
             MakePayload(
                 InQueue,
                 FCk_Queue_FormationState{
-                    InCurrent._State,
+                    InQueueComp._State,
                     RetryBudgetRemains
                         ? InReason
                         : ECk_Queue_EventReason::NavigationRetryExhausted,
-                    InCurrent._Revision,
-                    InCurrent._RetryEpisode}));
+                    InQueueComp._Revision,
+                    InQueueComp._RetryEpisode}));
     }
 }
 

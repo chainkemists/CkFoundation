@@ -18,7 +18,7 @@ namespace ck
         FCk_Handle_Queue,
         ck::TReadOnly<FFragment_Transform>,
         ck::TReadOnly<FFragment_Queue_Params>,
-        ck::TReadOnly<FFragment_Queue_Current>,
+        ck::TReadOnly<FFragment_Queue>,
         TExclude<FTag_Queue_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -36,7 +36,7 @@ namespace ck
             HandleType InQueue,
             const FFragment_Transform& InTransform,
             const FFragment_Queue_Params& InParams,
-            const FFragment_Queue_Current& InCurrent)
+            const FFragment_Queue& InQueueComp)
             -> void;
     };
 }

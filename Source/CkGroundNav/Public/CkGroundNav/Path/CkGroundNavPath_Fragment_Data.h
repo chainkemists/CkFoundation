@@ -45,12 +45,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_GroundNavPath)
  * agent has no business authoring one.
  */
 USTRUCT(BlueprintType)
-struct CKGROUNDNAV_API FCk_Fragment_GroundNavPath_ParamsData
+struct CKGROUNDNAV_API FCk_GroundNavPath_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_GroundNavPath_ParamsData);
+    CK_GENERATED_BODY(FCk_GroundNavPath_Spec);
 
 private:
     /** Tested against the field's per-cell clearance rather than baked into it, which is what lets one
@@ -121,7 +121,7 @@ public:
     CK_PROPERTY(_AllowPartialPath);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_GroundNavPath_ParamsData, _AgentRadiusUu);
+    CK_DEFINE_CONSTRUCTORS(FCk_GroundNavPath_Spec, _AgentRadiusUu);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

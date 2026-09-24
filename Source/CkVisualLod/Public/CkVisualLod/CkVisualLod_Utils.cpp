@@ -8,11 +8,11 @@ auto
     UCk_Utils_VisualLod_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VisualLod_ParamsData& InParams)
+        const FCk_VisualLod_Spec& InParams)
     -> FCk_Handle_VisualLod
 {
     InHandle.Add<ck::FFragment_VisualLod_Params>(InParams);
-    auto& Current = InHandle.Add<ck::FFragment_VisualLod_Current>();
+    auto& Current = InHandle.Add<ck::FFragment_VisualLod>();
     Current._FarAnim = InParams.Get_InitialFarAnim();
 
     InHandle.Add<ck::FTag_VisualLod_NeedsSetup>();
@@ -22,7 +22,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisualLod_UE, FCk_Handle_VisualLod, ck::FFragment_VisualLod_Current, ck::FFragment_VisualLod_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisualLod_UE, FCk_Handle_VisualLod, ck::FFragment_VisualLod, ck::FFragment_VisualLod_Params);
 
 auto
     UCk_Utils_VisualLod_UE::
@@ -41,7 +41,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> ECk_VisualLod_Representation
 {
-    const auto& Current = InHandle.Get<ck::FFragment_VisualLod_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_VisualLod>();
 
     if (Current.Get_Promoted())
     { return ECk_VisualLod_Representation::PromotedProxy; }
@@ -58,7 +58,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> bool
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_Hidden();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_Hidden();
 }
 
 auto
@@ -67,7 +67,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> float
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_FadeAlpha();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_FadeAlpha();
 }
 
 auto
@@ -76,7 +76,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PromoteLock();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_PromoteLock();
 }
 
 auto
@@ -85,7 +85,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_MemberIndex();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_MemberIndex();
 }
 
 auto
@@ -94,7 +94,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> ACk_Iskm_BatchedCrowd_Actor*
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_Crowd().Get();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_Crowd().Get();
 }
 
 auto
@@ -103,7 +103,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> FCk_Handle_IskmProxy
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_Proxy();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_Proxy();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -114,7 +114,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> float
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_LastDistance();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_LastDistance();
 }
 
 auto
@@ -123,7 +123,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> bool
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_LastInView();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_LastInView();
 }
 
 auto
@@ -132,7 +132,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> ck::EVisualLod_FadePhase
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_FadePhase();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_FadePhase();
 }
 
 auto
@@ -141,7 +141,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> bool
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PromotedViaLock();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_PromotedViaLock();
 }
 
 auto
@@ -150,7 +150,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> bool
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PromotedUnbudgeted();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_PromotedUnbudgeted();
 }
 
 auto
@@ -159,7 +159,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> bool
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_PreemptDemote();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_PreemptDemote();
 }
 
 auto
@@ -168,7 +168,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_ProxySequenceIndex();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_ProxySequenceIndex();
 }
 
 auto
@@ -177,7 +177,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> float
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_ProxyRate();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_ProxyRate();
 }
 
 auto
@@ -186,7 +186,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_CurrentSequenceIndex();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_CurrentSequenceIndex();
 }
 
 auto
@@ -195,7 +195,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> float
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_CurrentRate();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_CurrentRate();
 }
 
 auto
@@ -204,7 +204,7 @@ auto
         const FCk_Handle_VisualLod& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLod_Current>().Get_RenderBandIndex();
+    return InHandle.Get<ck::FFragment_VisualLod>().Get_RenderBandIndex();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -326,7 +326,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VisualLod
 {
-    auto& Current = InHandle.Get<ck::FFragment_VisualLod_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_VisualLod>();
     Current._PromoteLock = Current._PromoteLock + 1;
 
     InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);
@@ -341,7 +341,7 @@ auto
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_VisualLod
 {
-    auto& Current = InHandle.Get<ck::FFragment_VisualLod_Current>();
+    auto& Current = InHandle.Get<ck::FFragment_VisualLod>();
     Current._PromoteLock = FMath::Max(Current._PromoteLock - 1, 0);
 
     InDelegate.ExecuteIfBound(InHandle, ECk_Request_OperationResult::Succeeded);

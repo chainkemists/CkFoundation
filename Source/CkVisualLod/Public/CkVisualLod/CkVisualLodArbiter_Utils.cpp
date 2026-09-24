@@ -201,11 +201,11 @@ auto
     UCk_Utils_VisualLodArbiter_UE::
     Add(
         FCk_Handle& InHandle,
-        const FCk_Fragment_VisualLodArbiter_ParamsData& InParams)
+        const FCk_VisualLodArbiter_Spec& InParams)
     -> FCk_Handle_VisualLodArbiter
 {
     InHandle.Add<ck::FFragment_VisualLodArbiter_Params>(InParams);
-    InHandle.Add<ck::FFragment_VisualLodArbiter_Current>();
+    InHandle.Add<ck::FFragment_VisualLodArbiter>();
 
     InHandle.Add<ck::FTag_VisualLodArbiter_NeedsSetup>();
 
@@ -214,7 +214,7 @@ auto
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisualLodArbiter_UE, FCk_Handle_VisualLodArbiter, ck::FFragment_VisualLodArbiter_Current, ck::FFragment_VisualLodArbiter_Params);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_VisualLodArbiter_UE, FCk_Handle_VisualLodArbiter, ck::FFragment_VisualLodArbiter, ck::FFragment_VisualLodArbiter_Params);
 
 auto
     UCk_Utils_VisualLodArbiter_UE::
@@ -233,7 +233,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> FCk_Handle
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_Observer();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_Observer();
 }
 
 auto
@@ -242,7 +242,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_PromotedOwners().Num();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_PromotedOwners().Num();
 }
 
 auto
@@ -251,7 +251,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_NearPromotedCount();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_NearPromotedCount();
 }
 
 auto
@@ -260,7 +260,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_LockedPromotedCount();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_LockedPromotedCount();
 }
 
 auto
@@ -269,7 +269,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_UnbudgetedPromotedCount();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_UnbudgetedPromotedCount();
 }
 
 auto
@@ -279,7 +279,7 @@ auto
         int32 InCrowdIndex)
     -> ACk_Iskm_BatchedCrowd_Actor*
 {
-    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter>();
 
     if (NOT Current._Crowds.IsValidIndex(InCrowdIndex))
     { return nullptr; }
@@ -295,7 +295,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> ck::FVisualLod_LocalView
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_LastView();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_LastView();
 }
 
 auto
@@ -304,7 +304,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_PromotesThisTick();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_PromotesThisTick();
 }
 
 auto
@@ -313,7 +313,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_DemotesThisTick();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_DemotesThisTick();
 }
 
 auto
@@ -322,7 +322,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_PreemptsThisTick();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_PreemptsThisTick();
 }
 
 auto
@@ -340,7 +340,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> FCk_VisualLodArbiter_RuntimeTuners
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_RuntimeTuners();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_RuntimeTuners();
 }
 
 auto
@@ -353,7 +353,7 @@ auto
     if (ck::Is_NOT_Valid(InHandle))
     { return false; }
 
-    const auto Config = InHandle.Get<ck::FFragment_VisualLodArbiter_Current>().Get_Config().Get();
+    const auto Config = InHandle.Get<ck::FFragment_VisualLodArbiter>().Get_Config().Get();
     if (ck::Is_NOT_Valid(Config))
     { return false; }
 
@@ -381,7 +381,7 @@ auto
         const FCk_Handle_VisualLodArbiter& InHandle)
     -> int32
 {
-    return InHandle.Get<ck::FFragment_VisualLodArbiter_Current>()._Crowds.Num();
+    return InHandle.Get<ck::FFragment_VisualLodArbiter>()._Crowds.Num();
 }
 
 auto
@@ -391,7 +391,7 @@ auto
         int32 InCrowdIndex)
     -> FCk_VisualLodArbiter_CrowdPoolDebugInfo
 {
-    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_VisualLodArbiter>();
 
     if (NOT Current._Crowds.IsValidIndex(InCrowdIndex))
     { return {}; }

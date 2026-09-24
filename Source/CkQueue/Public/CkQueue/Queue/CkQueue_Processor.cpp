@@ -61,21 +61,21 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
-        InCurrent._LayoutAlgorithm = InParams.Get_LayoutAlgorithm();
+        InQueueComp._LayoutAlgorithm = InParams.Get_LayoutAlgorithm();
         const auto QueueTransform = UCk_Utils_Transform_UE::Cast(InQueue);
-        InCurrent._LastOwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
-        InCurrent._State = ECk_Queue_State::Ready;
-        InCurrent._Revision = 1;
-        InCurrent._Pressure = FCk_Queue_Pressure{
+        InQueueComp._LastOwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
+        InQueueComp._State = ECk_Queue_State::Ready;
+        InQueueComp._Revision = 1;
+        InQueueComp._Pressure = FCk_Queue_Pressure{
             0,
             InParams.Get_SoftLimit(),
             InParams.Get_HardLimit(),
             false,
             false,
-            InCurrent._Revision};
+            InQueueComp._Revision};
 
         InQueue.Remove<MarkedDirtyBy>();
 
@@ -84,10 +84,10 @@ namespace ck
             MakePayload(
                 InQueue,
                 FCk_Queue_FormationState{
-                    InCurrent._State,
+                    InQueueComp._State,
                     ECk_Queue_EventReason::None,
-                    InCurrent._Revision,
-                    InCurrent._RetryEpisode}));
+                    InQueueComp._Revision,
+                    InQueueComp._RetryEpisode}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             FFragment_Queue_Requests& InRequests)
         -> void
     {
@@ -111,12 +111,12 @@ namespace ck
             auto Result = ECk_Request_OperationResult::Failed;
             const auto Guard = MakeCompletionGuard(InRequest, InQueue, Result);
 
-            if (DoHandleRequest(InQueue, InParams, InCurrent, InRequest))
+            if (DoHandleRequest(InQueue, InParams, InQueueComp, InRequest))
             { Result = ECk_Request_OperationResult::Succeeded; }
         }), policy::DontResetContainer{});
 
-        if (InCurrent._State == ECk_Queue_State::WaitingForFormation)
-        { InvalidateAssignmentsForReflow(InQueue, InParams, InCurrent); }
+        if (InQueueComp._State == ECk_Queue_State::WaitingForFormation)
+        { InvalidateAssignmentsForReflow(InQueue, InParams, InQueueComp); }
 
         if (InRequests._Requests.IsEmpty())
         { InQueue.Remove<MarkedDirtyBy>(); }
@@ -127,16 +127,16 @@ namespace ck
         TryApplyReachedClaim(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             int32 InMemberIndex,
             TOptional<int32> InExpectedAssignmentRevision)
         -> bool
     {
-        if (NOT InCurrent._Members.IsValidIndex(InMemberIndex)
-            || InCurrent._State != ECk_Queue_State::Ready)
+        if (NOT InQueueComp._Members.IsValidIndex(InMemberIndex)
+            || InQueueComp._State != ECk_Queue_State::Ready)
         { return false; }
 
-        const auto Previous = InCurrent._Members[InMemberIndex];
+        const auto Previous = InQueueComp._Members[InMemberIndex];
         const auto HasExpectedAssignment = NOT InExpectedAssignmentRevision.IsSet()
             || Previous.Get_AssignmentRevision() == InExpectedAssignmentRevision.GetValue();
         const auto HasClaimableAssignment = HasExpectedAssignment
@@ -148,7 +148,7 @@ namespace ck
         if (NOT HasClaimableAssignment)
         { return false; }
 
-        const auto ClaimAlreadyExists = InCurrent._Members.ContainsByPredicate(
+        const auto ClaimAlreadyExists = InQueueComp._Members.ContainsByPredicate(
             [&Previous](const FCk_Queue_MemberSnapshot& InMember)
             {
                 return ck_queue_processor::IsClaimed(InMember)
@@ -159,8 +159,8 @@ namespace ck
         if (ClaimAlreadyExists)
         { return true; }
 
-        ++InCurrent._Revision;
-        InCurrent._Members[InMemberIndex] = FCk_Queue_MemberSnapshot{
+        ++InQueueComp._Revision;
+        InQueueComp._Members[InMemberIndex] = FCk_Queue_MemberSnapshot{
             Previous.Get_Member(),
             Previous.Get_Mover(),
             Previous.Get_Ticket(),
@@ -174,17 +174,17 @@ namespace ck
 
         BroadcastMemberEvent(
             InQueue,
-            InCurrent._Members[InMemberIndex],
+            InQueueComp._Members[InMemberIndex],
             Previous.Get_State(),
             ECk_Queue_EventReason::SlotReached,
-            InCurrent._Revision);
+            InQueueComp._Revision);
         if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
         {
             // Keep this request drain Ready: another contender may report the current offer reached this frame.
             // Formation runs after the drain and opens the next offer. The flag is required
             // because the formation processor early-outs on a settled Ready queue — without it the
             // reach event is swallowed and the next member is never offered a slot.
-            InCurrent._HasPendingClaimOffer = true;
+            InQueueComp._HasPendingClaimOffer = true;
             InQueue.AddOrGet<FTag_Queue_NeedsFormation>();
         }
         return true;
@@ -197,7 +197,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_RestoreJoin& InRequest)
         -> bool
     {
@@ -209,8 +209,8 @@ namespace ck
             InQueue, InRequest.Get_Member(), InRequest.Get_RestoredTicket())
         { return false; }
 
-        const auto ExistingIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
-        const auto TicketOwnerIndex = InCurrent._Members.IndexOfByPredicate(
+        const auto ExistingIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
+        const auto TicketOwnerIndex = InQueueComp._Members.IndexOfByPredicate(
             [&InRequest](const FCk_Queue_MemberSnapshot& InMember)
             { return InMember.Get_Ticket() == InRequest.Get_RestoredTicket(); });
         const auto TicketBelongsToAnotherMember = TicketOwnerIndex != INDEX_NONE
@@ -222,7 +222,7 @@ namespace ck
 
         if (ExistingIndex != INDEX_NONE)
         {
-            const auto Existing = InCurrent._Members[ExistingIndex];
+            const auto Existing = InQueueComp._Members[ExistingIndex];
             const auto TicketMatches = Existing.Get_Ticket() == InRequest.Get_RestoredTicket();
             CK_ENSURE_IF_NOT(TicketMatches,
                 TEXT("Queue [{}] restore member [{}] conflicts with existing ticket [{}]"),
@@ -239,40 +239,40 @@ namespace ck
             if (Mover == Existing.Get_Mover())
             { return true; }
 
-            ++InCurrent._Revision;
-            InCurrent._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
+            ++InQueueComp._Revision;
+            InQueueComp._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
                 Existing.Get_Member(), Mover, Existing.Get_Ticket(), INDEX_NONE,
                 FTransform::Identity, 0, Existing.Get_MovementSuppressed(), ECk_Queue_MemberState::PendingAdmission};
-            MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Rejoined);
-            BroadcastMemberEvent(InQueue, InCurrent._Members[ExistingIndex], Existing.Get_State(),
-                ECk_Queue_EventReason::Rejoined, InCurrent._Revision);
+            MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::Rejoined);
+            BroadcastMemberEvent(InQueue, InQueueComp._Members[ExistingIndex], Existing.Get_State(),
+                ECk_Queue_EventReason::Rejoined, InQueueComp._Revision);
             return true;
         }
 
         const auto HardLimit = InParams.Get_HardLimit();
-        if (HardLimit > 0 && InCurrent._Members.Num() >= HardLimit)
+        if (HardLimit > 0 && InQueueComp._Members.Num() >= HardLimit)
         {
-            ++InCurrent._Revision;
+            ++InQueueComp._Revision;
             const auto Rejected = FCk_Queue_MemberSnapshot{
                 InRequest.Get_Member(), InRequest.Get_Mover(), 0, INDEX_NONE,
                 FTransform::Identity, 0, false, ECk_Queue_MemberState::Rejected};
             BroadcastMemberEvent(InQueue, Rejected, ECk_Queue_MemberState::None,
-                ECk_Queue_EventReason::HardLimitReached, InCurrent._Revision);
+                ECk_Queue_EventReason::HardLimitReached, InQueueComp._Revision);
             return false;
         }
 
-        ++InCurrent._Revision;
-        InCurrent._Members.Emplace(InRequest.Get_Member(), InRequest.Get_Mover(), InRequest.Get_RestoredTicket(),
+        ++InQueueComp._Revision;
+        InQueueComp._Members.Emplace(InRequest.Get_Member(), InRequest.Get_Mover(), InRequest.Get_RestoredTicket(),
             0, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission);
-        InCurrent._Members.Sort([](const FCk_Queue_MemberSnapshot& InA, const FCk_Queue_MemberSnapshot& InB)
+        InQueueComp._Members.Sort([](const FCk_Queue_MemberSnapshot& InA, const FCk_Queue_MemberSnapshot& InB)
         { return InA.Get_Ticket() < InB.Get_Ticket(); });
-        InCurrent._NextTicket = FMath::Max(InCurrent._NextTicket, InRequest.Get_RestoredTicket() + 1);
-        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Joined);
-        RefreshPressure(InQueue, InParams, InCurrent);
+        InQueueComp._NextTicket = FMath::Max(InQueueComp._NextTicket, InRequest.Get_RestoredTicket() + 1);
+        MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::Joined);
+        RefreshPressure(InQueue, InParams, InQueueComp);
 
-        const auto RestoredIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
-        BroadcastMemberEvent(InQueue, InCurrent._Members[RestoredIndex], ECk_Queue_MemberState::None,
-            ECk_Queue_EventReason::Joined, InCurrent._Revision);
+        const auto RestoredIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
+        BroadcastMemberEvent(InQueue, InQueueComp._Members[RestoredIndex], ECk_Queue_MemberState::None,
+            ECk_Queue_EventReason::Joined, InQueueComp._Revision);
         return true;
     }
 
@@ -281,7 +281,7 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Join& InRequest)
         -> bool
     {
@@ -292,10 +292,10 @@ namespace ck
             InRequest.Get_Member())
         { return false; }
 
-        const auto ExistingIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        const auto ExistingIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
         if (ExistingIndex != INDEX_NONE)
         {
-            const auto Existing = InCurrent._Members[ExistingIndex];
+            const auto Existing = InQueueComp._Members[ExistingIndex];
             const auto Mover = ck::IsValid(InRequest.Get_Mover())
                 ? InRequest.Get_Mover()
                 : Existing.Get_Mover();
@@ -308,8 +308,8 @@ namespace ck
             if (Mover == Existing.Get_Mover())
             { return true; }
 
-            ++InCurrent._Revision;
-            InCurrent._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
+            ++InQueueComp._Revision;
+            InQueueComp._Members[ExistingIndex] = FCk_Queue_MemberSnapshot{
                 Existing.Get_Member(),
                 Mover,
                 Existing.Get_Ticket(),
@@ -319,21 +319,21 @@ namespace ck
                 Existing.Get_MovementSuppressed(),
                 ECk_Queue_MemberState::PendingAdmission};
 
-            MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Rejoined);
+            MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::Rejoined);
 
             BroadcastMemberEvent(
                 InQueue,
-                InCurrent._Members[ExistingIndex],
+                InQueueComp._Members[ExistingIndex],
                 Existing.Get_State(),
                 ECk_Queue_EventReason::Rejoined,
-                InCurrent._Revision);
+                InQueueComp._Revision);
             return true;
         }
 
         const auto HardLimit = InParams.Get_HardLimit();
-        if (HardLimit > 0 && InCurrent._Members.Num() >= HardLimit)
+        if (HardLimit > 0 && InQueueComp._Members.Num() >= HardLimit)
         {
-            ++InCurrent._Revision;
+            ++InQueueComp._Revision;
             const auto Rejected = FCk_Queue_MemberSnapshot{
                 InRequest.Get_Member(),
                 InRequest.Get_Mover(),
@@ -349,24 +349,24 @@ namespace ck
                 Rejected,
                 ECk_Queue_MemberState::None,
                 ECk_Queue_EventReason::HardLimitReached,
-                InCurrent._Revision);
+                InQueueComp._Revision);
             return false;
         }
 
-        const auto TicketIsAvailable = InCurrent._NextTicket > 0
-            && InCurrent._NextTicket < MAX_int64;
+        const auto TicketIsAvailable = InQueueComp._NextTicket > 0
+            && InQueueComp._NextTicket < MAX_int64;
         CK_ENSURE_IF_NOT(TicketIsAvailable,
             TEXT("Queue [{}] cannot join member [{}]: admission ticket space is exhausted"),
             InQueue, InRequest.Get_Member())
         { return false; }
 
-        const auto Ticket = InCurrent._NextTicket;
-        InCurrent._NextTicket = Ticket + 1;
-        const auto Rank = InCurrent._Members.Num();
+        const auto Ticket = InQueueComp._NextTicket;
+        InQueueComp._NextTicket = Ticket + 1;
+        const auto Rank = InQueueComp._Members.Num();
 
-        ++InCurrent._Revision;
+        ++InQueueComp._Revision;
 
-        InCurrent._Members.Emplace(
+        InQueueComp._Members.Emplace(
             InRequest.Get_Member(),
             InRequest.Get_Mover(),
             Ticket,
@@ -376,14 +376,14 @@ namespace ck
             false,
             ECk_Queue_MemberState::PendingAdmission);
 
-        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Joined);
-        RefreshPressure(InQueue, InParams, InCurrent);
+        MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::Joined);
+        RefreshPressure(InQueue, InParams, InQueueComp);
         BroadcastMemberEvent(
             InQueue,
-            InCurrent._Members.Last(),
+            InQueueComp._Members.Last(),
             ECk_Queue_MemberState::None,
             ECk_Queue_EventReason::Joined,
-            InCurrent._Revision);
+            InQueueComp._Revision);
         return true;
     }
 
@@ -392,20 +392,20 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Leave& InRequest)
         -> bool
     {
-        const auto MemberIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        const auto MemberIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
         if (MemberIndex == INDEX_NONE)
         { return true; }
 
-        const auto Removed = InCurrent._Members[MemberIndex];
-        InCurrent._Members.RemoveAt(MemberIndex);
-        ++InCurrent._Revision;
+        const auto Removed = InQueueComp._Members[MemberIndex];
+        InQueueComp._Members.RemoveAt(MemberIndex);
+        ++InQueueComp._Revision;
 
         const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
-        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
+        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InQueueComp._Members, Removed); }
 
         const auto RemovedSnapshot = FCk_Queue_MemberSnapshot{
             Removed.Get_Member(),
@@ -417,15 +417,15 @@ namespace ck
             false,
             ECk_Queue_MemberState::None};
 
-        MarkFormationDirty(InQueue, InCurrent, InRequest.Get_Reason());
-        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Reflowed); }
-        RefreshPressure(InQueue, InParams, InCurrent);
+        MarkFormationDirty(InQueue, InQueueComp, InRequest.Get_Reason());
+        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InQueueComp, ECk_Queue_EventReason::Reflowed); }
+        RefreshPressure(InQueue, InParams, InQueueComp);
         BroadcastMemberEvent(
             InQueue,
             RemovedSnapshot,
             Removed.Get_State(),
             InRequest.Get_Reason(),
-            InCurrent._Revision);
+            InQueueComp._Revision);
         return true;
     }
 
@@ -434,11 +434,11 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_Advance& /*InRequest*/)
         -> bool
     {
-        const auto MemberIndex = InCurrent._Members.IndexOfByPredicate(
+        const auto MemberIndex = InQueueComp._Members.IndexOfByPredicate(
         [&](const FCk_Queue_MemberSnapshot& InMember)
         {
             return InMember.Get_Rank() == 0
@@ -448,12 +448,12 @@ namespace ck
         if (MemberIndex == INDEX_NONE)
         { return false; }
 
-        const auto Removed = InCurrent._Members[MemberIndex];
-        InCurrent._Members.RemoveAt(MemberIndex);
-        ++InCurrent._Revision;
+        const auto Removed = InQueueComp._Members[MemberIndex];
+        InQueueComp._Members.RemoveAt(MemberIndex);
+        ++InQueueComp._Revision;
 
         const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
-        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
+        if (ClaimOnReach) { ck_queue_processor::InvalidateLaterClaims(InQueueComp._Members, Removed); }
 
         const auto Serving = FCk_Queue_MemberSnapshot{
             Removed.Get_Member(),
@@ -465,15 +465,15 @@ namespace ck
             false,
             ECk_Queue_MemberState::Serving};
 
-        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::Advanced);
-        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InCurrent, ECk_Queue_EventReason::Advanced); }
-        RefreshPressure(InQueue, InParams, InCurrent);
+        MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::Advanced);
+        if (NOT ClaimOnReach) { RebuildRanks(InQueue, InQueueComp, ECk_Queue_EventReason::Advanced); }
+        RefreshPressure(InQueue, InParams, InQueueComp);
         BroadcastMemberEvent(
             InQueue,
             Serving,
             Removed.Get_State(),
             ECk_Queue_EventReason::Advanced,
-            InCurrent._Revision);
+            InQueueComp._Revision);
         return true;
     }
 
@@ -481,14 +481,14 @@ namespace ck
     FProcessor_Queue_HandleRequests::
         RebuildRanks(
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason)
         -> void
     {
         auto RankedMemberIndices = TArray<int32>{};
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
         {
-            const auto& Member = InCurrent._Members[MemberIndex];
+            const auto& Member = InQueueComp._Members[MemberIndex];
             if (Member.Get_Rank() == INDEX_NONE
                 || Member.Get_State() == ECk_Queue_MemberState::WaitingForMover
                 || Member.Get_State() == ECk_Queue_MemberState::WaitingForNavigationChange)
@@ -497,7 +497,7 @@ namespace ck
             RankedMemberIndices.Add(MemberIndex);
         }
 
-        RankedMemberIndices.Sort([&Members = InCurrent._Members](int32 InLeftIndex, int32 InRightIndex)
+        RankedMemberIndices.Sort([&Members = InQueueComp._Members](int32 InLeftIndex, int32 InRightIndex)
         {
             const auto& Left = Members[InLeftIndex];
             const auto& Right = Members[InRightIndex];
@@ -509,11 +509,11 @@ namespace ck
         for (auto NextRank = 0; NextRank < RankedMemberIndices.Num(); ++NextRank)
         {
             const auto MemberIndex = RankedMemberIndices[NextRank];
-            const auto Previous = InCurrent._Members[MemberIndex];
+            const auto Previous = InQueueComp._Members[MemberIndex];
             if (Previous.Get_Rank() == NextRank)
             { continue; }
 
-            InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+            InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(),
                 Previous.Get_Mover(),
                 Previous.Get_Ticket(),
@@ -525,10 +525,10 @@ namespace ck
 
             BroadcastMemberEvent(
                 InQueue,
-                InCurrent._Members[MemberIndex],
+                InQueueComp._Members[MemberIndex],
                 Previous.Get_State(),
                 InReason,
-                InCurrent._Revision);
+                InQueueComp._Revision);
         }
     }
 
@@ -537,25 +537,25 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_SetLayout& InRequest)
         -> bool
     {
-        if (InCurrent._LayoutAlgorithm == InRequest.Get_LayoutAlgorithm())
+        if (InQueueComp._LayoutAlgorithm == InRequest.Get_LayoutAlgorithm())
         { return true; }
 
-        InCurrent._LayoutAlgorithm = InRequest.Get_LayoutAlgorithm();
-        ++InCurrent._Revision;
+        InQueueComp._LayoutAlgorithm = InRequest.Get_LayoutAlgorithm();
+        ++InQueueComp._Revision;
         if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach)
         {
-            for (auto& Member : InCurrent._Members)
+            for (auto& Member : InQueueComp._Members)
             {
                 if (Member.Get_MovementSuppressed()) { continue; }
                 Member = FCk_Queue_MemberSnapshot{Member.Get_Member(), Member.Get_Mover(), Member.Get_Ticket(),
                     INDEX_NONE, FTransform::Identity, 0, false, ECk_Queue_MemberState::PendingAdmission};
             }
         }
-        MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::LayoutChanged);
+        MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::LayoutChanged);
         return true;
     }
 
@@ -564,24 +564,24 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_SetMovementSuppressed& InRequest)
         -> bool
     {
-        const auto MemberIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        const auto MemberIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
         if (MemberIndex == INDEX_NONE)
         { return false; }
 
-        const auto Previous = InCurrent._Members[MemberIndex];
+        const auto Previous = InQueueComp._Members[MemberIndex];
         const auto Suppressed = InRequest.Get_MovementSuppressed() == ECk_EnableDisable::Enable;
         if (Previous.Get_MovementSuppressed() == Suppressed)
         { return true; }
 
-        ++InCurrent._Revision;
+        ++InQueueComp._Revision;
         const auto State = Suppressed
             ? ECk_Queue_MemberState::MovementSuppressed
             : ECk_Queue_MemberState::PendingAdmission;
-        InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+        InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
             Previous.Get_Member(),
             Previous.Get_Mover(),
             Previous.Get_Ticket(),
@@ -592,16 +592,16 @@ namespace ck
             State};
 
         if (NOT Suppressed)
-        { MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::MovementResumed); }
+        { MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::MovementResumed); }
 
         BroadcastMemberEvent(
             InQueue,
-            InCurrent._Members[MemberIndex],
+            InQueueComp._Members[MemberIndex],
             Previous.Get_State(),
             Suppressed
                 ? ECk_Queue_EventReason::MovementSuppressed
                 : ECk_Queue_EventReason::MovementResumed,
-            InCurrent._Revision);
+            InQueueComp._Revision);
         return true;
     }
 
@@ -610,18 +610,18 @@ namespace ck
         DoHandleRequest(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             const FCk_Request_Queue_ReportMovementOutcome& InRequest)
         -> bool
     {
-        const auto MemberIndex = FindMemberIndex(InCurrent, InRequest.Get_Member());
+        const auto MemberIndex = FindMemberIndex(InQueueComp, InRequest.Get_Member());
         if (MemberIndex == INDEX_NONE)
         { return false; }
 
-        const auto Previous = InCurrent._Members[MemberIndex];
+        const auto Previous = InQueueComp._Members[MemberIndex];
         if (Previous.Get_AssignmentRevision() != InRequest.Get_AssignmentRevision()
             || Previous.Get_MovementSuppressed()
-            || InCurrent.Get_State() != ECk_Queue_State::Ready)
+            || InQueueComp.Get_State() != ECk_Queue_State::Ready)
         { return true; }
 
         const auto HasIssuedAssignment = Previous.Get_AssignmentRevision() > 0
@@ -635,7 +635,7 @@ namespace ck
             return TryApplyReachedClaim(
                 InQueue,
                 InParams,
-                InCurrent,
+                InQueueComp,
                 MemberIndex,
                 TOptional<int32>{InRequest.Get_AssignmentRevision()});
         }
@@ -649,7 +649,7 @@ namespace ck
             {
                 // A failed mover no longer owns a reservation. Keep its ticket, but move it behind viable
                 // members and wait for a nav generation change before it can re-enter formation.
-                ++InCurrent._Revision;
+                ++InQueueComp._Revision;
                 const auto Relinquished = FCk_Queue_MemberSnapshot{
                     Previous.Get_Member(),
                     Previous.Get_Mover(),
@@ -659,16 +659,16 @@ namespace ck
                     0,
                     Previous.Get_MovementSuppressed(),
                     ECk_Queue_MemberState::WaitingForNavigationChange};
-                InCurrent._Members.RemoveAt(MemberIndex);
-                InCurrent._Members.Add(Relinquished);
+                InQueueComp._Members.RemoveAt(MemberIndex);
+                InQueueComp._Members.Add(Relinquished);
                 BroadcastMemberEvent(
                     InQueue,
                     Relinquished,
                     Previous.Get_State(),
                     ECk_Queue_EventReason::MovementFailed,
-                    InCurrent._Revision);
-                RefreshPressure(InQueue, InParams, InCurrent);
-                MarkFormationDirty(InQueue, InCurrent, ECk_Queue_EventReason::MovementFailed);
+                    InQueueComp._Revision);
+                RefreshPressure(InQueue, InParams, InQueueComp);
+                MarkFormationDirty(InQueue, InQueueComp, ECk_Queue_EventReason::MovementFailed);
                 return true;
             }
             case ECk_Queue_MovementOutcome::Cancelled:
@@ -684,8 +684,8 @@ namespace ck
             }
         }
 
-        ++InCurrent._Revision;
-        InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+        ++InQueueComp._Revision;
+        InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
             Previous.Get_Member(),
             Previous.Get_Mover(),
             Previous.Get_Ticket(),
@@ -697,21 +697,21 @@ namespace ck
 
         BroadcastMemberEvent(
             InQueue,
-            InCurrent._Members[MemberIndex],
+            InQueueComp._Members[MemberIndex],
             Previous.Get_State(),
             Reason,
-            InCurrent._Revision);
+            InQueueComp._Revision);
         return true;
     }
 
     auto
         FProcessor_Queue_HandleRequests::
         FindMemberIndex(
-            const FFragment_Queue_Current& InCurrent,
+            const FFragment_Queue& InQueue,
             const FCk_Handle& InMember)
         -> int32
     {
-        return InCurrent.Get_Members().IndexOfByPredicate(
+        return InQueue.Get_Members().IndexOfByPredicate(
         [&](const FCk_Queue_MemberSnapshot& InSnapshot)
         {
             return InSnapshot.Get_Member() == InMember;
@@ -723,7 +723,7 @@ namespace ck
         InvalidateAssignmentsForReflow(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
         // Reserve assignments are the input to the next atomic compaction. WaitingForFormation prevents
@@ -732,9 +732,9 @@ namespace ck
         if (InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ReserveOnFormation)
         { return; }
 
-        for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+        for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
         {
-            const auto Previous = InCurrent._Members[MemberIndex];
+            const auto Previous = InQueueComp._Members[MemberIndex];
             if (Previous.Get_MovementSuppressed()
                 || Previous.Get_State() == ECk_Queue_MemberState::WaitingForNavigationChange
                 || Previous.Get_State() == ECk_Queue_MemberState::WaitingForMover
@@ -745,7 +745,7 @@ namespace ck
                     && Previous.Get_State() == ECk_Queue_MemberState::PendingAdmission))
             { continue; }
 
-            InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+            InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                 Previous.Get_Member(),
                 Previous.Get_Mover(),
                 Previous.Get_Ticket(),
@@ -757,10 +757,10 @@ namespace ck
 
             BroadcastMemberEvent(
                 InQueue,
-                InCurrent._Members[MemberIndex],
+                InQueueComp._Members[MemberIndex],
                 Previous.Get_State(),
                 ECk_Queue_EventReason::Reflowed,
-                InCurrent._Revision);
+                InQueueComp._Revision);
         }
     }
 
@@ -769,24 +769,24 @@ namespace ck
         RefreshPressure(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
-        const auto Count = InCurrent._Members.Num();
+        const auto Count = InQueueComp._Members.Num();
         const auto SoftLimited = InParams.Get_SoftLimit() > 0 && Count >= InParams.Get_SoftLimit();
         const auto HardLimited = InParams.Get_HardLimit() > 0 && Count >= InParams.Get_HardLimit();
 
-        InCurrent._Pressure = FCk_Queue_Pressure{
+        InQueueComp._Pressure = FCk_Queue_Pressure{
             Count,
             InParams.Get_SoftLimit(),
             InParams.Get_HardLimit(),
             SoftLimited,
             HardLimited,
-            InCurrent._Revision};
+            InQueueComp._Revision};
 
         UUtils_Signal_OnQueuePressureChanged::Broadcast(
             InQueue,
-            MakePayload(InQueue, InCurrent._Pressure));
+            MakePayload(InQueue, InQueueComp._Pressure));
     }
 
     auto
@@ -815,15 +815,15 @@ namespace ck
     FProcessor_Queue_HandleRequests::
     MarkFormationDirty(
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason)
         -> void
     {
-        InCurrent._State = InCurrent._Members.IsEmpty()
+        InQueueComp._State = InQueueComp._Members.IsEmpty()
             ? ECk_Queue_State::Ready
             : ECk_Queue_State::WaitingForFormation;
 
-        if (InCurrent._Members.IsEmpty())
+        if (InQueueComp._Members.IsEmpty())
         { InQueue.Try_Remove<FTag_Queue_NeedsFormation>(); }
         else
         { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
@@ -833,10 +833,10 @@ namespace ck
             MakePayload(
                 InQueue,
                 FCk_Queue_FormationState{
-                    InCurrent._State,
+                    InQueueComp._State,
                     InReason,
-                    InCurrent._Revision,
-                    InCurrent._RetryEpisode}));
+                    InQueueComp._Revision,
+                    InQueueComp._RetryEpisode}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -847,41 +847,41 @@ namespace ck
             TimeType /*InDeltaT*/,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
         const auto QueueTransform = UCk_Utils_Transform_UE::Cast(InQueue);
         const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(QueueTransform);
         const auto LocationMoved = FVector::DistSquared(
             OwnerWorldTransform.GetLocation(),
-            InCurrent._LastOwnerWorldTransform.GetLocation())
+            InQueueComp._LastOwnerWorldTransform.GetLocation())
             > FMath::Square(InParams.Get_TransformEpsilonUu());
         const auto RotationMoved = OwnerWorldTransform.GetRotation().AngularDistance(
-            InCurrent._LastOwnerWorldTransform.GetRotation())
+            InQueueComp._LastOwnerWorldTransform.GetRotation())
             > FMath::DegreesToRadians(InParams.Get_RotationEpsilonDegrees());
         const auto ScaleChanged = NOT OwnerWorldTransform.GetScale3D().Equals(
-            InCurrent._LastOwnerWorldTransform.GetScale3D(),
+            InQueueComp._LastOwnerWorldTransform.GetScale3D(),
             KINDA_SMALL_NUMBER);
         const auto OwnerMoved = LocationMoved || RotationMoved || ScaleChanged;
 
         if (OwnerMoved)
         {
-            InCurrent._LastOwnerWorldTransform = OwnerWorldTransform;
-            if (NOT InCurrent._Members.IsEmpty())
+            InQueueComp._LastOwnerWorldTransform = OwnerWorldTransform;
+            if (NOT InQueueComp._Members.IsEmpty())
             {
-                ++InCurrent._Revision;
+                ++InQueueComp._Revision;
 
                 const auto PreserveReserveAssignments = InParams.Get_SlotClaimPolicy()
                     == ECk_Queue_SlotClaimPolicy::ReserveOnFormation;
                 if (NOT PreserveReserveAssignments)
                 {
-                    for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+                    for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
                     {
-                        const auto Previous = InCurrent._Members[MemberIndex];
+                        const auto Previous = InQueueComp._Members[MemberIndex];
                         if (Previous.Get_MovementSuppressed())
                         { continue; }
 
-                        InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+                        InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                             Previous.Get_Member(),
                             Previous.Get_Mover(),
                             Previous.Get_Ticket(),
@@ -897,35 +897,35 @@ namespace ck
                                 InQueue,
                                 FCk_Queue_MemberEvent{
                                     InQueue,
-                                    InCurrent._Members[MemberIndex],
+                                    InQueueComp._Members[MemberIndex],
                                     Previous.Get_State(),
                                     ECk_Queue_EventReason::Reflowed,
-                                    InCurrent._Revision}));
+                                    InQueueComp._Revision}));
                     }
                 }
 
-                InCurrent._State = ECk_Queue_State::WaitingForFormation;
+                InQueueComp._State = ECk_Queue_State::WaitingForFormation;
                 InQueue.AddOrGet<FTag_Queue_NeedsFormation>();
                 UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
                     InQueue,
                     MakePayload(
                         InQueue,
                         FCk_Queue_FormationState{
-                            InCurrent._State,
+                            InQueueComp._State,
                             ECk_Queue_EventReason::Reflowed,
-                            InCurrent._Revision,
-                            InCurrent._RetryEpisode}));
+                            InQueueComp._Revision,
+                            InQueueComp._RetryEpisode}));
             }
         }
 
-        const auto ReconcileArrivals = InCurrent._State == ECk_Queue_State::Ready;
+        const auto ReconcileArrivals = InQueueComp._State == ECk_Queue_State::Ready;
         if (ReconcileArrivals)
         {
             // HandleRequests has already consumed explicit outcomes this frame. This stable member
             // iteration therefore only supplies a transform-backed fallback for an unreported arrival.
-            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+            for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
             {
-                const auto Previous = InCurrent._Members[MemberIndex];
+                const auto Previous = InQueueComp._Members[MemberIndex];
                 const auto Member = Previous.Get_Member();
                 const auto MemberIsLive = ck::IsValid(Member) && NOT Member.Has<FTag_DestroyEntity_Initiate>();
                 const auto HasCurrentAssignment = MemberIsLive
@@ -955,7 +955,7 @@ namespace ck
                 FProcessor_Queue_HandleRequests::TryApplyReachedClaim(
                     InQueue,
                     InParams,
-                    InCurrent,
+                    InQueueComp,
                     MemberIndex,
                     TOptional<int32>{Previous.Get_AssignmentRevision()});
             }
@@ -964,9 +964,9 @@ namespace ck
         auto RemovedMembers = TArray<FCk_Queue_MemberSnapshot>{};
         auto MembersWithDestroyedMovers = TArray<FCk_Handle>{};
 
-        for (auto MemberIndex = InCurrent._Members.Num() - 1; MemberIndex >= 0; --MemberIndex)
+        for (auto MemberIndex = InQueueComp._Members.Num() - 1; MemberIndex >= 0; --MemberIndex)
         {
-            const auto& Member = InCurrent._Members[MemberIndex];
+            const auto& Member = InQueueComp._Members[MemberIndex];
             if (ck::IsValid(Member.Get_Member()))
             {
                 const auto HadMover = Member.Get_Mover() != FCk_Handle{};
@@ -975,28 +975,28 @@ namespace ck
                 continue;
             }
 
-            RemovedMembers.Emplace(InCurrent._Members[MemberIndex]);
-            InCurrent._Members.RemoveAt(MemberIndex);
+            RemovedMembers.Emplace(InQueueComp._Members[MemberIndex]);
+            InQueueComp._Members.RemoveAt(MemberIndex);
         }
 
         if (RemovedMembers.IsEmpty() && MembersWithDestroyedMovers.IsEmpty())
         { return; }
 
-        ++InCurrent._Revision;
+        ++InQueueComp._Revision;
 
         const auto ClaimOnReach = InParams.Get_SlotClaimPolicy() == ECk_Queue_SlotClaimPolicy::ClaimFirstAvailableOnReach;
         if (ClaimOnReach)
         {
             for (const auto& Removed : RemovedMembers)
-            { ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Removed); }
+            { ck_queue_processor::InvalidateLaterClaims(InQueueComp._Members, Removed); }
 
-            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+            for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
             {
-                const auto Previous = InCurrent._Members[MemberIndex];
+                const auto Previous = InQueueComp._Members[MemberIndex];
                 if (NOT MembersWithDestroyedMovers.Contains(Previous.Get_Member())) { continue; }
 
-                ck_queue_processor::InvalidateLaterClaims(InCurrent._Members, Previous);
-                InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+                ck_queue_processor::InvalidateLaterClaims(InQueueComp._Members, Previous);
+                InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                     Previous.Get_Member(), FCk_Handle{}, Previous.Get_Ticket(),
                     INDEX_NONE, FTransform::Identity, 0,
                     Previous.Get_MovementSuppressed(), ECk_Queue_MemberState::WaitingForMover};
@@ -1007,21 +1007,21 @@ namespace ck
                         InQueue,
                         FCk_Queue_MemberEvent{
                             InQueue,
-                            InCurrent._Members[MemberIndex],
+                            InQueueComp._Members[MemberIndex],
                             Previous.Get_State(),
                             ECk_Queue_EventReason::MovementFailed,
-                            InCurrent._Revision}));
+                            InQueueComp._Revision}));
             }
         }
         else
         {
             auto NextRank = 0;
-            for (auto MemberIndex = 0; MemberIndex < InCurrent._Members.Num(); ++MemberIndex)
+            for (auto MemberIndex = 0; MemberIndex < InQueueComp._Members.Num(); ++MemberIndex)
             {
-                const auto Previous = InCurrent._Members[MemberIndex];
+                const auto Previous = InQueueComp._Members[MemberIndex];
                 const auto MoverWasDestroyed = MembersWithDestroyedMovers.Contains(Previous.Get_Member());
                 const auto Rank = MoverWasDestroyed ? INDEX_NONE : NextRank++;
-                InCurrent._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
+                InQueueComp._Members[MemberIndex] = FCk_Queue_MemberSnapshot{
                     Previous.Get_Member(),
                     MoverWasDestroyed ? FCk_Handle{} : Previous.Get_Mover(),
                     Previous.Get_Ticket(),
@@ -1039,31 +1039,31 @@ namespace ck
                             InQueue,
                             FCk_Queue_MemberEvent{
                                 InQueue,
-                                InCurrent._Members[MemberIndex],
+                                InQueueComp._Members[MemberIndex],
                                 Previous.Get_State(),
                                 ECk_Queue_EventReason::MovementFailed,
-                                InCurrent._Revision}));
+                                InQueueComp._Revision}));
                 }
             }
         }
 
-        InCurrent._State = InCurrent._Members.IsEmpty()
+        InQueueComp._State = InQueueComp._Members.IsEmpty()
             ? ECk_Queue_State::Ready
             : ECk_Queue_State::WaitingForFormation;
 
-        if (InCurrent._Members.IsEmpty())
+        if (InQueueComp._Members.IsEmpty())
         { InQueue.Try_Remove<FTag_Queue_NeedsFormation>(); }
         else
         { InQueue.AddOrGet<FTag_Queue_NeedsFormation>(); }
 
-        const auto Count = InCurrent._Members.Num();
-        InCurrent._Pressure = FCk_Queue_Pressure{
+        const auto Count = InQueueComp._Members.Num();
+        InQueueComp._Pressure = FCk_Queue_Pressure{
             Count,
             InParams.Get_SoftLimit(),
             InParams.Get_HardLimit(),
             InParams.Get_SoftLimit() > 0 && Count >= InParams.Get_SoftLimit(),
             InParams.Get_HardLimit() > 0 && Count >= InParams.Get_HardLimit(),
-            InCurrent._Revision};
+            InQueueComp._Revision};
 
         for (const auto& Removed : RemovedMembers)
         {
@@ -1086,21 +1086,21 @@ namespace ck
                         Invalidated,
                         Removed.Get_State(),
                         ECk_Queue_EventReason::MemberDestroyed,
-                        InCurrent._Revision}));
+                        InQueueComp._Revision}));
         }
 
         UUtils_Signal_OnQueuePressureChanged::Broadcast(
             InQueue,
-            MakePayload(InQueue, InCurrent._Pressure));
+            MakePayload(InQueue, InQueueComp._Pressure));
         UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
             InQueue,
             MakePayload(
                 InQueue,
                 FCk_Queue_FormationState{
-                    InCurrent._State,
+                    InQueueComp._State,
                     ECk_Queue_EventReason::MemberDestroyed,
-                    InCurrent._Revision,
-                    InCurrent._RetryEpisode}));
+                    InQueueComp._Revision,
+                    InQueueComp._RetryEpisode}));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1121,13 +1121,13 @@ namespace ck
         ForEachEntity(
             TimeType /*InDeltaT*/,
             HandleType InQueue,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
         -> void
     {
-        ++InCurrent._Revision;
-        InCurrent._State = ECk_Queue_State::Invalidated;
+        ++InQueueComp._Revision;
+        InQueueComp._State = ECk_Queue_State::Invalidated;
 
-        for (const auto& Member : InCurrent._Members)
+        for (const auto& Member : InQueueComp._Members)
         {
             const auto Invalidated = FCk_Queue_MemberSnapshot{
                 Member.Get_Member(),
@@ -1148,23 +1148,23 @@ namespace ck
                         Invalidated,
                         Member.Get_State(),
                         ECk_Queue_EventReason::OwnerDestroyed,
-                        InCurrent._Revision}));
+                        InQueueComp._Revision}));
         }
 
-        InCurrent._Members.Reset();
-        InCurrent._Pressure = FCk_Queue_Pressure{
+        InQueueComp._Members.Reset();
+        InQueueComp._Pressure = FCk_Queue_Pressure{
             0,
-            InCurrent._Pressure.Get_SoftLimit(),
-            InCurrent._Pressure.Get_HardLimit(),
+            InQueueComp._Pressure.Get_SoftLimit(),
+            InQueueComp._Pressure.Get_HardLimit(),
             false,
             false,
-            InCurrent._Revision};
+            InQueueComp._Revision};
 
         const auto FormationState = FCk_Queue_FormationState{
-            InCurrent._State,
+            InQueueComp._State,
             ECk_Queue_EventReason::OwnerDestroyed,
-            InCurrent._Revision,
-            InCurrent._RetryEpisode};
+            InQueueComp._Revision,
+            InQueueComp._RetryEpisode};
 
         UUtils_Signal_OnQueueFormationStateChanged::Broadcast(
             InQueue,

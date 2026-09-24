@@ -26,7 +26,7 @@ public:
     static FCk_Handle_QueueCoordinator
     Add(
         UPARAM(ref) FCk_Handle& InOwner,
-        const FCk_Fragment_QueueCoordinator_ParamsData& InParams);
+        const FCk_QueueCoordinator_Spec& InParams);
 
 public:
     static bool

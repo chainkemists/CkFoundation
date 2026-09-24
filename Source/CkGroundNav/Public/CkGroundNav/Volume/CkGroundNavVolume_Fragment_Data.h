@@ -93,12 +93,12 @@ enum class ECk_GroundNav_StreamingBuildScope : uint8
  * the ground they cover.
  */
 USTRUCT(BlueprintType)
-struct CKGROUNDNAV_API FCk_Fragment_GroundNavVolume_ParamsData
+struct CKGROUNDNAV_API FCk_GroundNavVolume_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_GroundNavVolume_ParamsData);
+    CK_GENERATED_BODY(FCk_GroundNavVolume_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -202,7 +202,7 @@ public:
     CK_PROPERTY(_CookLevelPackage);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_GroundNavVolume_ParamsData, _VolumeBounds, _Config, _Profile);
+    CK_DEFINE_CONSTRUCTORS(FCk_GroundNavVolume_Spec, _VolumeBounds, _Config, _Profile);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

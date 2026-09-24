@@ -111,12 +111,12 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKVISUALLOD_API FCk_Fragment_VisualLod_ParamsData
+struct CKVISUALLOD_API FCk_VisualLod_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_VisualLod_ParamsData);
+    CK_GENERATED_BODY(FCk_VisualLod_Spec);
 
 private:
     // Which arbiter (LOD domain) manages this entity. Resolved lazily against the arbiter whose
@@ -151,7 +151,7 @@ public:
     CK_PROPERTY(_InitialFarAnim);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_VisualLod_ParamsData, _ArbiterTag);
+    CK_DEFINE_CONSTRUCTORS(FCk_VisualLod_Spec, _ArbiterTag);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
