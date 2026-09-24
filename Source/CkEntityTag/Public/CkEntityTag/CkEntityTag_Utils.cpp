@@ -350,10 +350,10 @@ auto
     if (NOT HandleIsValid)
     { return {}; }
 
-    if (NOT InHandle.Has<ck::FFragment_EntityTag_Current>())
+    if (NOT InHandle.Has<ck::FFragment_EntityTag>())
     { return {}; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_EntityTag_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_EntityTag>();
     for (const auto& GameplayTagCount : Current._GameplayTagCounts)
     {
         if (GameplayTagCount._Tag.MatchesTag(InParentTag))

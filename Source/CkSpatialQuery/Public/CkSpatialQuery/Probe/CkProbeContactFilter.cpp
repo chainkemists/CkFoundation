@@ -20,7 +20,7 @@ namespace ck::spatialquery
     auto
         FCk_ProbeContactFilter::
         Get_OrRegisterSignature(
-            const FCk_Fragment_Probe_ParamsData& InParams)
+            const FCk_Probe_Spec& InParams)
         -> uint32
     {
         const auto Signature = FCk_ProbeContactSignature{
@@ -127,7 +127,7 @@ namespace ck::spatialquery
     auto
         FCk_ProbeContactFilter_Context::
         Get_OrRegisterSignature(
-            const FCk_Fragment_Probe_ParamsData& InParams)
+            const FCk_Probe_Spec& InParams)
         const -> uint32
     {
         return Filter != nullptr

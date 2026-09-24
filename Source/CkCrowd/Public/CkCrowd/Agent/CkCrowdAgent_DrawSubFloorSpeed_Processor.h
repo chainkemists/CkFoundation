@@ -24,8 +24,8 @@ namespace ck
             FProcessor_CrowdAgent_DrawSubFloorSpeed,
             FCk_Handle_CrowdAgent,
             ck::TReadOnly<FFragment_Transform>,
-            ck::TReadOnly<FFragment_CrowdAgent_Params>,
-            ck::TReadOnly<FFragment_Velocity_Current>,
+            ck::TReadOnly<FFragment_CrowdAgent_Tunables>,
+            ck::TReadOnly<FFragment_Velocity>,
             TExclude<FTag_CrowdAgent_Disabled>,
             CK_IGNORE_PENDING_KILL>
     {
@@ -42,8 +42,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_CrowdAgent_Params& InParams,
-            const FFragment_Velocity_Current& InVelocity) -> void;
+            const FFragment_CrowdAgent_Tunables& InTunables,
+            const FFragment_Velocity& InVelocity) -> void;
     };
 }
 

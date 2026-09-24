@@ -27,7 +27,7 @@ bool FCkTest_SmTask_CanRunScopedWork::RunTest(const FString&)
     const auto MakeTask = [&Registry]() -> TPair<FCk_Handle, FCk_Handle_SmTask>
     {
         auto Task = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-        Task.Add<ck::FFragment_SmTask_Current>();
+        Task.Add<ck::FFragment_SmTask>();
         Task.Add<ck::FFragment_SmTask_Params>();
         Task.Add<ck::FTag_SmTask_EnterExit>();
         Task.Add<ck::FTag_SmTask_Active>();
@@ -39,7 +39,7 @@ bool FCkTest_SmTask_CanRunScopedWork::RunTest(const FString&)
         const ECk_Sm_NetContext InNetContext) -> TPair<FCk_Handle, FCk_Handle_StateMachine>
     {
         auto StateMachine = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-        StateMachine.Add<ck::FFragment_Sm_Current>();
+        StateMachine.Add<ck::FFragment_Sm>();
         StateMachine.Add<ck::FFragment_Sm_Params>();
         StateMachine.Add<ck::FFragment_Sm_NetIdentity>(InAuthority, InNetContext);
         return {StateMachine, ck::StaticCast<FCk_Handle_StateMachine>(StateMachine)};
@@ -104,7 +104,7 @@ bool FCkTest_SmTask_CanRunScopedWork::RunTest(const FString&)
 
     auto [MissingSmParamsRaw, MissingSmParamsTask] = MakeTask();
     auto MissingSmParams = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(Registry);
-    MissingSmParams.Add<ck::FFragment_Sm_Current>();
+    MissingSmParams.Add<ck::FFragment_Sm>();
     MissingSmParams.Add<ck::FFragment_Sm_NetIdentity>(
         ECk_Sm_AuthorityModel::ServerAuthoritative, ECk_Sm_NetContext::Standalone);
     auto MissingSmParamsTyped = ck::StaticCast<FCk_Handle_StateMachine>(MissingSmParams);

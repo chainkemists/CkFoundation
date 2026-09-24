@@ -296,7 +296,7 @@ namespace ck
         FProcessor_IsmProxy_HandleLateCustomDataRequests,
         FCk_Handle_IsmProxy,
         TReadOnly<FFragment_IsmProxy_Params>,
-        TReadWrite<FFragment_IsmProxy_Current>,
+        TReadWrite<FFragment_IsmProxy>,
         TReadOnly<FFragment_IsmProxy_LateCustomDataRequests>,
         TExclude<FTag_IsmProxy_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -318,7 +318,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FFragment_IsmProxy_LateCustomDataRequests& InRequestsComp) const -> void;
 
     private:
@@ -326,7 +326,7 @@ namespace ck
         DoHandleRequest(
             HandleType& InHandle,
             const FFragment_IsmProxy_Params& InParams,
-            FFragment_IsmProxy_Current& InCurrent,
+            FFragment_IsmProxy& InIsmProxy,
             const FCk_Request_IsmProxy_SetCustomInstanceDataValue& InRequest) const -> bool;
 
     private:
