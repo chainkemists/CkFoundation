@@ -297,7 +297,7 @@ contract as `TProcessor_SceneNode_Update`) and runs before `FProcessor_Transform
 land on their actors the same frame.
 
 **Plan-1 → Plan-2 migration shape.** Two fragments look over-decomposed because of where they're going:
-`FFragment_IskmProxy_Current`'s `TWeakObjectPtr<USkeletalMeshComponent>` is slated to become
+`FFragment_IskmProxy`'s `TWeakObjectPtr<USkeletalMeshComponent>` is slated to become
 `int32 _InstanceIndex + uint32 _InstanceVersion` — an SOA index into the renderer's instance arrays, with no per-entity
 SKMC for sequence-mode entities — hence the rule that `_BaseSKMC` access never leaves `UCk_Utils_IskmProxy_UE` and the
 proxy processors. `FFragment_IskmProxy_PoseSource` stays a separate fragment (never merged into AnimState) because it is

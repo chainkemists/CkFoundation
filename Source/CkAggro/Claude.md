@@ -51,7 +51,7 @@ Two typesafe handles, two feature quartets:
 
 ```cpp
 // Compose (authority-side, requires a Transform):
-auto Aggro = UCk_Utils_Aggro_UE::Add(Entity, FCk_Fragment_Aggro_ParamsData{});
+auto Aggro = UCk_Utils_Aggro_UE::Add(Entity, FCk_Aggro_Spec{});
 
 // Damage -> threat, one line (game binds Resolver's OnAllPhasesComplete and calls this):
 UCk_Utils_Aggro_UE::Request_AddThreat(Aggro,
@@ -91,7 +91,7 @@ Every per-target behavior the `Evaluate` stage reads lives on the TARGET (`FCk_A
 target created via `AggroTarget::Add` works standalone. The OWNER carries only owner-level concerns +
 the default-target template it stamps onto new targets.
 
-**Target params** (`FCk_AggroTarget_*`, aggregated in `FCk_Fragment_AggroTarget_ParamsData`):
+**Target params** (`FCk_AggroTarget_*`, aggregated in `FCk_AggroTarget_Spec`):
 
 | Piece | Governs |
 |---|---|
@@ -101,11 +101,11 @@ the default-target template it stamps onto new targets.
 | `ScoreParams` | `_ScoreBias` / `_ScoreMultiplier` — the game-heuristic escape hatch |
 | `LifetimeParams` | max lifetime, can-become-active, can-be-forgotten |
 
-**Owner params** (`FCk_Fragment_Aggro_ParamsData`):
+**Owner params** (`FCk_Aggro_Spec`):
 
 | Piece | Governs |
 |---|---|
-| `DefaultTargetParams` | the `FCk_Fragment_AggroTarget_ParamsData` template stamped onto new targets by `CreateTarget` |
+| `DefaultTargetParams` | the `FCk_AggroTarget_Spec` template stamped onto new targets by `CreateTarget` |
 | `FCk_Aggro_SelectionParams` | switch threshold, switch cooldown, current-target bias, min score, min aggro duration (the four hysteresis gates) |
 | `FCk_Aggro_CapParams` | target cap mode + max tracked targets + eviction policy (owner-level set management) |
 | `FCk_Aggro_EvaluationParams` | evaluation interval + per-rearm jitter (fleet decorrelation) |

@@ -53,7 +53,7 @@ non-skeletal vertex animation (future).
 
 GPU-time-driven playback: `frame = f((WorldTime - PlaybackStartTime) * PlayRate)` evaluated in the
 material; per-instance custom data carries (clip row range, start time, rate, crossfade pair). All
-mutations go through the request queue — processors write `FFragment_VatProxy_Current`; nothing per-frame.
+mutations go through the request queue — processors write `FFragment_VatProxy`; nothing per-frame.
 
 **Modular characters** (one collection = one baked mesh + skeleton): compose several VatProxy
 entities as children of a parent entity (body + head + outfit, each its own collection), sharing

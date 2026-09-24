@@ -19,7 +19,7 @@ The Spec is the authoring payload and is fully unpacked at `Add`; it is NOT reta
 
 - `ck::FFragment_Minimap_Params` — retained immutable residue ONLY: `_ProjectionMode`, `_FrameShape`,
   `_FixedBounds`, `_MaxEntries`, `_UpdateInterval`.
-- `ck::FFragment_Minimap_Current` — everything request-mutable: the three seeded from the Spec at
+- `ck::FFragment_Minimap` — everything request-mutable: the three seeded from the Spec at
   `Add` (`_ViewExtent`, `_RotationMode`, `_CategoryFilter`) plus the derived view state.
 
 **Why `_CategoryFilter` moved.** It used to live in the Params fragment and be mutated *there* by

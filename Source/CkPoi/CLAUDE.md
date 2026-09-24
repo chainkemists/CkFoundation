@@ -57,7 +57,7 @@ is an overlap-collision primitive, unrelated to HUD markers.
 
 ## Anti-patterns
 
-1. Don't add fields to `FCk_Fragment_Poi_ParamsData` — if a datum isn't intrinsic to "is a Poi at
+1. Don't add fields to `FCk_Poi_Spec` — if a datum isn't intrinsic to "is a Poi at
    all", it belongs in a composable module (root CLAUDE.md non-negotiable #9; this module is the case
    study).
 2. Don't read `Get_CategoryTags`/disabled state in the same tick as the mutation — EntityTag is

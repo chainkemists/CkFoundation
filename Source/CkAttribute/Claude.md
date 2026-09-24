@@ -144,8 +144,8 @@ The non-obvious constraints the code cannot state for itself (recorded 2026-07-2
   (a byte meaning "the key is down this frame"). Persisting one restores "held" with no key down and no release
   edge to come — BusterBlock QA 2026-09-01, where a saved `Intent.Interact.Primary` of `1` re-stocked a shelf at
   10 Hz and autofired the held weapon on every load of that slot, forever. Instance-level siblings elsewhere:
-  `FCk_Fragment_Inventory_DataOnly_ParamsData::_PersistContents`,
-  `FCk_Fragment_StateMachine_ParamsData::_ShouldPersistCurrentState`.
+  `FCk_Inventory_DataOnly_Spec::_PersistContents`,
+  `FCk_StateMachine_Spec::_ShouldPersistCurrentState`.
 - **KNOWN LIMIT of the opt-out: the refill RUN-STATE is not covered.** `CkAttribute_RefillPersistence.h`
   registers its own `Save-Only` handler keyed on the refill entity, and it does not read the marker. New
   saves are already safe (capture's ancestry walk omits the whole subtree), but an OLD save's refill

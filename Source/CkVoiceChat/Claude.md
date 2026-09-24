@@ -100,7 +100,7 @@ on. Audition: gym station (P4 `[EDITOR-VERIFY]`).
   configurations on channel entities (ADR-5; CTO review N4).
 - Don't poll overlaps for the routing set — the routing set is a persistent probe's
   event-maintained overlap set (ADR-6); world scans in the packet path are the confirmed failure
-  mode of a commercial reference. The routing processor READS `FFragment_Probe_Current`'s
+  mode of a commercial reference. The routing processor READS `FFragment_Probe`'s
   maintained set (the CkCrowd Neighbors adopter pattern) only when bundles actually flow — it
   never issues a spatial query.
 - Don't stash undecodable/unroutable voice packets — voice is disposable; drop + count (review N1).

@@ -10,7 +10,7 @@
 ## Key API
 
 - `UCk_Utils_RaySense_UE::Add(InHandle, InParams)` — attach a ray sense to an entity.
-- `FFragment_RaySense_Current` — last hit result (actor, component, distance, normal).
+- `FFragment_RaySense` — last hit result (actor, component, distance, normal).
 
 ---
 

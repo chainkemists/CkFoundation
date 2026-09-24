@@ -11,7 +11,7 @@
 
 | Handle | Discriminator fragment | Meaning |
 |---|---|---|
-| `FCk_Handle_Goap_Planner` | `FFragment_Goap_Planner_Params` (+ `FFragment_Goap_Planner_Current`) | This entity runs a goal-directed A* search over its registered child Actions. |
+| `FCk_Handle_Goap_Planner` | `FFragment_Goap_Planner_Params` (+ `FFragment_Goap_Planner`) | This entity runs a goal-directed A* search over its registered child Actions. |
 | `FCk_Handle_Goap_Action` | `FFragment_Goap_Action_Definition` | This entity is a unit of work: CDO-extracted preconditions, effects, cost — offered as a candidate operator to some parent Planner. |
 
 `FCk_Handle_Goap` (the old root container) **does not exist**. There is no dedicated root entity type.
@@ -211,7 +211,7 @@ Signal bindings have moved to the Planner utility. If you held an `FCk_Handle_Go
 
 ## Replan policy
 
-`ECk_Goap_ReplanPolicy` is **per-Planner** (set via `Request_SetReplanPolicy` or `_ReplanPolicy` on `FCk_Fragment_Goap_PlannerParamsData`):
+`ECk_Goap_ReplanPolicy` is **per-Planner** (set via `Request_SetReplanPolicy` or `_ReplanPolicy` on `FCk_Goap_Planner_Spec`):
 
 | Policy | Triggers replan when |
 |---|---|
@@ -244,7 +244,7 @@ The deepest active node's `OnPlanComplete` payload is what the action-runner sub
 
 ## Per-Planner goal — no goal=effects rule
 
-Each Planner has its own `_Goal` in `FFragment_Goap_Planner_Goal`, set independently at construction via `FCk_Fragment_Goap_PlannerParamsData._Goal` and mutable at runtime via `Request_SetGoal`. This goal is **completely independent** of:
+Each Planner has its own `_Goal` in `FFragment_Goap_Planner_Goal`, set independently at construction via `FCk_Goap_Planner_Spec._Goal` and mutable at runtime via `Request_SetGoal`. This goal is **completely independent** of:
 
 - Any Action-role effects this same entity may carry.
 - Any parent or descendant Planner's goal.
@@ -358,17 +358,17 @@ To register an Action under a Planner, call `UCk_Utils_Goap_Planner_UE::AddActio
 | Fragment / tag | Lives on | Contents |
 |---|---|---|
 | `FFragment_Goap_Action_Definition` | Action entity | CDO-extracted `_Preconditions`, `_Effects`, `_Cost`; `_GoalFromEffects`; `_InvalidGoal`; `_CachedActionDef`. **Discriminator for Action role.** |
-| `FFragment_Goap_Action_Params` (`FCk_Fragment_Goap_ActionParamsData`) | Action entity | `_ActionClass`, `_WorldStateSource_Override`, `_SearchBudgetMicroseconds`, `_CostThreshold` (the budget/threshold on ActionParams are vestigial overrides at the Action tier; the authoritative copies live on `FFragment_Goap_Planner_Params` and are what the A* pipeline reads) |
+| `FFragment_Goap_Action_Params` (`FCk_Goap_Action_Spec`) | Action entity | `_ActionClass`, `_WorldStateSource_Override`, `_SearchBudgetMicroseconds`, `_CostThreshold` (the budget/threshold on ActionParams are vestigial overrides at the Action tier; the authoritative copies live on `FFragment_Goap_Planner_Params` and are what the A* pipeline reads) |
 | `FFragment_Goap_Action_Tree` | Action entity | `_ParentAction`, `_ChildActions` |
-| `FFragment_Goap_Action_Current` | Action entity | `_ActiveParentAction` (the parent class that injected the current goal) |
+| `FFragment_Goap_Action` | Action entity | `_ActiveParentAction` (the parent class that injected the current goal) |
 | `FTag_Goap_Action_RequiresSetup` | Action entity | One-shot setup gate consumed by `FProcessor_Goap_Action_Setup` |
 
 #### Planner-role fragments
 
 | Fragment / tag | Lives on | Contents |
 |---|---|---|
-| `FFragment_Goap_Planner_Params` (`FCk_Fragment_Goap_PlannerParamsData`) | Planner entity | `_PlannerTag`, `_InitialToggle`, `_Goal`, `_WorldStateSource`, `_SearchBudgetMicroseconds`, `_CostThreshold`, `_ReplanPolicy`, `_MinReplanIntervalSeconds`, `_PlanOnStart` |
-| `FFragment_Goap_Planner_Current` | Planner entity | `_EnableToggle`, `_DependencyCycles` |
+| `FFragment_Goap_Planner_Params` (`FCk_Goap_Planner_Spec`) | Planner entity | `_PlannerTag`, `_InitialToggle`, `_Goal`, `_WorldStateSource`, `_SearchBudgetMicroseconds`, `_CostThreshold`, `_ReplanPolicy`, `_MinReplanIntervalSeconds`, `_PlanOnStart` |
+| `FFragment_Goap_Planner` | Planner entity | `_EnableToggle`, `_DependencyCycles` |
 | `FFragment_Goap_Planner_Activation` | Planner entity | `_LastActivatedPlan0`, `_IsActive` |
 | `FFragment_Goap_Planner_ActionCatalogIndex` | Planner entity | `_TagToAction` map for O(1) tag lookup |
 | `FFragment_Goap_Planner_WorldStateSource` | Planner entity (also Action entities) | `_WorldStateSource` (default), `_Resolved` (eager-resolved at activation) |
@@ -387,7 +387,7 @@ To register an Action under a Planner, call `UCk_Utils_Goap_Planner_UE::AddActio
 
 **Actions are lean, with one exception.** `DoCreateOrFindActionEntity` stamps `_Definition`, `_Params`, `_Tree`, `_Current` — plus `FFragment_Goap_Planner_WorldStateSource`, which even an atomic leaf needs because `FProcessor_Goap_Action_Setup` resolves its preconditions/effects against the registry that fragment points at (and `UCk_Utils_Goap_Action_UE::Get_WorldStateSource` reads it). The rest of the Planner-role cluster — `PlanState`, `Goal`, `Activation`, `Requests`, `ReplanThrottle`, `SearchState`, `Result`, `PlanContext`, `AStar_Params`, `AStar_Debug` — arrives only via `PromoteActionToPlanner`'s AddOrGet pass. The Planner-role discriminator fragments are what distinguish a bare Action from a dual-role entity.
 
-`FFragment_Goap_Action_Current` is **residual** Action-role state: `_Plan` / `_PlanCost` / `_PlanStatus` / `_PlanAttemptCount` moved to `FFragment_Goap_Planner_PlanState`, `_Goal` / `_InvalidGoal` to `FFragment_Goap_Planner_Goal`, and the resolved WS source to `FFragment_Goap_Planner_WorldStateSource._Resolved`. Only `_ActiveParentAction` remains.
+`FFragment_Goap_Action` is **residual** Action-role state: `_Plan` / `_PlanCost` / `_PlanStatus` / `_PlanAttemptCount` moved to `FFragment_Goap_Planner_PlanState`, `_Goal` / `_InvalidGoal` to `FFragment_Goap_Planner_Goal`, and the resolved WS source to `FFragment_Goap_Planner_WorldStateSource._Resolved`. Only `_ActiveParentAction` remains.
 
 ---
 
@@ -413,10 +413,10 @@ Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` 
 
 **The framework enforces this tenet.** Two checks fire automatically:
 
-1. **Setup-time static check (`FProcessor_Goap_Planner_Setup`)**: walks the Planner's catalog and asserts at least one Action has empty preconditions AND effects covering every goal condition. If no fallback exists, fires `CK_ENSURE_IF_NOT` with a clear message + suggested fix. Result is cached on `FFragment_Goap_Planner_Current._HasUnconditionalFallback`.
+1. **Setup-time static check (`FProcessor_Goap_Planner_Setup`)**: walks the Planner's catalog and asserts at least one Action has empty preconditions AND effects covering every goal condition. If no fallback exists, fires `CK_ENSURE_IF_NOT` with a clear message + suggested fix. Result is cached on `FFragment_Goap_Planner._HasUnconditionalFallback`.
 2. **Runtime check on `PlanFailed`**: when `FProcessor_Goap_Planner_HandleResult` (or `HandleRequests` on the WS-unresolved path) would set status to `PlanFailed`, fires `CK_ENSURE_IF_NOT` unless `_HasUnconditionalFallback || _AllowPlanFailed`. Belt-and-suspenders: catches cases the static check might miss.
 
-**Opt-out via `FCk_Fragment_Goap_PlannerParamsData._AllowPlanFailed = true`**. Only for framework tests, research catalogs, or gym stations that intentionally demonstrate `PlanFailed` (e.g. `CkAutoTest_Goap_Planner_InvalidGoal` — exercises the unregistered-key diagnostic; `CkGoapGym_MakeTea_Station` — demos PlanFailed when ingredients are missing). **Game-content Planners must never set this true.** The flag is greppable in code review.
+**Opt-out via `FCk_Goap_Planner_Spec._AllowPlanFailed = true`**. Only for framework tests, research catalogs, or gym stations that intentionally demonstrate `PlanFailed` (e.g. `CkAutoTest_Goap_Planner_InvalidGoal` — exercises the unregistered-key diagnostic; `CkGoapGym_MakeTea_Station` — demos PlanFailed when ingredients are missing). **Game-content Planners must never set this true.** The flag is greppable in code review.
 
 **`CostThresholdReached` is exempt from the runtime ensure.** It's a deliberate budget-cap signal (the user explicitly set a CostThreshold and the planner respected it), not a catalog misconfiguration. Consumers can still react via `OnPlanFailed`.
 
@@ -429,10 +429,10 @@ Real-game examples: a combat NPC's `WaitForEnemy` (satisfies `EnemyNeutralized` 
 ## Anti-patterns
 
 - **Letting a game-authored Planner reach `PlanFailed`.** See *Design tenets / Every Planner must always produce a valid plan*. The framework fires `CK_ENSURE_IF_NOT` at Setup (no fallback found) and at runtime (PlanFailed actually reached) when `_AllowPlanFailed=false`. Game-content Planners must include a fallback Action (e.g. `WaitForEnemy`, `StandWatch`, `Idle`) and never set `_AllowPlanFailed=true`.
-- **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Params` per Planner; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
+- **Calling `Add` on an owner that already has standalone `CkAStar`.** GOAP stamps `FFragment_AStar_Tunables` per Planner; the two collide. Use `Create` (child entity) or remove the standalone AStar feature.
 - **Expecting a WS key to influence a plan when no Action references it.** `Set_Value` lazily registers any tag (`FindOrRegister`) and stores it — writes are *not* silent no-ops, and the registry is *not* sealed after Setup. The only drop conditions are the per-WS registry already holding `WorldState_MaxKeys` (64) keys, or an invalid tag — both logged at `Verbose`, not dropped silently. The real caveat: a stored value only changes a plan if some Action precondition/effect (or the Planner goal) references the key. Reference the key in at least one Action to make it plan-relevant; registration itself is automatic.
 - **Trying to make a leaf Action also plan.** Leaf Actions have no children registered, so there is nothing to plan over. If you want a leaf to plan, `PromoteActionToPlanner` it first, then `AddAction(PromotedPlanner, ...)` to register children under the promoted host.
-- **Expecting goal = effects on a composite.** This rule no longer exists. Set `_Goal` on `FCk_Fragment_Goap_PlannerParamsData` independently of the effects the Action-role declares.
+- **Expecting goal = effects on a composite.** This rule no longer exists. Set `_Goal` on `FCk_Goap_Planner_Spec` independently of the effects the Action-role declares.
 - **Setting `_PlanOnStart = true` on a sub-Planner that should only plan when activated.** Eager planning fires before the first activation. Set `_PlanOnStart = false` to get "plan only when activated" semantics.
 - **Calling `Request_ResetActiveChain` and expecting the chain to stay collapsed.** `UpdateActivation` re-extends the chain on the next frame if the Planner's plan still has a composite Plan[0]. Disable the Planner first via `Request_SetEnableToggle(Planner, Disable)`.
 - **Reading `Get_Plan()` while `Get_PlanStatus() == Planning`.** The plan is only populated after `Planner_HandleResult` runs. Wait for `OnPlanComplete` or poll status.
@@ -464,7 +464,7 @@ utils_goap_world_state::Set_Value(WS, Tag_HasEnoughFood, ActualFood >= Threshold
 
 Each Planner runs an **iterative** Tarjan SCC over its *direct children* — a promoted mid-tier Planner's own `_ChildActions`, or a top-level Planner's `ActionCatalogIndex` entries. The recursive textbook formulation is deliberately avoided: a deep Action catalog would consume the native call stack. The work-stack form carries an explicit `FFrame{Node, ChildIdx}` to resume each node's child iteration.
 
-**Edges are precondition/effect, not tree edges.** For sibling Actions A and B, an effect `(Key,Value)` of A matching a precondition `(Key,Value)` of B adds `A -> B` ("B depends on A"). A tree-edge model would be a no-op — a tree has no cycles by construction. A non-trivial SCC (size > 1, or a self-loop) means those candidate operators mutually require each other's effects; it is recorded in `FFragment_Goap_Planner_Current._DependencyCycles` (with the union of participating WS keys) as a **diagnostic only** — the planner does not refuse a cyclic catalog; designers fix them via the debugger surface.
+**Edges are precondition/effect, not tree edges.** For sibling Actions A and B, an effect `(Key,Value)` of A matching a precondition `(Key,Value)` of B adds `A -> B` ("B depends on A"). A tree-edge model would be a no-op — a tree has no cycles by construction. A non-trivial SCC (size > 1, or a self-loop) means those candidate operators mutually require each other's effects; it is recorded in `FFragment_Goap_Planner._DependencyCycles` (with the union of participating WS keys) as a **diagnostic only** — the planner does not refuse a cyclic catalog; designers fix them via the debugger surface.
 
 ### Catalog mutation goes through the index mutator
 

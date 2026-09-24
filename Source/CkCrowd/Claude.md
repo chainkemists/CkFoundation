@@ -27,7 +27,7 @@
 // Compose the crowd-agent feature DIRECTLY onto a transform-bearing entity (no child entity).
 static FCk_Handle_CrowdAgent Add(
     UPARAM(ref) FCk_Handle_Transform& InOwner,
-    const FCk_Fragment_CrowdAgent_ParamsData& InParams);
+    const FCk_CrowdAgent_Spec& InParams);
 
 // Move it.
 static FCk_Handle_CrowdAgent Request_MoveTo(
@@ -46,7 +46,7 @@ static FCk_Handle_CrowdAgent Request_EnableDisable(
 // Add a static path-aware oriented obstacle to any transform-bearing entity.
 static FCk_Handle_CrowdAvoidanceVolume Add(
     UPARAM(ref) FCk_Handle_Transform& InOwner,
-    const FCk_Fragment_CrowdAvoidanceVolume_ParamsData& InParams);
+    const FCk_CrowdAvoidanceVolume_Spec& InParams);
 
 // Bind to lifecycle signals.
 static void BindTo_OnGoalReached(UPARAM(ref) FCk_Handle_CrowdAgent& InAgent, const FCk_Delegate_CrowdAgent_OnGoalReached& InDelegate, ...);
@@ -82,7 +82,7 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
   FProcessor_CrowdAgent_AvoidanceSample ← THE avoidance layer: velocity-obstacle sampler,
                                           OVERWRITES the desired velocity (see "Avoidance" below)
   FProcessor_CrowdAgent_AccelClamp      ← bounds per-frame magnitude + direction change
-  FProcessor_CrowdAgent_VelocityBridge  ← writes FFragment_Velocity_Current (RunAfter AccelClamp)
+  FProcessor_CrowdAgent_VelocityBridge  ← writes FFragment_Velocity (RunAfter AccelClamp)
   FProcessor_CrowdAgent_FaceAngle       ← slews yaw toward the desired-velocity heading (yaw only),
                                           but only while genuinely moving and only once a large
                                           heading change persists (see "Facing")
@@ -91,7 +91,7 @@ The handle `FCk_Handle_CrowdAgent` is a typesafe handle (`FCk_Handle_TypeSafe` d
 [CkPhysics]
   FProcessor_Velocity_Clamp            ← min/max enforcement
   FProcessor_EulerIntegrator_Update    ← position += velocity * dt
-  → FFragment_EulerIntegrator_Current
+  → FFragment_EulerIntegrator
        │
        ▼
   FProcessor_CrowdAgent_ApplyOffset    ← stages the integrator delta into PendingDisplacement
@@ -277,7 +277,7 @@ this tier exists to make unnecessary.
 
 | Fragment | Purpose | Added by |
 |---|---|---|
-| `FFragment_CrowdAgent_Params` | Reflected params (radius, height, max speed, separation weight, flags, etc.) | `Add()` |
+| `FFragment_CrowdAgent_Tunables` | Reflected params (radius, height, max speed, separation weight, flags, etc.) | `Add()` |
 | `FFragment_CrowdAgent_PathFollow` | Current waypoint index, arrival radii | `Add()` |
 | `FFragment_CrowdAgent_DesiredVelocity` | Steering output | `Add()` |
 | `FFragment_CrowdAgent_NeighborCache` | Per-frame trimmed list of nearby agents | NeighborSync |
@@ -371,7 +371,7 @@ to displace NPCs today, that is not implemented.
 
 ## Tunables Reference
 
-Every row below was verified against `FCk_Fragment_CrowdAgent_ParamsData` on 2026-07-14. Rows that used
+Every row below was verified against `FCk_CrowdAgent_Spec` on 2026-07-14. Rows that used
 to be here for `_Piercing*`, `_Sleep*`, `_Replan*`, `_MaxReplansPerPath` and `_PlayerProxy*`/
 `_PlayerYield*` have been **deleted: those params never existed.**
 
@@ -417,7 +417,7 @@ two movers, keep the damped model. `Disabled` returns every pair to the damped m
 auto AgentEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(ParentEntity);
 auto AgentTransform = UCk_Utils_Transform_UE::Add(AgentEntity, SpawnTransform, ECk_Replication::DoesNotReplicate);
 
-auto Params = FCk_Fragment_CrowdAgent_ParamsData{42.f, 192.f};
+auto Params = FCk_CrowdAgent_Spec{42.f, 192.f};
 Params.Set_MaxSpeed(240.f);
 Params.Get_Tags().AddTag(FGameplayTag::RequestGameplayTag(TEXT("Crowd.Agent")));
 auto Agent = UCk_Utils_CrowdAgent_UE::Add(AgentTransform, Params);
@@ -724,7 +724,7 @@ makes the agent ABSENT. A deferred request, it drains in order with MoveTo/Stop 
 
 **Disable:**
 - runs the Stop body, ending the episode and releasing the provider query;
-- zeroes `FFragment_Velocity_Current`, because the bridge that would ramp it down is excluded from
+- zeroes `FFragment_Velocity`, because the bridge that would ramp it down is excluded from
   then on, and a stale velocity reads as a moving body;
 - disables the probe child, so Jolt stops pairing it;
 - stamps `FTag_CrowdAgent_Disabled`.
@@ -1103,11 +1103,11 @@ Steering or the sampler from here. Coverage:
 
 ## Anti-patterns
 
-- **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity_Current → EulerIntegrator → PendingDisplacement → ConstrainToNavmesh → SceneNode`. Skipping any step is a bug.
+- **Never write SceneNode position from a steering processor.** The pipeline is `Steering → DesiredVelocity → VelocityBridge → FFragment_Velocity → EulerIntegrator → PendingDisplacement → ConstrainToNavmesh → SceneNode`. Skipping any step is a bug.
 - **Never write a crowd agent's Transform position from anywhere but the agent's one displacement drain** — `ConstrainToNavmesh` for a grounded agent, `ApplyDisplacement3D` for a flying one (the two views are disjoint on `FTag_CrowdAgent_Flying`, so it is still exactly one writer per agent). A second writer bypasses the navmesh constraint and re-opens the through-the-wall bug. New displacement sources accumulate into `FFragment_CrowdAgent_PendingDisplacement` instead. The one exception is a DISABLED agent (`Request_EnableDisable`): nothing drains it while it is out, so its owner may relocate it, and Enable re-grounds it on the first pass back. Rotation is a separate concern with its own single writer per agent (`FaceAngle` / `FaceAngle3D`) and does not compete with either.
 - **Never enqueue MoveTo from a client.** Server-authoritative. `Request_MoveTo` checks authority.
 - **Never bypass `_MaxNeighborsForSteering`.** It's the perf cliff — a careless "let me just look at all 30 neighbors" inside a custom processor will tank stress runs.
-- **Don't read `FFragment_Velocity_Current` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.
+- **Don't read `FFragment_Velocity` to drive steering decisions.** Read `FFragment_CrowdAgent_DesiredVelocity` (the steering output) or compute fresh. The current velocity is a frame behind and includes the velocity clamp.
 - **Don't add a new flag bit beyond bit 31.** It's a `uint32`; the bitfield is documented; pick a reserved slot.
 - **Keep log and warning text ASCII.** AutoTests match crowd warnings from AngelScript (`Get_ExpectedLogErrors`, plain
   substring), and shipped AngelScript must be ASCII, so a matcher cannot contain a non-ASCII character a message
@@ -1179,7 +1179,7 @@ magnitude only and left direction free to snap.
   delegate per move-request: it is view-iteration driven, only touches agents actually waiting for a
   path, and the view filter excludes the entity again as soon as `PathPending` clears.
 - **`FProcessor_CrowdAgent_VelocityBridge`** calls `UCk_Utils_Velocity_UE::Request_OverrideVelocity`
-  (public API) rather than writing `FFragment_Velocity_Current::_CurrentVelocity` directly, so CkCrowd
+  (public API) rather than writing `FFragment_Velocity::_CurrentVelocity` directly, so CkCrowd
   needs no cross-module friend declaration into CkPhysics.
 
 ### Path install & waypoint retirement
@@ -1230,7 +1230,7 @@ Steering then drives CkNavigation's neutral handshake off the same cursor it alr
 once it is past that span's exit, and `Request_CancelLinkTraversal` (reported to listeners as
 `Failed_Cancelled`) when a route drop or a route that stopped ON a link leaves a crossing unfinished.
 The crowd owns no traversal state of its own beyond `_ActiveLinkId` / `_ActiveLinkCorrelator` and the
-`FTag_CrowdAgent_TraversingLink` mirror; `FFragment_NavSurface_LinkTraversal_Current` on the agent is
+`FTag_CrowdAgent_TraversingLink` mirror; `FFragment_NavSurface_LinkTraversal` on the agent is
 authoritative, and `OnLinkTraversalBegun` / `OnLinkTraversalCompleted` are the consumer surface (ladder
 animation, gating). **The agent stays `Walking` throughout** — the crossing tag is additive, like
 `Flying` and `Permeable`, because an agent on a ladder is still walking the polyline it was handed.
@@ -1279,7 +1279,7 @@ Three details are load-bearing:
   stamped and a single `[RECOVERY-REJECT]` or `[GLIDE-HOLD]` line is logged (`:282-305`). Nothing hoists it
   back.
 
-**Which links an agent may take is on its own params.** `FCk_Fragment_CrowdAgent_ParamsData` carries
+**Which links an agent may take is on its own params.** `FCk_CrowdAgent_Spec` carries
 `_DeniedLinkIds` (stable link ids this body may never traverse), `_DeniedLinkUserTypeTags` (the same denial
 by CLASS — matched against the link's authored `_UserTypeTag`, and a parent tag denies every link under it,
 so one tag says "cannot use ladders" without naming any id) and `_LinkCostMultipliers` (per-link

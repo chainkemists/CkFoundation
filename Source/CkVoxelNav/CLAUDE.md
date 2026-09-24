@@ -31,7 +31,7 @@ and plan paths through it at horde scale.
   handle. `Add` stamps `ck::FTag_VoxelNavVolume_NeedsSetup`, which
   `ck::FProcessor_VoxelNavVolume_Setup` consumes; that processor validates the params and arms
   `FTag_VoxelNavVolume_NeedsBuild` unless `_AutoBuildOnSetup` opted out.
-- `FCk_Fragment_VoxelNavVolume_ParamsData` — `_VolumeBounds` (world-space `FBox`),
+- `FCk_VoxelNavVolume_Spec` — `_VolumeBounds` (world-space `FBox`),
   `_FinestCellSizeUu` (the finest navigable cell's **edge length** in uu, not a half-extent),
   `_ClearanceUu` (added to every probe half-extent — grows obstacles, shrinks free space),
   `_AutoBuildOnSetup`, and a per-volume budget override pair.
@@ -52,7 +52,7 @@ and plan paths through it at horde scale.
 
 - `UCk_Utils_VoxelNavPath_UE` — `Add` stamps the feature **on the agent entity itself**, not on a
   child: a path belongs to the thing flying it, and every consumer that reads waypoints already
-  holds the agent's handle. `FCk_Fragment_VoxelNavPath_ParamsData` carries what belongs to the
+  holds the agent's handle. `FCk_VoxelNavPath_Spec` carries what belongs to the
   agent (`_AgentRadiusUu`, `_HeuristicScale`, `_NodeSizeCompensation`); the query itself rides the
   request.
 - `Request_FindPath(volume, from, to)` — deferred, completion delegate last. The search is
@@ -155,7 +155,7 @@ and plan paths through it at horde scale.
 
 - `UCk_Utils_VoxelNavOccluder_UE` — `Add` stamps the feature **on the moving entity itself** (it is a
   reading of that entity's transform, so the entity must already carry `Transform`).
-  `FCk_Fragment_VoxelNavOccluder_ParamsData` carries authored `_HalfExtentsUu` plus an optional
+  `FCk_VoxelNavOccluder_Spec` carries authored `_HalfExtentsUu` plus an optional
   movement-threshold override; `Get_TrackedBounds` / `Get_TimesDirtied` are what a caller or a test
   reads. There is no component and nothing ticks per actor: one processor walks every occluder.
 - **An occluder does not occlude.** Occupancy comes from the geometry backend, so a tracked entity

@@ -216,19 +216,19 @@ Architectural reference: `TProcessor_AttributeModifier_Compute` + `TAttributeMin
 
 ### DataOnly contents save opt-out
 
-`FCk_Fragment_Inventory_DataOnly_ParamsData::_PersistContents` defaults to `Enable`. Set it to `Disable` for a DataOnly inventory whose contents are reconstructed session state: snapshot Produce emits no item payload, and HydrationApply ignores an older item payload against the rebuilt opted-out inventory. This is save transport only; live replication still publishes the current item projection normally.
+`FCk_Inventory_DataOnly_Spec::_PersistContents` defaults to `Enable`. Set it to `Disable` for a DataOnly inventory whose contents are reconstructed session state: snapshot Produce emits no item payload, and HydrationApply ignores an older item payload against the rebuilt opted-out inventory. This is save transport only; live replication still publishes the current item projection normally.
 
 ## Known invariant — typed ParamsData duplication
 
 USTRUCTs cannot inherit cleanly with UHT reflection. As a result, the shared field set (`_Name`, `_CustomCanAcceptItem*`, `_CustomCanStackItems*`, `_CanAcceptItemRef`, `_CanStackItemsRef`) is duplicated by hand across three structs:
 
-- `FCk_Fragment_Inventory_ParamsData`           — internal-only ECS fragment (no `BlueprintType`); constructed exclusively from the typed structs via the two conversion ctors `FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_DataOnly_ParamsData&)` and `FCk_Fragment_Inventory_ParamsData(const FCk_Fragment_Inventory_Spatial_ParamsData&)`. Stored on the inventory entity by `CreateInventory`.
-- `FCk_Fragment_Inventory_Spatial_ParamsData`   — Spatial public surface (BP / AS); adds `_Dimensions`.
-- `FCk_Fragment_Inventory_DataOnly_ParamsData`  — DataOnly public surface (BP / AS); adds `_BoundMode` + `_BoundLimit`.
+- `FCk_Inventory_Spec`           — internal-only ECS fragment (no `BlueprintType`); constructed exclusively from the typed structs via the two conversion ctors `FCk_Inventory_Spec(const FCk_Inventory_DataOnly_Spec&)` and `FCk_Inventory_Spec(const FCk_Inventory_Spatial_Spec&)`. Stored on the inventory entity by `CreateInventory`.
+- `FCk_Inventory_Spatial_Spec`   — Spatial public surface (BP / AS); adds `_Dimensions`.
+- `FCk_Inventory_DataOnly_Spec`  — DataOnly public surface (BP / AS); adds `_BoundMode` + `_BoundLimit`.
 
 When adding / removing / renaming a shared field, **update all three in lockstep** — both typed structs *and* the conversion ctor bodies in `CkInventory_Fragment_Data.cpp` that copy the shared field set into the base struct. Each struct carries a comment block at its declaration pointing to the others.
 
-The `Add()` forwarders on the typed Utils are one-liners over `CreateInventory(InOwnerEntity, FCk_Fragment_Inventory_ParamsData{InTypedParams}, ...)` — the field-by-field copy is owned by the conversion ctor, not duplicated at the call sites. The corresponding `AddMultiple` UFUNCTIONs accept `FCk_Fragment_MultipleInventory_DataOnly_ParamsData` / `FCk_Fragment_MultipleInventory_Spatial_ParamsData` — typed array wrappers (mirroring CkAttribute's `FCk_Fragment_MultipleIntegerAttribute_ParamsData` precedent).
+The `Add()` forwarders on the typed Utils are one-liners over `CreateInventory(InOwnerEntity, FCk_Inventory_Spec{InTypedParams}, ...)` — the field-by-field copy is owned by the conversion ctor, not duplicated at the call sites. The corresponding `AddMultiple` UFUNCTIONs accept `FCk_MultipleInventory_DataOnly_Spec` / `FCk_MultipleInventory_Spatial_Spec` — typed array wrappers (mirroring CkAttribute's `FCk_MultipleIntegerAttribute_Spec` precedent).
 
 ## Anti-patterns
 

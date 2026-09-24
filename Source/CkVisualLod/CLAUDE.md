@@ -56,7 +56,7 @@ closed before a crowd or partial profile set is published.
 The arbiter uses its already-computed observer distance to select the greatest threshold not above
 the member. Moving outward changes at the threshold; returning inward changes only below
 `threshold - hysteresis`. Large teleports may cross several bands in one update. The selected
-index is retained on `FFragment_VisualLod_Current` and exposed by `Get_RenderBandIndex`.
+index is retained on `FFragment_VisualLod` and exposed by `Get_RenderBandIndex`.
 
 Far members migrate between stable `(spatial tile, profile index)` GPU buckets. Their member index,
 world transform, animation phase, custom data, visibility ownership, cosmetic registration, and

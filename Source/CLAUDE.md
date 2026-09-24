@@ -484,26 +484,26 @@ the assets must stay resident and clears it (`= {}`) at EndPlay.
 
 ```cpp
 // Setup — kick once, poll, resolve. Canonical: CkFx Vfx Setup.
-if (NOT InCurrent._LoadedAssets.Get_IsRequested())
+if (NOT InVfx._LoadedAssets.Get_IsRequested())
 {
-    InCurrent._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
+    InVfx._LoadedAssets = UCk_Utils_ResourceLoader_UE::RequestLoad_RootedBatch(
         TEXT("Vfx.Setup"), {Params.Get_ParticleSystem().ToSoftObjectPath()});
 }
 
-if (NOT InCurrent._LoadedAssets.Get_IsReady())
+if (NOT InVfx._LoadedAssets.Get_IsReady())
 {
     InHandle.AddOrGet<FTag_Vfx_PendingAssetLoad>();
     return;
 }
 
 const auto ResolvedSystem = Cast<UNiagaraSystem>(
-    InCurrent._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
-const auto AssetsAreLoaded = NOT InCurrent._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSystem);
+    InVfx._LoadedAssets.Get_ResolvedObject(Params.Get_ParticleSystem().ToSoftObjectPath()));
+const auto AssetsAreLoaded = NOT InVfx._LoadedAssets.Get_HasFailed() && ck::IsValid(ResolvedSystem);
 
 CK_ENSURE_IF_NOT(AssetsAreLoaded,
     TEXT("Cannot setup Vfx [{}] - loading its ParticleSystem [{}] through CkResourceLoader failed"),
     InHandle, Params.Get_ParticleSystem().ToSoftObjectPath())
-{ InCurrent._LoadedAssets = {}; }
+{ InVfx._LoadedAssets = {}; }
 
 InHandle.Try_Remove<FTag_Vfx_PendingAssetLoad>();
 ```
@@ -647,14 +647,14 @@ Corollaries:
 
 ### Variant dispatch — `ck::Visitor` takes ONE generic lambda
 
-Defined in `CkCore/TypeTraits/CkTypeTraits.h`; canonical use `CkTimer_Processor.cpp:51`:
+Defined in `CkCore/TypeTraits/CkTypeTraits.h`; canonical use `CkTimer_Processor.cpp:59`:
 
 ```cpp
 // CORRECT — single generic lambda; overload the handler instead:
 ck::algo::ForEachRequest(RequestsCopy, ck::Visitor(
     [&](const auto& InRequest) -> void
     {
-        DoHandleRequest(InHandle, InCurrent, InRequest);
+        DoHandleRequest(InHandle, InTimerComp, InRequest);
     }), ck::policy::DontResetContainer{});
 
 // WRONG — ck::Visitor is not a std::visit overload-set:
