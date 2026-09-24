@@ -1340,10 +1340,10 @@ namespace ck::groundnav
 
         auto Registry = Subsystem->Get_Registry();
 
-        Registry.View<ck::FFragment_GroundNavPath_Current>().ForEach(
-            [&](FCk_Entity InEntity, const ck::FFragment_GroundNavPath_Current& InCurrent)
+        Registry.View<ck::FFragment_GroundNavPath>().ForEach(
+            [&](FCk_Entity InEntity, const ck::FFragment_GroundNavPath& InGroundNavPath)
             {
-                const auto& Bounds = InCurrent.Get_LastCorridorBounds();
+                const auto& Bounds = InGroundNavPath.Get_LastCorridorBounds();
 
                 // The same entity the invalidator itself skips: no corridor is no route a rebuild
                 // can have moved, and a box at the world origin would read as one.
@@ -1358,8 +1358,8 @@ namespace ck::groundnav
 
                 Drawn._Bounds = Bounds;
                 Drawn._PathName = ck::Format_UE(TEXT("{}"), PathEntity);
-                Drawn._InflationUu = InCurrent.Get_CorridorInflationUu();
-                Drawn._CorridorEpoch = InCurrent.Get_LastCorridorEpoch()._Value;
+                Drawn._InflationUu = InGroundNavPath.Get_CorridorInflationUu();
+                Drawn._CorridorEpoch = InGroundNavPath.Get_LastCorridorEpoch()._Value;
                 Drawn._HasField = Field.IsValid();
                 Drawn._FieldEpoch = Field.IsValid() ? Field->_Epoch._Value : 0;
                 Drawn._RepathRequired = PathEntity.Has<ck::FTag_GroundNavPath_RepathRequired>();

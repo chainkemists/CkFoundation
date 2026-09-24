@@ -100,7 +100,7 @@ namespace ck
 
         if (ck_crowd_agent_path_pending_watchdog::Get_ShouldLogPendingTimeoutState())
         {
-            const auto HasGroundNavCurrent = InHandle.Has<FFragment_GroundNavPath_Current>();
+            const auto HasGroundNavCurrent = InHandle.Has<FFragment_GroundNavPath>();
             const auto HasGroundNavResult = InHandle.Has<FFragment_GroundNavPath_Result>();
             auto TimeoutState = FCk_GroundNavPath_TimeoutState{};
             auto HasFreshResult = false;
@@ -108,7 +108,7 @@ namespace ck
             auto LastRevision = 0;
 
             if (HasGroundNavCurrent)
-            { TimeoutState = InHandle.Get<FFragment_GroundNavPath_Current>().Get_TimeoutState(); }
+            { TimeoutState = InHandle.Get<FFragment_GroundNavPath>().Get_TimeoutState(); }
 
             if (HasGroundNavResult)
             {
@@ -144,7 +144,7 @@ namespace ck
 
             if (HasGroundNavCurrent)
             {
-                InHandle.Get<FFragment_GroundNavPath_Current>().Try_RunStrictCrowdCostTimeoutReplay(
+                InHandle.Get<FFragment_GroundNavPath>().Try_RunStrictCrowdCostTimeoutReplay(
                     UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle),
                     TAG_Nav_Area_Crowd_Agent,
                     TimeoutState._SearchExpansionCount);

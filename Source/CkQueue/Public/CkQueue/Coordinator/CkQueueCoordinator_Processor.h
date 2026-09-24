@@ -16,7 +16,7 @@ namespace ck
     class CKQUEUE_API FProcessor_QueueCoordinator_Setup : public ck_exp::TProcessor<
         FProcessor_QueueCoordinator_Setup,
         FCk_Handle_QueueCoordinator,
-        ck::TReadWrite<FFragment_QueueCoordinator_Current>,
+        ck::TReadWrite<FFragment_QueueCoordinator>,
         FTag_QueueCoordinator_NeedsSetup,
         CK_IGNORE_PENDING_KILL>
     {
@@ -32,7 +32,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InCoordinator,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
             -> void;
     };
 
@@ -42,7 +42,7 @@ namespace ck
         FProcessor_QueueCoordinator_HandleRequests,
         FCk_Handle_QueueCoordinator,
         ck::TReadOnly<FFragment_QueueCoordinator_Params>,
-        ck::TReadWrite<FFragment_QueueCoordinator_Current>,
+        ck::TReadWrite<FFragment_QueueCoordinator>,
         ck::TReadWrite<FFragment_QueueCoordinator_Requests>,
         TExclude<FTag_QueueCoordinator_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -63,7 +63,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             FFragment_QueueCoordinator_Requests& InRequests)
             -> void;
 
@@ -72,7 +72,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& InOutProjectedAdmissions,
             const FCk_Request_QueueCoordinator_RegisterQueue& InRequest)
             -> bool;
@@ -81,7 +81,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& InOutProjectedAdmissions,
             const FCk_Request_QueueCoordinator_UnregisterQueue& InRequest)
             -> bool;
@@ -90,7 +90,7 @@ namespace ck
         DoHandleRequest(
             HandleType InCoordinator,
             const FFragment_QueueCoordinator_Params& InParams,
-            FFragment_QueueCoordinator_Current& InCurrent,
+            FFragment_QueueCoordinator& InQueueCoordinator,
             TMap<FCk_Handle_Queue, int32>& InOutProjectedAdmissions,
             const FCk_Request_QueueCoordinator_SelectQueue& InRequest)
             -> bool;
@@ -104,7 +104,7 @@ namespace ck
     class CKQUEUE_API FProcessor_QueueCoordinator_Reconcile : public ck_exp::TProcessor<
         FProcessor_QueueCoordinator_Reconcile,
         FCk_Handle_QueueCoordinator,
-        ck::TReadWrite<FFragment_QueueCoordinator_Current>,
+        ck::TReadWrite<FFragment_QueueCoordinator>,
         TExclude<FTag_QueueCoordinator_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -120,7 +120,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InCoordinator,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
             -> void;
     };
 
@@ -129,7 +129,7 @@ namespace ck
     class CKQUEUE_API FProcessor_QueueCoordinator_EndPlay : public ck_exp::TProcessor<
         FProcessor_QueueCoordinator_EndPlay,
         FCk_Handle_QueueCoordinator,
-        ck::TReadWrite<FFragment_QueueCoordinator_Current>,
+        ck::TReadWrite<FFragment_QueueCoordinator>,
         CK_IF_END_PLAY>
     {
     public:
@@ -143,7 +143,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InCoordinator,
-            FFragment_QueueCoordinator_Current& InCurrent)
+            FFragment_QueueCoordinator& InQueueCoordinator)
             -> void;
     };
 

@@ -56,7 +56,7 @@ namespace ck
             HandleType InQueue,
             const FFragment_Transform& InTransform,
             const FFragment_Queue_Params& InParams,
-            const FFragment_Queue_Current& InCurrent)
+            const FFragment_Queue& InQueueComp)
         -> void
     {
         if (ck_queue_debug_draw_processor::CVarQueueDebugDraw.GetValueOnAnyThread() == 0)
@@ -67,7 +67,7 @@ namespace ck
         { return; }
 
         const auto OwnerWorldTransform = InTransform.Get_Transform();
-        const auto StateColor = ck_queue_debug_draw_processor::GetStateColor(InCurrent.Get_State());
+        const auto StateColor = ck_queue_debug_draw_processor::GetStateColor(InQueueComp.Get_State());
         const auto CategoryText = InParams.Get_Category().IsValid()
             ? InParams.Get_Category().ToString()
             : FString{TEXT("Queue.Category.Unspecified")};
@@ -78,10 +78,10 @@ namespace ck
                 TEXT("%s | %s | %d members | %s | rev %d retry %d"),
                 *CategoryText,
                 *InQueue.Get_DebugName().ToString(),
-                InCurrent.Get_Members().Num(),
-                *StaticEnum<ECk_Queue_State>()->GetNameStringByValue(static_cast<int64>(InCurrent.Get_State())),
-                InCurrent.Get_Revision(),
-                InCurrent.Get_RetryEpisode()),
+                InQueueComp.Get_Members().Num(),
+                *StaticEnum<ECk_Queue_State>()->GetNameStringByValue(static_cast<int64>(InQueueComp.Get_State())),
+                InQueueComp.Get_Revision(),
+                InQueueComp.Get_RetryEpisode()),
             StateColor,
             ck_queue_debug_draw_processor::DurationOneFrame);
 
@@ -121,7 +121,7 @@ namespace ck
             ck_queue_debug_draw_processor::DurationOneFrame);
 
         auto PreviousTarget = TOptional<FTransform>{};
-        for (const auto& Member : InCurrent.Get_Members())
+        for (const auto& Member : InQueueComp.Get_Members())
         {
             const auto HasTarget = Member.Get_AssignmentRevision() > 0
                 && NOT Member.Get_TargetWorldTransform().ContainsNaN();

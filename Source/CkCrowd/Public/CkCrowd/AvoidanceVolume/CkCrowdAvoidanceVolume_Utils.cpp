@@ -48,7 +48,7 @@ namespace ck_crowd_avoidance_volume
 
 auto UCk_Utils_CrowdAvoidanceVolume_UE::Add(
     FCk_Handle_Transform& InOwner,
-    const FCk_Fragment_CrowdAvoidanceVolume_ParamsData& InParams)
+    const FCk_CrowdAvoidanceVolume_Spec& InParams)
     -> FCk_Handle_CrowdAvoidanceVolume
 {
     const auto& HalfExtents = InParams.Get_HalfExtents();

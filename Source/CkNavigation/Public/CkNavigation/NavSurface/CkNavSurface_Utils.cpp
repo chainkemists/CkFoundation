@@ -93,7 +93,7 @@ auto
         const FCk_Handle& InHandle)
     -> bool
 {
-    return InHandle.Has<ck::FFragment_NavSurfaceMarkup_Current>();
+    return InHandle.Has<ck::FFragment_NavSurfaceMarkup>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -336,7 +336,7 @@ auto
     }
 
     auto MarkupEntity = UCk_Utils_EntityLifetime_UE::Request_CreateEntity(WorldEntity);
-    MarkupEntity.Add<ck::FFragment_NavSurfaceMarkup_Current>();
+    MarkupEntity.Add<ck::FFragment_NavSurfaceMarkup>();
 
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
@@ -596,7 +596,7 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal>();
     InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
 
     return InHandle;
@@ -626,7 +626,7 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal>();
     InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
 
     return InHandle;
@@ -656,7 +656,7 @@ auto
     if (InDelegate.IsBound())
     { InRequest.Set_CompletionDelegate(InDelegate); }
 
-    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal>();
     InHandle.AddOrGet<ck::FFragment_NavSurface_LinkTraversal_Requests>()._Requests.Emplace(InRequest);
 
     return InHandle;
@@ -672,10 +672,10 @@ auto
 {
     auto Traversal = FCk_NavSurface_LinkTraversal{};
 
-    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_NavSurface_LinkTraversal_Current>())
+    if (ck::Is_NOT_Valid(InHandle) || NOT InHandle.Has<ck::FFragment_NavSurface_LinkTraversal>())
     { return Traversal; }
 
-    const auto& Current = InHandle.Get<ck::FFragment_NavSurface_LinkTraversal_Current>();
+    const auto& Current = InHandle.Get<ck::FFragment_NavSurface_LinkTraversal>();
 
     Traversal.Set_LinkId(Current.Get_ActiveLinkId());
     Traversal.Set_CorrelatorId(Current.Get_ActiveCorrelatorId());
@@ -810,7 +810,7 @@ namespace ck::nav_surface
         // after every FGroup_EndPlay processor has run -- so the window between them is exactly the span
         // in which FProcessor_NavSurfaceMarkup_EndPlay has not yet handed the release to the provider.
         return Registry.View<
-            FFragment_NavSurfaceMarkup_Current,
+            FFragment_NavSurfaceMarkup,
             FTag_DestroyEntity_Initiate,
             TExclude<FTag_DestroyEntity_Teardown>,
             TExclude<FTag_DestroyEntity_Await>,

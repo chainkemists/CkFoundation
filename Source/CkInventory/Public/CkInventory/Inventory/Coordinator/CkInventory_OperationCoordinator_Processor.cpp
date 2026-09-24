@@ -139,13 +139,13 @@ namespace ck
     ForEachEntity(
         TimeType,
         HandleType InCoordinator,
-        FFragment_Inventory_OperationCoordinator_Current& InCurrent,
+        FFragment_Inventory_OperationCoordinator& InInventoryOperationCoordinator,
         FFragment_Inventory_OperationCoordinator_Requests& InRequests) -> void
     {
         const auto RequestsCopy = InRequests.Get_Requests();
         InRequests.Get_RequestsMutable().Reset();
 
-        auto& Pending = InCurrent.Get_PendingMutable();
+        auto& Pending = InInventoryOperationCoordinator.Get_PendingMutable();
         Pending.Append(RequestsCopy);
         Pending.StableSort([](const FInventoryOperation_Submission& InA, const FInventoryOperation_Submission& InB)
         { return InA.Ordinal < InB.Ordinal; });
@@ -201,10 +201,10 @@ namespace ck
     ForEachEntity(
         TimeType,
         HandleType,
-        const FFragment_Inventory_OperationCoordinator_Current& InCurrent,
+        const FFragment_Inventory_OperationCoordinator& InInventoryOperationCoordinator,
         const FFragment_Inventory_OperationCoordinator_Requests& InRequests) -> void
     {
-        const auto Pending = InCurrent.Get_Pending();
+        const auto Pending = InInventoryOperationCoordinator.Get_Pending();
         for (const auto& Submission : Pending)
         { ck_inventory_operation_coordinator::CancelOrdinary(Submission); }
 

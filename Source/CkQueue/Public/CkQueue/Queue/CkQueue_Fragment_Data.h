@@ -125,12 +125,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_Queue);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKQUEUE_API FCk_Fragment_Queue_ParamsData
+struct CKQUEUE_API FCk_Queue_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_Queue_ParamsData);
+    CK_GENERATED_BODY(FCk_Queue_Spec);
 
 private:
     // Optional service category. When set, Add also stamps this as the owner's CkEntityTag so

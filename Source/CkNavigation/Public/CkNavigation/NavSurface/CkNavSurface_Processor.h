@@ -14,7 +14,7 @@ namespace ck
         FProcessor_NavSurfaceMarkup_HandleRequests,
         FCk_Handle_NavSurfaceMarkup,
         ck::TReadWrite<FFragment_NavSurfaceMarkup_Requests>,
-        ck::TReadWrite<FFragment_NavSurfaceMarkup_Current>,
+        ck::TReadWrite<FFragment_NavSurfaceMarkup>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -29,7 +29,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurfaceMarkup_Requests& InRequests,
-            FFragment_NavSurfaceMarkup_Current& InCurrent) const -> void;
+            FFragment_NavSurfaceMarkup& InNavSurfaceMarkup) const -> void;
 
     private:
         static auto DoHandleRequest(
@@ -63,7 +63,7 @@ namespace ck
     class CKNAVIGATION_API FProcessor_NavSurfaceMarkup_EndPlay : public ck_exp::TProcessor<
         FProcessor_NavSurfaceMarkup_EndPlay,
         FCk_Handle_NavSurfaceMarkup,
-        ck::TReadWrite<FFragment_NavSurfaceMarkup_Current>,
+        ck::TReadWrite<FFragment_NavSurfaceMarkup>,
         CK_IF_END_PLAY>
     {
     public:
@@ -76,7 +76,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_NavSurfaceMarkup_Current& InCurrent) -> void;
+            FFragment_NavSurfaceMarkup& InNavSurfaceMarkup) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ namespace ck
         FProcessor_NavSurface_LinkTraversal_HandleRequests,
         FCk_Handle,
         ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Requests>,
-        ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Current>,
+        ck::TReadWrite<FFragment_NavSurface_LinkTraversal>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -111,29 +111,29 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             FFragment_NavSurface_LinkTraversal_Requests& InRequests,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent) const -> void;
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal) const -> void;
 
         // Clears the crossing and reports it ended with InResult. Public because teardown ends a live
         // crossing the same way a cancel does, and two copies of "what ending means" would drift.
         static auto DoEnd_Traversal(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             ECk_Request_OperationResult InResult) -> void;
 
     private:
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_BeginLinkTraversal& InRequest) -> ECk_Request_OperationResult;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_CompleteLinkTraversal& InRequest) -> ECk_Request_OperationResult;
 
         static auto DoHandleRequest(
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent,
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal,
             const FCk_Request_NavSurface_CancelLinkTraversal& InRequest) -> ECk_Request_OperationResult;
     };
 
@@ -150,7 +150,7 @@ namespace ck
     class CKNAVIGATION_API FProcessor_NavSurface_LinkTraversal_EndPlay : public ck_exp::TProcessor<
         FProcessor_NavSurface_LinkTraversal_EndPlay,
         FCk_Handle,
-        ck::TReadWrite<FFragment_NavSurface_LinkTraversal_Current>,
+        ck::TReadWrite<FFragment_NavSurface_LinkTraversal>,
         CK_IF_END_PLAY>
     {
     public:
@@ -163,7 +163,7 @@ namespace ck
         static auto ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_NavSurface_LinkTraversal_Current& InCurrent) -> void;
+            FFragment_NavSurface_LinkTraversal& InNavSurfaceLinkTraversal) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

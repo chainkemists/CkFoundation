@@ -49,12 +49,12 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_QueueCoordinat
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKQUEUE_API FCk_Fragment_QueueCoordinator_ParamsData
+struct CKQUEUE_API FCk_QueueCoordinator_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_QueueCoordinator_ParamsData);
+    CK_GENERATED_BODY(FCk_QueueCoordinator_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,

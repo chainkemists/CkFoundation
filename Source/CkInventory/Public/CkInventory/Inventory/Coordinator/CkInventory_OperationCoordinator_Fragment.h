@@ -62,10 +62,10 @@ namespace ck
 
     CK_ECS_DEFINE_CALLSTACK_FRAGMENT_FOR(FFragment_Inventory_OperationCoordinator_Requests);
 
-    struct CKINVENTORY_API FFragment_Inventory_OperationCoordinator_Current
+    struct CKINVENTORY_API FFragment_Inventory_OperationCoordinator
     {
     public:
-        CK_GENERATED_BODY(FFragment_Inventory_OperationCoordinator_Current);
+        CK_GENERATED_BODY(FFragment_Inventory_OperationCoordinator);
 
     private:
         TArray<FInventoryOperation_Submission> _Pending;

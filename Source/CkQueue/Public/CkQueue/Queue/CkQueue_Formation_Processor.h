@@ -10,7 +10,7 @@ namespace ck
         FProcessor_Queue_Formation,
         FCk_Handle_Queue,
         ck::TReadOnly<FFragment_Queue_Params>,
-        ck::TReadWrite<FFragment_Queue_Current>,
+        ck::TReadWrite<FFragment_Queue>,
         FTag_Queue_NeedsFormation,
         TExclude<FTag_Queue_NeedsSetup>,
         CK_IGNORE_PENDING_KILL>
@@ -30,7 +30,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent)
+            FFragment_Queue& InQueueComp)
             -> void;
 
     private:
@@ -38,7 +38,7 @@ namespace ck
         ScheduleNextReserveAssignmentRefresh(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             double InWorldTimeSeconds,
             bool InWasSettledRefresh)
             -> void;
@@ -47,7 +47,7 @@ namespace ck
         RecordRetryableFailure(
             HandleType InQueue,
             const FFragment_Queue_Params& InParams,
-            FFragment_Queue_Current& InCurrent,
+            FFragment_Queue& InQueueComp,
             ECk_Queue_EventReason InReason,
             double InWorldTimeSeconds,
             int32 InNavigationRevision)

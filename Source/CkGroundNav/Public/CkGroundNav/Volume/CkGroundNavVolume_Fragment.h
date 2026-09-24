@@ -63,7 +63,7 @@ namespace ck
 
     // ----------------------------------------------------------------------------------------------------------------
 
-    using FFragment_GroundNavVolume_Params = FCk_Fragment_GroundNavVolume_ParamsData;
+    using FFragment_GroundNavVolume_Params = FCk_GroundNavVolume_Spec;
 
     // ----------------------------------------------------------------------------------------------------------------
 
