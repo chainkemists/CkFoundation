@@ -112,7 +112,7 @@ namespace ck
                     { continue; }
 
                     const auto ExpandedObb = crowd_avoidance_volume::MakeEffectiveAgentObb(
-                        Obb, Runtime.Get_PaintedObb(), InParams.Get_Radius());
+                        Obb, Runtime.Get_PaintedObb(), InTunables.Get_Radius());
                     const auto ExpandedObbIsValid = ExpandedObb.IsFiniteAndPositive();
                     CK_ENSURE_IF_NOT(ExpandedObbIsValid,
                         TEXT("CrowdAvoidanceVolume [{}] produced an invalid agent-expanded OBB"),

@@ -69,7 +69,7 @@ namespace ck
         if (ck::Is_NOT_Valid(Subsystem))
         { return; }
 
-        if (InCurrent.Get_BodyIds().IsEmpty())
+        if (InJoltStaticActor.Get_BodyIds().IsEmpty())
         { return; }
 
         // FGroup_EndPlay runs later in the same tick that starts the async step. Wait only after the view found
