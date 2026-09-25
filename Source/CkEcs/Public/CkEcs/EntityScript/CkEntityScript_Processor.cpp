@@ -77,6 +77,23 @@ namespace ck_entity_script_spawn_trace
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_entity_script_processor
+{
+    auto
+    Get_IsNetworkedAuthorityWorld(
+        const FCk_Handle& InHandle)
+        -> bool
+    {
+        const auto World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return false; }
+
+        return World->IsNetMode(NM_DedicatedServer) || World->IsNetMode(NM_ListenServer);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -417,11 +434,11 @@ namespace ck
         ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle=[{}] Owner=[{}] IsSelfOwned=[{}]"),
             InHandle, ReplicatedOwner, IsSelfOwned);
 
-        // Defer (retry next frame, KEEP the dirty marker) until the ReplicationDriver exists: WithActor entities
-        // acquire theirs via OwningActor::Add slightly after this request lands.
+        // Leave the request in place without a driver. FinishConstruction runs next and removes the tag this view
+        // needs, so a request still here at that point can never be retried; FinishConstruction retires it.
         if (NOT InHandle.Has<TObjectPtr<UCk_Fragment_EntityReplicationDriver_Rep>>())
         {
-            ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] does NOT have ReplicationDriver yet, deferring"), InHandle);
+            ck::ecs::VeryVerbose(TEXT("[REP_DEBUG] ReplicateProcessor — Handle [{}] has NO ReplicationDriver - left for FinishConstruction to retire"), InHandle);
             return;
         }
 
@@ -447,6 +464,25 @@ namespace ck
         -> void
     {
         InHandle.Remove<MarkedDirtyBy>();
+
+        // Replicate runs before this processor in the main pass and in the settle pass, and its view needs the tag
+        // removed above, so a request that survived it can never be processed. It survives only when the entity got
+        // no ReplicationDriver, i.e. no replicated actor in its ownership chain. On a networked authority that means
+        // a Replicates entity no client will ever receive; a standalone world has no driver to replicate through.
+        if (InHandle.Has<FRequest_EntityScript_Replicate>())
+        {
+            const auto IsUnreachableByClients = ck_entity_script_processor::Get_IsNetworkedAuthorityWorld(InHandle);
+            CK_ENSURE_IF_NOT(NOT IsUnreachableByClients,
+                TEXT("EntityScript [{}] declares Replicates but finished construction without a ReplicationDriver "
+                     "(owner [{}], owning actor in chain [{}]), so it will never replicate to clients. Spawn it under "
+                     "an owner whose chain has a replicated actor, or make it DoesNotReplicate."),
+                InHandle,
+                InHandle.Get<FRequest_EntityScript_Replicate>().Get_Owner(),
+                UCk_Utils_OwningActor_UE::TryGet_Entity_OwningActor_InOwnershipChain(InHandle))
+            {}
+
+            InHandle.Remove<FRequest_EntityScript_Replicate>();
+        }
 
         CK_CALLSTACK_RECORD_MSG(ck::FFragment_EntityScript_Current, InHandle,
             TEXT("Construction finished, ready for BeginPlay"));
