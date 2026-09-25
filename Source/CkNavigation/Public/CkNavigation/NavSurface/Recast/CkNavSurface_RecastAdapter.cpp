@@ -602,9 +602,7 @@ namespace ck::nav_surface_recast
             return Result;
         }
 
-        // The same contract as FCk_Nav_Algorithm::FindPathSync: the start through the policy, the end
-        // onto the SURFACE. Projecting the end through the policy would move an end inside an excluded
-        // area out to its edge, and answer Reachable for a point nobody asked about.
+        // The end goes onto the surface, as in FCk_Nav_Algorithm::FindPathSync.
         const auto SurfaceFilter = NavData->GetDefaultQueryFilter();
         const auto Extent = UCk_Utils_Nav_Settings_UE::Get_NavQueryProjectionExtentVec();
         auto StartProj = FNavLocation{};

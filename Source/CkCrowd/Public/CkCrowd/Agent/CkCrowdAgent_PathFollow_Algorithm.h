@@ -111,16 +111,10 @@ namespace ck::ck_crowd_agent_path_follow_algorithm
             EveryChordIsNavigable);
     }
 
-    // A route that stops farther than the arrival radius from the goal can never produce a genuine
-    // arrival, and walking it to its end must be reported as a failure.
-    //
-    // Partial is not the only way to get one. Recast re-projects both endpoints through the query
-    // filter inside the navmesh's default query extent (FPImplRecastNavMesh::InitPathfinding), so
-    // a goal inside an excluded area near its edge comes back READY, ending at the edge. A Ready
-    // route is therefore judged too - but only against a goal CkNavigation projected onto that same
-    // surface (InGoalIsOnSurface). A route installed from elsewhere is compared against the caller's
-    // raw goal, whose Z need not lie on the surface, and its provider does not move goals (CkGroundNav
-    // keeps the goal's XY and snaps only Z), so judging it would fail genuine arrivals.
+    // Status alone cannot decide this: Recast re-projects the goal through the query filter
+    // (FPImplRecastNavMesh::InitPathfinding), so a goal just inside an excluded area comes back Ready,
+    // ending at its edge. A Ready route is judged only against a goal projected onto the surface,
+    // because a raw goal's Z need not lie on it.
     inline auto Get_RouteEndsShortOfGoal(
         const ECk_Nav_PathStatus InStatus,
         const TConstArrayView<FVector> InWaypoints,

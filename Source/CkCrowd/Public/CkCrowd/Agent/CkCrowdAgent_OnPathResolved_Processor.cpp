@@ -42,9 +42,6 @@ namespace ck_crowd_agent_on_path_resolved_processor
         return UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InAgent);
     }
 
-    // CkNavigation projects the goal onto the surface, not through the query's policy, so when it
-    // did the projection that is the goal the route has to reach. An externally installed route
-    // (CkGroundNav) carries no projection and falls back to the caller's raw goal.
     auto Get_RouteEndsShortOfGoal(
         const ck::FFragment_Nav_PathResult& InPathResult,
         float InArrivalRadius)
@@ -120,9 +117,8 @@ namespace ck
 
         // ---- Strict → permissive fallback ---------------------------------------------------------
         // The strict phase treats configured soft policy areas as impassable, so its honest answer
-        // when no strict route exists is Failed — or, more often, a route ending short of the goal
-        // (Recast returns the closest reachable poly outside the excluded band, as Partial, or as
-        // Ready when its own filtered re-projection moved the goal). Neither is terminal for
+        // when no strict route exists is Failed — or, more often, a route ending short (Recast
+        // returns the closest reachable poly outside the excluded band). Neither is terminal for
         // the EPISODE: re-dispatch once with the permissive toll filter. Runs BEFORE the path-trouble stamp and the
         // switch — a strict miss is expected control flow, not trouble for the overlay to flag and
         // never a caller-facing CROWD failure: no OnGoalFailed, no hold. The per-query
@@ -137,14 +133,10 @@ namespace ck
 
             // Only a genuine planning VERDICT may trigger the permissive retry: the query ran
             // against the mesh and found no route the strict filter allows. An infrastructure
-            // failure — an unprojectable start or end, NoNavData/deferral-timeout, or the pending
-            // watchdog's PendingTimeout — is filter-independent, and retrying it doubles the
-            // caller's wait for nothing. The end is projected onto the surface, so its miss fails
-            // permissive identically. The start is projected through the policy, but it is escaped
-            // out of other bodies' markup and avoidance volumes first (Get_EscapedQueryStart), and
-            // an agent's own markup is far inside the projection extent, so a start that still
-            // misses is, in practice, an agent off the mesh. PendingTimeout is the load-bearing
-            // case: the watchdog's contract is
+            // failure — an unprojectable start or end (the end is projected onto the surface; a start
+            // that still misses after Get_EscapedQueryStart is off the mesh), NoNavData/deferral-timeout, or the pending watchdog's
+            // PendingTimeout — is filter-independent, and retrying it doubles the caller's wait
+            // for nothing. PendingTimeout is the load-bearing case: the watchdog's contract is
             // that a never-answered episode terminates as a bounded failure EXACTLY ONCE, and a
             // fallback re-dispatch here would resurrect it into a second Pending wait instead
             // (caught by CkAutoTest_Crowd_Watchdog_PendingTimeoutFailsEpisodeOnce). Ending in
@@ -247,11 +239,8 @@ namespace ck
                 InPathFollow._PathSerial =
                     FProcessor_CrowdAgent_PathRefresh::Get_CurrentConfirmationSerial();
 
-                // Verdict for the final-stop latch: a route whose end is outside the arrival
-                // radius of the goal can never produce a genuine arrival — walking it to the end
-                // must report OnGoalFailed, never OnGoalReached. Decided here, against nav-space
-                // points, so Steering never compares against a caller-supplied (possibly
-                // unprojected) goal.
+                // Decided here, against nav-space points, so Steering's final-stop latch never
+                // compares against a caller-supplied (possibly unprojected) goal.
                 InPathFollow._ActivePathEndsShortOfGoal =
                     ck_crowd_agent_on_path_resolved_processor::Get_RouteEndsShortOfGoal(
                         InPathResult, InPathFollow.Get_ActiveArrivalRadius());
