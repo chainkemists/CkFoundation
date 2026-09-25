@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Processor.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Processor.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment.h"
@@ -57,7 +58,7 @@ namespace ck
     {
     public:
         using Group = FGroup_Transform_Derived;
-        using RunAfter = TDepList<FProcessor_ProceduralGait_Update, FProcessor_ProceduralRig_Setup>;
+        using RunAfter = TDepList<FProcessor_ProceduralGait_Update, FProcessor_ProceduralRig_Setup, FProcessor_ProceduralBodyPose_Update>;
 
     public:
         using TProcessor::TProcessor;
