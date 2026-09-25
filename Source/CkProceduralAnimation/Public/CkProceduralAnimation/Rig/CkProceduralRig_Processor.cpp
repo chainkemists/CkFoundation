@@ -193,7 +193,7 @@ namespace ck
         if (HasFoot)
         { ck_procedural_rig::Request_Pose(InParams.Get_Foot(), Joints.Last(), Foot.Get_Rotation()); }
 
-        InCurrent._DebugGaitSequence = Gait.Get<FFragment_ProceduralGait_Current>()._DebugSnapshot.Get_Sequence();
+        InCurrent._DebugGaitSequence = Gait.Get<FFragment_ProceduralGait_Current>()._DebugSnapshot.Get_Sample().Get_Sequence();
         InCurrent._Ready = true;
     }
 }

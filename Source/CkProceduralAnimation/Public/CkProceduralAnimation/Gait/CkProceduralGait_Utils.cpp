@@ -236,15 +236,15 @@ auto
         : ck::EProceduralGaitLegLossPolicy::KeepAuthoredOffsets;
 
     auto Settings = ck::FProceduralGaitSettings{};
-    Settings.Set_CycleDuration(Timing.Get_CycleDuration())
-        .Set_StepDuration(Timing.Get_StepDuration())
-        .Set_StepHeight(Step.Get_Height())
-        .Set_StepThreshold(Step.Get_Threshold())
+    Settings.Get_Cadence().Set_CycleDuration(Timing.Get_CycleDuration())
         .Set_MaxSimultaneousSwings(MaxSimultaneousSwings)
         .Set_CadenceSpeedRef(Timing.Get_CadenceSpeedRef())
-        .Set_MaxCadenceScale(Timing.Get_MaxCadenceScale())
-        .Set_ObstacleClearance(Step.Get_ObstacleClearance())
-        .Set_LegLossPolicy(LegLossPolicy);
+        .Set_MaxCadenceScale(Timing.Get_MaxCadenceScale());
+    Settings.Get_Step().Set_Duration(Timing.Get_StepDuration())
+        .Set_Threshold(Step.Get_Threshold());
+    Settings.Get_Swing().Set_Height(Step.Get_Height())
+        .Set_ObstacleClearance(Step.Get_ObstacleClearance());
+    Settings.Get_Pattern().Set_LegLossPolicy(LegLossPolicy);
 
     return Settings;
 }

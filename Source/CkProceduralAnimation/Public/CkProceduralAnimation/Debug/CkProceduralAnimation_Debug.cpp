@@ -108,25 +108,26 @@ auto
     const auto& Gait = Body.Get<ck::FFragment_ProceduralGait_Current>();
     auto Snapshot = Gait._DebugSnapshot;
     Snapshot.Set_EntityName(Body.Get_DebugName())
-        .Set_EntityId(Body.Get_Entity().ToString())
-        .Set_Available(true)
+        .Set_EntityId(Body.Get_Entity().ToString());
+    Snapshot.Get_Status().Set_Available(true)
         .Set_GaitReady(Gait._Ready)
-        .Set_GaitFailed(Gait._Failed)
-        .Set_GaitFresh(Snapshot.Get_HasAcceptedSample() && Snapshot.Get_FrameNumber() == GFrameCounter);
+        .Set_GaitFailed(Gait._Failed);
+    Snapshot.Get_Freshness().Set_GaitFresh(Snapshot.Get_Status().Get_HasAcceptedSample()
+        && Snapshot.Get_Sample().Get_FrameNumber() == GFrameCounter);
 
     const auto HasMotion = Body.Has<ck::FFragment_SurfaceMotion_Current>()
         && Body.Has<ck::FFragment_SurfaceMotion_Params>();
-    Snapshot.Set_HasSurfaceMotion(HasMotion);
+    Snapshot.Get_Status().Set_HasSurfaceMotion(HasMotion);
     if (HasMotion)
     {
         const auto& Motion = Body.Get<ck::FFragment_SurfaceMotion_Current>();
-        Snapshot.Set_MotionMatchesGaitFrame(Snapshot.Get_HasAcceptedSample()
-            && Motion._Ready && Motion._DebugFrameNumber == Snapshot.Get_FrameNumber());
+        Snapshot.Get_Freshness().Set_MotionMatchesGaitFrame(Snapshot.Get_Status().Get_HasAcceptedSample()
+            && Motion._Ready && Motion._DebugFrameNumber == Snapshot.Get_Sample().Get_FrameNumber());
     }
 
     auto HasRig = false;
     auto RigReady = true;
-    auto RigMatchesGaitSequence = Snapshot.Get_HasAcceptedSample();
+    auto RigMatchesGaitSequence = Snapshot.Get_Status().Get_HasAcceptedSample();
     auto RigFailure = ECk_ProceduralRig_Failure::None;
     auto Pending = false;
     for (auto Index = 0; Index < Gait._Legs.Num(); ++Index)
@@ -145,7 +146,7 @@ auto
         const auto& Chain = Leg.Get<ck::FFragment_ProceduralRig_Params>();
         HasRig = true;
         RigReady &= Rig._Ready;
-        RigMatchesGaitSequence &= Rig._DebugGaitSequence == Snapshot.Get_Sequence();
+        RigMatchesGaitSequence &= Rig._DebugGaitSequence == Snapshot.Get_Sample().Get_Sequence();
         if (RigFailure == ECk_ProceduralRig_Failure::None)
         { RigFailure = Rig._Failure; }
 
@@ -155,17 +156,17 @@ auto
             return ck_procedural_animation_debug::Get_Part(InSegment, Pending);
         });
 
-        DebugLeg.Set_HasRig(true)
-            .Set_RigReady(Rig._Ready)
-            .Set_RigFailure(Rig._Failure)
+        DebugLeg.Get_Rig().Set_Composed(true)
+            .Set_Ready(Rig._Ready)
+            .Set_Failure(Rig._Failure)
             .Set_Segments(Segments)
             .Set_Foot(ck_procedural_animation_debug::Get_Part(Chain.Get_Foot(), Pending));
     }
 
-    Snapshot.Set_HasRig(HasRig)
+    Snapshot.Get_Status().Set_HasRig(HasRig)
         .Set_RigReady(HasRig && RigReady)
-        .Set_RigFailure(RigFailure)
-        .Set_RigMatchesGaitSequence(HasRig && RigMatchesGaitSequence)
+        .Set_RigFailure(RigFailure);
+    Snapshot.Get_Freshness().Set_RigMatchesGaitSequence(HasRig && RigMatchesGaitSequence)
         .Set_RigPosePending(Pending);
 
     return Snapshot;
