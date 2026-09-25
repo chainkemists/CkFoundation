@@ -20,14 +20,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_SurfaceMotion_Params = FCk_Fragment_SurfaceMotion_ParamsData;
+    using FFragment_SurfaceMotion_Params = FCk_SurfaceMotion_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Current
+    struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion
     {
     public:
-        CK_GENERATED_BODY(FFragment_SurfaceMotion_Current);
+        CK_GENERATED_BODY(FFragment_SurfaceMotion);
 
     public:
         friend class FProcessor_SurfaceMotion_Update;

@@ -109,12 +109,12 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Movement, IsValid_Policy_Defa
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROCEDURALANIMATION_API FCk_Fragment_SurfaceMotion_ParamsData
+struct CKPROCEDURALANIMATION_API FCk_SurfaceMotion_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_SurfaceMotion_ParamsData);
+    CK_GENERATED_BODY(FCk_SurfaceMotion_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -130,8 +130,8 @@ public:
     CK_PROPERTY(_Movement);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Fragment_SurfaceMotion_ParamsData, IsValid_Policy_Default,
-[=](const FCk_Fragment_SurfaceMotion_ParamsData& InParams)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Spec, IsValid_Policy_Default,
+[=](const FCk_SurfaceMotion_Spec& InParams)
 {
     return ck::IsValid(InParams.Get_Contact()) && ck::IsValid(InParams.Get_Movement());
 });

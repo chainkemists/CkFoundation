@@ -37,12 +37,12 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_Failure);
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROCEDURALANIMATION_API FCk_Fragment_ProceduralRig_ParamsData
+struct CKPROCEDURALANIMATION_API FCk_ProceduralRig_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ProceduralRig_ParamsData);
+    CK_GENERATED_BODY(FCk_ProceduralRig_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -58,11 +58,11 @@ public:
     CK_PROPERTY(_Foot);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ProceduralRig_ParamsData, _Segments);
+    CK_DEFINE_CONSTRUCTORS(FCk_ProceduralRig_Spec, _Segments);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Fragment_ProceduralRig_ParamsData, IsValid_Policy_Default,
-[=](const FCk_Fragment_ProceduralRig_ParamsData& InParams)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralRig_Spec, IsValid_Policy_Default,
+[=](const FCk_ProceduralRig_Spec& InParams)
 {
     const auto& Segments = InParams.Get_Segments();
     if (Segments.Num() < 1 || Segments.Num() > 8)
@@ -101,7 +101,7 @@ protected:
 private:
     UPROPERTY(EditAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true, TitleProperty = "_Id"))
-    TArray<FCk_Fragment_ProceduralLeg_ParamsData> _Legs;
+    TArray<FCk_ProceduralLeg_Spec> _Legs;
 
 public:
     CK_PROPERTY(_Legs);

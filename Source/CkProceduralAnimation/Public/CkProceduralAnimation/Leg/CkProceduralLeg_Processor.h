@@ -29,7 +29,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ProceduralLeg_Requests& InRequests)
+            FFragment_ProceduralLeg_Requests& InRequestsComp)
             -> void;
 
     private:
@@ -65,7 +65,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralLeg_Requests& InRequests)
+            const FFragment_ProceduralLeg_Requests& InRequestsComp)
             -> void;
     };
 }

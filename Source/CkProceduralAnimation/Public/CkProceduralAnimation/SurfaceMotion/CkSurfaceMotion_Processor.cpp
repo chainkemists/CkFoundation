@@ -85,12 +85,12 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion_Current& InCurrent,
-            FFragment_SurfaceMotion_Requests& InRequests)
+            FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Requests& InRequestsComp)
         -> void
     {
-        auto Requests = MoveTemp(InRequests._Requests);
-        InRequests._Requests.Reset();
+        auto Requests = MoveTemp(InRequestsComp._Requests);
+        InRequestsComp._Requests.Reset();
         for (const auto& Request : Requests)
         {
             auto Result = ECk_Request_OperationResult::Failed_Cancelled;
@@ -99,13 +99,13 @@ namespace ck
             if (ck::Is_NOT_Valid(InHandle) || InHandle.Has<FTag_DestroyEntity_Initiate>())
             { continue; }
 
-            InCurrent._Direction = Request.Get_WorldDirection().GetSafeNormal();
-            InCurrent._Speed = FMath::Min(Request.Get_Speed(), InParams.Get_Movement().Get_MaxSpeed());
+            InMotionComp._Direction = Request.Get_WorldDirection().GetSafeNormal();
+            InMotionComp._Speed = FMath::Min(Request.Get_Speed(), InParams.Get_Movement().Get_MaxSpeed());
             Result = ECk_Request_OperationResult::Succeeded;
         }
 
         // A completion callback may enqueue more work; do not remove its new queue.
-        if (InRequests._Requests.IsEmpty())
+        if (InRequestsComp._Requests.IsEmpty())
         { InHandle.Remove<MarkedDirtyBy>(); }
     }
 
@@ -116,10 +116,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SurfaceMotion_Requests& InRequests)
+            const FFragment_SurfaceMotion_Requests& InRequestsComp)
         -> void
     {
-        request::FireCancelledForPending(InHandle, InRequests.Get_Requests());
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -130,7 +130,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion_Current& InCurrent,
+            FFragment_SurfaceMotion& InMotionComp,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -141,14 +141,14 @@ namespace ck
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
         {
-            InCurrent._Ready = false;
+            InMotionComp._Ready = false;
             return;
         }
 
         auto Body = InTransform.Get_Transform();
         if (Body.ContainsNaN())
         {
-            InCurrent._Ready = false;
+            InMotionComp._Ready = false;
             return;
         }
 
@@ -165,21 +165,21 @@ namespace ck
             const auto OldRotation = Body.GetRotation();
             // Attachment owns the accepted surface frame. It must not use the visual body's
             // partially eased up axis: doing so alternates floor/wall hits during a corner turn.
-            const auto Up = InCurrent._SupportNormal;
-            auto Forward = FVector::VectorPlaneProject(InCurrent._Direction, Up).GetSafeNormal();
+            const auto Up = InMotionComp._SupportNormal;
+            auto Forward = FVector::VectorPlaneProject(InMotionComp._Direction, Up).GetSafeNormal();
             if (Forward.IsNearlyZero())
-            { Forward = InCurrent._TravelTangent; }
-            const auto Candidate = Body.GetLocation() + Forward * (InCurrent._Speed * Step.Get_Seconds());
-            const auto Moving = InCurrent._Speed > 0.0f;
+            { Forward = InMotionComp._TravelTangent; }
+            const auto Candidate = Body.GetLocation() + Forward * (InMotionComp._Speed * Step.Get_Seconds());
+            const auto Moving = InMotionComp._Speed > 0.0f;
             const auto Hit = ck_surface_motion::Get_Contact(World, Candidate, Up, Forward, Contact, Moving);
-            InCurrent._TrustedContact = Hit.Get_HasHit();
+            InMotionComp._TrustedContact = Hit.Get_HasHit();
             if (Hit.Get_HasHit())
             {
                 const auto Normal = Hit.Get_Normal().GetSafeNormal();
                 const auto Transport = FQuat::FindBetweenNormals(Up, Normal);
                 const auto TargetForward = Transport.RotateVector(Forward);
-                InCurrent._SupportNormal = Normal;
-                InCurrent._TravelTangent = TargetForward;
+                InMotionComp._SupportNormal = Normal;
+                InMotionComp._TravelTangent = TargetForward;
                 const auto TargetRotation = FRotationMatrix::MakeFromZX(Normal, TargetForward).ToQuat();
                 const auto Angle = OldRotation.AngularDistance(TargetRotation);
                 const auto Alpha = Angle > KINDA_SMALL_NUMBER
@@ -189,44 +189,44 @@ namespace ck
                 const auto Correction = FMath::Clamp(Contact.Get_Clearance() - Height,
                     -Movement.Get_ClearanceSpeed() * Step.Get_Seconds(), Movement.Get_ClearanceSpeed() * Step.Get_Seconds());
                 Body.SetLocation(Candidate + Normal * Correction);
-                InCurrent._MissingContact = FCk_Time{};
-                InCurrent._Grounded = true;
-                InCurrent._Velocity = (Body.GetLocation() - StartPosition) / (Step.Get_Seconds() * (Iteration + 1));
+                InMotionComp._MissingContact = FCk_Time{};
+                InMotionComp._Grounded = true;
+                InMotionComp._Velocity = (Body.GetLocation() - StartPosition) / (Step.Get_Seconds() * (Iteration + 1));
                 continue;
             }
-            InCurrent._MissingContact += Step;
-            if (InCurrent._Grounded && InCurrent._MissingContact <= Contact.Get_ContactGrace())
+            InMotionComp._MissingContact += Step;
+            if (InMotionComp._Grounded && InMotionComp._MissingContact <= Contact.Get_ContactGrace())
             {
                 Body.SetLocation(Candidate);
-                InCurrent._Velocity = Forward * InCurrent._Speed;
+                InMotionComp._Velocity = Forward * InMotionComp._Speed;
                 continue;
             }
-            InCurrent._Grounded = false;
-            InCurrent._Velocity += Movement.Get_Gravity() * Step.Get_Seconds();
+            InMotionComp._Grounded = false;
+            InMotionComp._Velocity += Movement.Get_Gravity() * Step.Get_Seconds();
             const auto FallStart = Body.GetLocation();
-            const auto FallEnd = FallStart + InCurrent._Velocity * Step.Get_Seconds();
+            const auto FallEnd = FallStart + InMotionComp._Velocity * Step.Get_Seconds();
             const auto FallDirection = (FallEnd - FallStart).GetSafeNormal();
             const auto FallHit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, FallStart,
                 FallEnd + FallDirection * Contact.Get_Clearance(), Contact.Get_QueryFilter());
             if (ck_surface_motion::Get_TrustedHit(FallHit, FallDirection))
             {
-                InCurrent._TrustedContact = true;
+                InMotionComp._TrustedContact = true;
                 const auto Normal = FallHit.Get_Normal().GetSafeNormal();
                 Body.SetLocation(FallHit.Get_Position() + Normal * Contact.Get_Clearance());
                 Body.SetRotation(FRotationMatrix::MakeFromZX(Normal, Forward).ToQuat());
-                InCurrent._Velocity = FVector::ZeroVector;
-                InCurrent._Grounded = true;
-                InCurrent._SupportNormal = Normal;
-                InCurrent._TravelTangent = Body.GetRotation().GetAxisX();
-                InCurrent._MissingContact = FCk_Time{};
+                InMotionComp._Velocity = FVector::ZeroVector;
+                InMotionComp._Grounded = true;
+                InMotionComp._SupportNormal = Normal;
+                InMotionComp._TravelTangent = Body.GetRotation().GetAxisX();
+                InMotionComp._MissingContact = FCk_Time{};
             }
             else
             {
                 Body.SetLocation(FallEnd);
             }
         }
-        InCurrent._Ready = true;
-        InCurrent._DebugFrameNumber = GFrameCounter;
+        InMotionComp._Ready = true;
+        InMotionComp._DebugFrameNumber = GFrameCounter;
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
         UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, FCk_Request_Transform_SetTransform{Body}, {});
     }

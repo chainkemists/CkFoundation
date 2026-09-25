@@ -29,7 +29,7 @@ private:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
-    FCk_Fragment_ProceduralRig_ParamsData _Rig;
+    FCk_ProceduralRig_Spec _Rig;
 
 public:
     CK_PROPERTY_GET(_LegId);

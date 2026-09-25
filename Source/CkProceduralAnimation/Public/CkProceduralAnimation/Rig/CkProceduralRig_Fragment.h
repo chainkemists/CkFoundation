@@ -17,14 +17,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_ProceduralRig_Params = FCk_Fragment_ProceduralRig_ParamsData;
+    using FFragment_ProceduralRig_Params = FCk_ProceduralRig_Spec;
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROCEDURALANIMATION_API FFragment_ProceduralRig_Current
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralRig
     {
     public:
-        CK_GENERATED_BODY(FFragment_ProceduralRig_Current);
+        CK_GENERATED_BODY(FFragment_ProceduralRig);
 
     public:
         friend class FProcessor_ProceduralRig_Update;

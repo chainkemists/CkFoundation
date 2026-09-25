@@ -16,8 +16,8 @@ namespace ck
     class CKPROCEDURALANIMATION_API FProcessor_ProceduralGait_HandleRequests : public ck_exp::TProcessor<
         FProcessor_ProceduralGait_HandleRequests,
         FCk_Handle_ProceduralGait,
-        TReadWrite<FFragment_ProceduralGait_Params>,
-        TReadWrite<FFragment_ProceduralGait_Current>,
+        TReadWrite<FFragment_ProceduralGait_Tunables>,
+        TReadWrite<FFragment_ProceduralGait>,
         TReadWrite<FFragment_ProceduralGait_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -35,17 +35,17 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ProceduralGait_Params& InParams,
-            FFragment_ProceduralGait_Current& InCurrent,
-            FFragment_ProceduralGait_Requests& InRequests)
+            FFragment_ProceduralGait_Tunables& InTunables,
+            FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Requests& InRequestsComp)
             -> void;
 
     private:
         static auto
         DoHandleRequest(
             HandleType InHandle,
-            FFragment_ProceduralGait_Params& InParams,
-            FFragment_ProceduralGait_Current& InCurrent,
+            FFragment_ProceduralGait_Tunables& InTunables,
+            FFragment_ProceduralGait& InGaitComp,
             const FCk_Request_ProceduralGait_ApplyPreset& InRequest)
             -> void;
     };
@@ -55,8 +55,9 @@ namespace ck
     class CKPROCEDURALANIMATION_API FProcessor_ProceduralGait_Update : public ck_exp::TProcessor<
         FProcessor_ProceduralGait_Update,
         FCk_Handle_ProceduralGait,
-        TReadOnly<FFragment_ProceduralGait_Params>,
-        TReadWrite<FFragment_ProceduralGait_Current>,
+        TReadOnly<FFragment_ProceduralGait_Tunables>,
+        TReadWrite<FFragment_ProceduralGait>,
+        TReadWrite<FFragment_ProceduralGait_Debug>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -73,8 +74,9 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralGait_Params& InParams,
-            FFragment_ProceduralGait_Current& InCurrent,
+            const FFragment_ProceduralGait_Tunables& InTunables,
+            FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp,
             const FFragment_Transform& InTransform)
             -> void;
     };
@@ -98,7 +100,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralGait_Requests& InRequests)
+            const FFragment_ProceduralGait_Requests& InRequestsComp)
             -> void;
     };
 }

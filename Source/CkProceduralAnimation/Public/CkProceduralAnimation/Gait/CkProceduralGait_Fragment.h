@@ -29,10 +29,10 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_Params
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_Tunables
     {
     public:
-        CK_GENERATED_BODY(FFragment_ProceduralGait_Params);
+        CK_GENERATED_BODY(FFragment_ProceduralGait_Tunables);
 
     private:
         FCk_ProceduralGait_Timing _Timing;
@@ -45,15 +45,15 @@ namespace ck
         CK_PROPERTY_GET(_Probe);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralGait_Params, _Timing, _Step, _Probe);
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralGait_Tunables, _Timing, _Step, _Probe);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_Current
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait
     {
     public:
-        CK_GENERATED_BODY(FFragment_ProceduralGait_Current);
+        CK_GENERATED_BODY(FFragment_ProceduralGait);
 
     public:
         friend class FProcessor_ProceduralGait_HandleRequests;
@@ -67,15 +67,29 @@ namespace ck
         TArray<FCk_Handle_ProceduralLeg> _Legs;
         uint64 _EnabledMask = ~uint64{0};
         TArray<FProceduralFootProbeState> _Probes;
-        TArray<FProceduralGaitLegInput> _Inputs;
-        TArray<FProceduralGaitLegOutput> _Outputs;
         FProceduralGaitVelocityTracker _VelocityTracker;
         FQuat _Basis = FQuat::Identity;
-        TArray<FCk_ProceduralAnimation_DebugLeg> _DebugScratchLegs;
-        FCk_ProceduralAnimation_DebugSnapshot _DebugSnapshot;
+        uint64 _SolveSequence = 0;
         bool _Initialized = false;
         bool _Failed = false;
         bool _Ready = false;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_Debug
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralGait_Debug);
+
+    public:
+        friend class FProcessor_ProceduralGait_Update;
+        friend class ::UCk_Utils_ProceduralGait_UE;
+        friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
+
+    private:
+        FCk_ProceduralAnimation_DebugSnapshot _Snapshot;
+        TArray<FCk_ProceduralAnimation_DebugLeg> _ScratchLegs;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

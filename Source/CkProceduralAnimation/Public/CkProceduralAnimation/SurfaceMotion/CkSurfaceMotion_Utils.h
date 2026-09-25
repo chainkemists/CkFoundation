@@ -32,7 +32,7 @@ public:
     static FCk_Handle_SurfaceMotion
     Add(
         UPARAM(ref) FCk_Handle_Transform& InBody,
-        const FCk_Fragment_SurfaceMotion_ParamsData& InParams);
+        const FCk_SurfaceMotion_Spec& InParams);
 
 public:
     static bool
