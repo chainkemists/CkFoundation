@@ -826,6 +826,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
+            const FFragment_Probe_Params& InParams,
             const FFragment_Probe& InProbe,
             const FFragment_Transform& InTransform)
         -> void

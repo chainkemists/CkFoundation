@@ -59,7 +59,8 @@ auto
         InParams.Get_ContextOverlapPolicy(),
         InParams.Get_MotionType(),
         InParams.Get_MotionQuality(),
-        InParams.Get_SurfaceInfo());
+        InParams.Get_SurfaceInfo(),
+        InParams.Get_ContactParticipation());
     InHandle.Add<ck::FFragment_Probe_DebugInfo>(InDebugInfo);
     InHandle.Add<ck::FFragment_Probe>();
 
