@@ -178,8 +178,8 @@ namespace ck
             const auto& Placement = Leg.Get<FFragment_ProceduralLeg_Params>().Get_Placement();
             auto& LegCurrent = Leg.Get<FFragment_ProceduralLeg_Current>();
             const auto Neutral = Body.TransformPosition(Placement.Get_RestFootLocal());
-            DebugLeg.Set_Id(Leg.Get<FFragment_ProceduralLeg_Params>().Get_Id())
-                .Set_HipWorld(Body.TransformPosition(Placement.Get_HipLocal()))
+            DebugLeg.Set_Id(Leg.Get<FFragment_ProceduralLeg_Params>().Get_Id());
+            DebugLeg.Get_Targeting().Set_HipWorld(Body.TransformPosition(Placement.Get_HipLocal()))
                 .Set_NeutralWorld(Neutral);
 
             if (NOT Enabled)
@@ -230,7 +230,7 @@ namespace ck
 
             ++EnabledCount;
             const auto Ideal = Neutral + Lead;
-            DebugLeg.Set_QueryTarget(Ideal);
+            DebugLeg.Get_Targeting().Set_QueryTarget(Ideal);
             MeanFootRadius += FVector::VectorPlaneProject(Placement.Get_RestFootLocal(), FVector::UpVector).Size();
             const auto Radial = FVector::VectorPlaneProject(Ideal - Body.GetLocation(), Up).GetSafeNormal();
 
@@ -242,13 +242,13 @@ namespace ck
                 const auto ProbeStart = Ideal + Axis * Span.Get_UpDistance();
                 const auto ProbeEnd = Ideal - Axis * Span.Get_DownDistance();
                 Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, ProbeStart, ProbeEnd, Probe.Get_QueryFilter());
-                DebugLeg.Set_ProbeStart(ProbeStart)
-                    .Set_ProbeEnd(ProbeEnd)
-                    .Set_ProbeAttemptCount(Attempt + 1)
-                    .Set_ProbeHit(Hit.Get_HasHit())
-                    .Set_ProbeHitFraction(Hit.Get_Fraction())
-                    .Set_ProbeHitPosition(Hit.Get_Position())
-                    .Set_ProbeHitNormal(Hit.Get_Normal());
+                DebugLeg.Get_Probe().Set_Start(ProbeStart)
+                    .Set_End(ProbeEnd)
+                    .Set_AttemptCount(Attempt + 1)
+                    .Set_Hit(Hit.Get_HasHit())
+                    .Set_HitFraction(Hit.Get_Fraction())
+                    .Set_HitPosition(Hit.Get_Position())
+                    .Set_HitNormal(Hit.Get_Normal());
 
                 if (ck_procedural_gait::Get_TrustedHit(Hit))
                 { break; }
@@ -285,10 +285,10 @@ namespace ck
             }
 
             LegCurrent._Foot.Set_ContactTrusted(Trusted);
-            DebugLeg.Set_IdealTarget(Position)
-                .Set_TargetValid(TargetValid)
-                .Set_ContactTrusted(Trusted)
-                .Set_ProbeState(ProbeState)
+            DebugLeg.Get_Targeting().Set_IdealTarget(Position)
+                .Set_TargetValid(TargetValid);
+            DebugLeg.Get_Foot().Set_ContactTrusted(Trusted);
+            DebugLeg.Get_Probe().Set_State(ProbeState)
                 .Set_MissingContact(InCurrent._Probes[Index].Get_MissingDuration());
         }
 
@@ -346,43 +346,43 @@ namespace ck
             {
                 const auto& Output = InCurrent._Outputs[Index];
                 const auto& State = InCurrent._Solver.GetLegState(Index);
-                InCurrent._DebugScratchLegs[Index].Set_PlantedPosition(Basis.RotateVector(State.Get_PlantedPosition()))
-                    .Set_SwingTarget(Basis.RotateVector(State.Get_SwingTarget()))
-                    .Set_FootPosition(Basis.RotateVector(Output.Get_Position()))
-                    .Set_FootRotation((Basis * Output.Get_Rotation()).GetNormalized())
+                InCurrent._DebugScratchLegs[Index].Get_Foot().Set_PlantedPosition(Basis.RotateVector(State.Get_Plant().Get_Position()))
+                    .Set_SwingTarget(Basis.RotateVector(State.Get_Swing().Get_Target()))
+                    .Set_Position(Basis.RotateVector(Output.Get_Position()))
+                    .Set_Rotation((Basis * Output.Get_Rotation()).GetNormalized())
                     .Set_Normal(Basis.RotateVector(Output.Get_Normal()))
                     .Set_Planted(Output.Get_Planted())
                     .Set_SwingAlpha(Output.Get_SwingAlpha())
-                    .Set_PhaseOffset(InCurrent._Solver.GetEffectivePhaseOffset(Index))
-                    .Set_StepThreshold(InCurrent._Solver.Get_Settings().Get_StepThreshold()
-                        * InCurrent._Inputs[Index].Get_StepThresholdScale());
+                    .Set_PhaseOffset(InCurrent._Solver.GetEffectivePhaseOffset(Index));
+                InCurrent._DebugScratchLegs[Index].Get_Targeting().Set_StepThreshold(InCurrent._Solver.Get_Settings().Get_Step().Get_Threshold()
+                    * InCurrent._Inputs[Index].Get_StepThresholdScale());
             }
 
             auto& Snapshot = InCurrent._DebugSnapshot;
-            Snapshot.Set_HasAcceptedSample(true)
-                .Set_FrameNumber(GFrameCounter)
-                .Set_Sequence(Snapshot.Get_Sequence() + 1)
-                .Set_Time(FCk_Time{World->GetTimeSeconds()})
-                .Set_BodyTransform(Body)
+            Snapshot.Get_Status().Set_HasAcceptedSample(true);
+            Snapshot.Get_Sample().Set_FrameNumber(GFrameCounter)
+                .Set_Sequence(Snapshot.Get_Sample().Get_Sequence() + 1)
+                .Set_Time(FCk_Time{World->GetTimeSeconds()});
+            Snapshot.Get_Gait().Set_BodyTransform(Body)
                 .Set_Velocity(Velocity)
                 .Set_CadenceSpeed(CadenceSpeed)
                 .Set_CadenceScale(InCurrent._Solver.Get_LastCadenceScale())
-                .Set_GaitClock(InCurrent._Solver.GetGaitClock())
+                .Set_Clock(InCurrent._Solver.GetGaitClock())
                 .Set_Airborne(InCurrent._Solver.IsAirborne())
                 .Set_RestTime(InCurrent._Solver.GetRestTime())
-                .Set_Legs(InCurrent._DebugScratchLegs)
                 .Set_SupportNormal(Up);
+            Snapshot.Set_Legs(InCurrent._DebugScratchLegs);
 
             if (InHandle.Has<FFragment_SurfaceMotion_Current>())
             {
                 const auto& Motion = InHandle.Get<FFragment_SurfaceMotion_Current>();
-                Snapshot.Set_MotionVelocity(Motion._Velocity)
-                    .Set_SupportNormal(Motion._SupportNormal)
+                Snapshot.Get_Motion().Set_Velocity(Motion._Velocity)
                     .Set_RequestedDirection(Motion._Direction)
                     .Set_RequestedSpeed(Motion._Speed)
                     .Set_Grounded(Motion._Grounded)
                     .Set_TrustedContact(Motion._TrustedContact)
                     .Set_MissingContact(Motion._MissingContact);
+                Snapshot.Get_Gait().Set_SupportNormal(Motion._SupportNormal);
             }
         }
 
