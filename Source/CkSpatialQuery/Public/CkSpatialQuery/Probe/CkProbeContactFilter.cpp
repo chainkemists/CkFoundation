@@ -20,22 +20,16 @@ namespace ck::spatialquery
     auto
         FCk_ProbeContactFilter::
         Get_OrRegisterSignature(
-            const FCk_Probe_Spec& InParams)
+            const FCk_ProbeContactSignature& InSignature)
         -> uint32
     {
-        const auto Signature = FCk_ProbeContactSignature{
-            .ProbeName = InParams.Get_ProbeName(),
-            .ResponsePolicy = InParams.Get_ResponsePolicy(),
-            .ContactParticipation = InParams.Get_ContactParticipation(),
-            .Filter = InParams.Get_Filter()};
-
         for (uint32 Index = 0; Index < static_cast<uint32>(_Signatures.Num()); ++Index)
         {
             const auto& Existing = _Signatures[Index];
-            if (Existing.ProbeName == Signature.ProbeName
-                && Existing.ResponsePolicy == Signature.ResponsePolicy
-                && Existing.ContactParticipation == Signature.ContactParticipation
-                && Existing.Filter == Signature.Filter)
+            if (Existing.ProbeName == InSignature.ProbeName
+                && Existing.ResponsePolicy == InSignature.ResponsePolicy
+                && Existing.ContactParticipation == InSignature.ContactParticipation
+                && Existing.Filter == InSignature.Filter)
             {
                 return Index;
             }
@@ -48,7 +42,7 @@ namespace ck::spatialquery
         { return JPH::CollisionGroup::cInvalidSubGroup; }
 
         const auto SignatureId = static_cast<uint32>(_Signatures.Num());
-        _Signatures.Emplace(Signature);
+        _Signatures.Emplace(InSignature);
 
         // Publish only after every value field is fully written. Acquire readers may now index this entry safely.
         _PublishedSignatureCount.store(static_cast<uint32>(_Signatures.Num()), std::memory_order_release);
@@ -127,11 +121,11 @@ namespace ck::spatialquery
     auto
         FCk_ProbeContactFilter_Context::
         Get_OrRegisterSignature(
-            const FCk_Probe_Spec& InParams)
+            const FCk_ProbeContactSignature& InSignature)
         const -> uint32
     {
         return Filter != nullptr
-            ? Filter->Get_OrRegisterSignature(InParams)
+            ? Filter->Get_OrRegisterSignature(InSignature)
             : JPH::CollisionGroup::cInvalidSubGroup;
     }
 }
