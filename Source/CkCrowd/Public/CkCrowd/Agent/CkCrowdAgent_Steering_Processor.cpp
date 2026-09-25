@@ -190,9 +190,9 @@ namespace ck
                     QueryFilterIsResolved = true;
                     QueryFilterTag =
                         InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::PathNetwork
-                        ? InParams.Get_NavQueryFilter()
+                        ? InTunables.Get_NavQueryFilter()
                         : FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(
-                            InParams, InPathFollow);
+                            InTunables, InPathFollow);
                     QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
                         InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
                             ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
@@ -320,11 +320,11 @@ namespace ck
         // Without this, a turning radius (v / MaxTurnRate) larger than the remaining distance makes
         // the agent physically unable to curve onto its goal, so it ORBITS instead. Only bites in
         // the final ~60cm at defaults.
-        const auto IsCloseGoalStrafe = InParams.Get_CloseGoalStrafe() == ECk_EnableDisable::Enable
+        const auto IsCloseGoalStrafe = InTunables.Get_CloseGoalStrafe() == ECk_EnableDisable::Enable
             && InPathResult.Get_Status() == ECk_Nav_PathStatus::Ready
             && IsTargetingFinal
             && DistanceToNext > InPathFollow.Get_ActiveArrivalRadius()
-            && DistanceToNext <= InParams.Get_CloseGoalStrafeDistanceUu();
+            && DistanceToNext <= InTunables.Get_CloseGoalStrafeDistanceUu();
         auto TurnRadiusSpeedCap = MaxSpeed;
         if (MaxTurnRate > 0.0f && NOT IsCloseGoalStrafe)
         {
