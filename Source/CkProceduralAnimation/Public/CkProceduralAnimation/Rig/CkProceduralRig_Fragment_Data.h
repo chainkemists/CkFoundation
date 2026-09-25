@@ -83,7 +83,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralRig_Spec, IsValid_Policy_Default,
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Leg layout for one creature: what a future authoring viewport edits. No runtime handles.
+// Leg layout for one creature. No runtime handles.
 UCLASS(BlueprintType)
 class CKPROCEDURALANIMATION_API UCk_ProceduralRig_Data : public UCk_DataAsset_PDA
 {

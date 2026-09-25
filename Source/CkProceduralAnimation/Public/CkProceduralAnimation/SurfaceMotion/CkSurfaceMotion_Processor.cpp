@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Processor.h"
 
+#include "CkCore/Ensure/CkEnsure.h"
+
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Request/CkRequest_Completion.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -146,7 +148,8 @@ namespace ck
         }
 
         auto Body = InTransform.Get_Transform();
-        if (Body.ContainsNaN())
+        const auto BodyFinite = NOT Body.ContainsNaN();
+        CK_ENSURE_IF_NOT(BodyFinite, TEXT("Surface motion [{}] body transform contains NaN; motion is not ready."), InHandle)
         {
             InMotionComp._Ready = false;
             return;
