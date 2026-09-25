@@ -35,8 +35,9 @@ namespace ck_procedural_animation_debug
         -> bool
     {
         return Get_IsActive(InHandle)
-            && InHandle.Has<ck::FFragment_ProceduralGait_Current>()
-            && InHandle.Has<ck::FFragment_ProceduralGait_Params>()
+            && InHandle.Has<ck::FFragment_ProceduralGait>()
+            && InHandle.Has<ck::FFragment_ProceduralGait_Tunables>()
+            && InHandle.Has<ck::FFragment_ProceduralGait_Debug>()
             && InHandle.Has<ck::FFragment_Transform>();
     }
 
@@ -105,8 +106,8 @@ auto
     if (NOT ck_procedural_animation_debug::Get_HasGait(Body))
     { return {}; }
 
-    const auto& Gait = Body.Get<ck::FFragment_ProceduralGait_Current>();
-    auto Snapshot = Gait._DebugSnapshot;
+    const auto& Gait = Body.Get<ck::FFragment_ProceduralGait>();
+    auto Snapshot = Body.Get<ck::FFragment_ProceduralGait_Debug>()._Snapshot;
     Snapshot.Set_EntityName(Body.Get_DebugName())
         .Set_EntityId(Body.Get_Entity().ToString());
     Snapshot.Get_Status().Set_Available(true)
@@ -115,12 +116,12 @@ auto
     Snapshot.Get_Freshness().Set_GaitFresh(Snapshot.Get_Status().Get_HasAcceptedSample()
         && Snapshot.Get_Sample().Get_FrameNumber() == GFrameCounter);
 
-    const auto HasMotion = Body.Has<ck::FFragment_SurfaceMotion_Current>()
+    const auto HasMotion = Body.Has<ck::FFragment_SurfaceMotion>()
         && Body.Has<ck::FFragment_SurfaceMotion_Params>();
     Snapshot.Get_Status().Set_HasSurfaceMotion(HasMotion);
     if (HasMotion)
     {
-        const auto& Motion = Body.Get<ck::FFragment_SurfaceMotion_Current>();
+        const auto& Motion = Body.Get<ck::FFragment_SurfaceMotion>();
         Snapshot.Get_Freshness().Set_MotionMatchesGaitFrame(Snapshot.Get_Status().Get_HasAcceptedSample()
             && Motion._Ready && Motion._DebugFrameNumber == Snapshot.Get_Sample().Get_FrameNumber());
     }
@@ -142,7 +143,7 @@ auto
         if (NOT UCk_Utils_ProceduralRig_UE::Has(Leg))
         { continue; }
 
-        const auto& Rig = Leg.Get<ck::FFragment_ProceduralRig_Current>();
+        const auto& Rig = Leg.Get<ck::FFragment_ProceduralRig>();
         const auto& Chain = Leg.Get<ck::FFragment_ProceduralRig_Params>();
         HasRig = true;
         RigReady &= Rig._Ready;
@@ -197,8 +198,8 @@ auto
     { return Entities; }
 
     auto Registry = Subsystem->Get_Registry();
-    Registry.View<ck::FFragment_ProceduralGait_Current>().ForEach(
-    [&](FCk_Entity InEntity, const ck::FFragment_ProceduralGait_Current& InCurrent)
+    Registry.View<ck::FFragment_ProceduralGait>().ForEach(
+    [&](FCk_Entity InEntity, const ck::FFragment_ProceduralGait& InGaitComp)
     {
         auto Handle = ck::MakeHandle(InEntity, TransientEntity);
         if (ck_procedural_animation_debug::Get_HasGait(Handle))

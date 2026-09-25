@@ -16,7 +16,7 @@ namespace ck
         FProcessor_SurfaceMotion_HandleRequests,
         FCk_Handle_SurfaceMotion,
         TReadOnly<FFragment_SurfaceMotion_Params>,
-        TReadWrite<FFragment_SurfaceMotion_Current>,
+        TReadWrite<FFragment_SurfaceMotion>,
         TReadWrite<FFragment_SurfaceMotion_Requests>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -34,8 +34,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion_Current& InCurrent,
-            FFragment_SurfaceMotion_Requests& InRequests)
+            FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Requests& InRequestsComp)
             -> void;
     };
 
@@ -47,7 +47,7 @@ namespace ck
         FProcessor_SurfaceMotion_Update,
         FCk_Handle_SurfaceMotion,
         TReadOnly<FFragment_SurfaceMotion_Params>,
-        TReadWrite<FFragment_SurfaceMotion_Current>,
+        TReadWrite<FFragment_SurfaceMotion>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
@@ -65,7 +65,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion_Current& InCurrent,
+            FFragment_SurfaceMotion& InMotionComp,
             const FFragment_Transform& InTransform)
             -> void;
     };
@@ -89,7 +89,7 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_SurfaceMotion_Requests& InRequests)
+            const FFragment_SurfaceMotion_Requests& InRequestsComp)
             -> void;
     };
 }

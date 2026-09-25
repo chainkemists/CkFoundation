@@ -30,7 +30,7 @@ public:
     static FCk_Handle_ProceduralRig
     Add(
         UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
-        const FCk_Fragment_ProceduralRig_ParamsData& InParams);
+        const FCk_ProceduralRig_Spec& InParams);
 
 public:
     static bool
@@ -80,7 +80,7 @@ public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralRig",
               DisplayName="[Ck][ProceduralRig] Get Chain")
-    static FCk_Fragment_ProceduralRig_ParamsData
+    static FCk_ProceduralRig_Spec
     Get_Chain(
         const FCk_Handle_ProceduralRig& InRig);
 };

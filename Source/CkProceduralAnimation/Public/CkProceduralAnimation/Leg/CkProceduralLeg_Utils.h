@@ -33,7 +33,7 @@ public:
     static FCk_Handle_ProceduralLeg
     Create(
         UPARAM(ref) FCk_Handle_Transform& InBody,
-        const FCk_Fragment_ProceduralLeg_ParamsData& InParams);
+        const FCk_ProceduralLeg_Spec& InParams);
 
 public:
     static bool

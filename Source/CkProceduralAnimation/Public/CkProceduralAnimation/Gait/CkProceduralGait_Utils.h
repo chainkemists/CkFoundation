@@ -19,7 +19,7 @@ namespace ck
 {
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
-    struct FFragment_ProceduralGait_Params;
+    struct FFragment_ProceduralGait_Tunables;
     struct FProceduralGaitSettings;
 }
 
@@ -161,7 +161,7 @@ public:
 private:
     static auto
     DoBuild_SolverSettings(
-        const ck::FFragment_ProceduralGait_Params& InParams,
+        const ck::FFragment_ProceduralGait_Tunables& InTunables,
         int32 InEnabledCount)
         -> ck::FProceduralGaitSettings;
 };

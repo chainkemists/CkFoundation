@@ -11,8 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_SurfaceMotion_UE, FCk_Handle_SurfaceMotion,
-    ck::FFragment_SurfaceMotion_Params, ck::FFragment_SurfaceMotion_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_SurfaceMotion_UE, FCk_Handle_SurfaceMotion, ck::FFragment_SurfaceMotion);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +19,7 @@ auto
     UCk_Utils_SurfaceMotion_UE::
     Add(
         FCk_Handle_Transform& InBody,
-        const FCk_Fragment_SurfaceMotion_ParamsData& InParams)
+        const FCk_SurfaceMotion_Spec& InParams)
     -> FCk_Handle_SurfaceMotion
 {
     const auto BodyValid = ck::IsValid(InBody)
@@ -38,13 +37,13 @@ auto
     { return {}; }
 
     const auto Body = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InBody);
-    auto Current = ck::FFragment_SurfaceMotion_Current{};
-    Current._SupportNormal = Body.GetRotation().GetAxisZ();
-    Current._TravelTangent = Body.GetRotation().GetAxisX();
-    Current._Direction = Current._TravelTangent;
+    auto MotionComp = ck::FFragment_SurfaceMotion{};
+    MotionComp._SupportNormal = Body.GetRotation().GetAxisZ();
+    MotionComp._TravelTangent = Body.GetRotation().GetAxisX();
+    MotionComp._Direction = MotionComp._TravelTangent;
 
     InBody.Add<ck::FFragment_SurfaceMotion_Params>(InParams);
-    InBody.Add<ck::FFragment_SurfaceMotion_Current>(MoveTemp(Current));
+    InBody.Add<ck::FFragment_SurfaceMotion>(MoveTemp(MotionComp));
 
     return CastChecked(InBody);
 }
@@ -57,7 +56,7 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> bool
 {
-    return ck::IsValid(InHandle) && Has(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion_Current>()._Ready;
+    return ck::IsValid(InHandle) && Has(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._Ready;
 }
 
 auto
@@ -66,7 +65,7 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> bool
 {
-    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion_Current>()._Grounded;
+    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._Grounded;
 }
 
 auto
@@ -75,7 +74,7 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> FVector
 {
-    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion_Current>()._SupportNormal : FVector::UpVector;
+    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion>()._SupportNormal : FVector::UpVector;
 }
 
 auto
@@ -84,7 +83,7 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> bool
 {
-    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion_Current>()._TrustedContact;
+    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._TrustedContact;
 }
 
 auto
@@ -93,7 +92,7 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> FVector
 {
-    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion_Current>()._Velocity : FVector::ZeroVector;
+    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion>()._Velocity : FVector::ZeroVector;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

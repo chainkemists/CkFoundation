@@ -104,13 +104,13 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProceduralRig_Params& InParams,
-            FFragment_ProceduralRig_Current& InCurrent,
+            FFragment_ProceduralRig& InRigComp,
             const FFragment_ProceduralLeg_Params& InLegParams,
-            const FFragment_ProceduralLeg_Current& InLegCurrent)
+            const FFragment_ProceduralLeg& InLegComp)
         -> void
     {
-        InCurrent._Ready = false;
-        if (InCurrent._Failure != ECk_ProceduralRig_Failure::None)
+        InRigComp._Ready = false;
+        if (InRigComp._Failure != ECk_ProceduralRig_Failure::None)
         { return; }
 
         auto Body = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
@@ -125,7 +125,7 @@ namespace ck
         CK_ENSURE_IF_NOT(RootScaleValid,
             TEXT("Procedural rig [{}] root changed to unsupported non-unit scale; rig has failed."), InHandle)
         {
-            InCurrent._Failure = ECk_ProceduralRig_Failure::InvalidRootScale;
+            InRigComp._Failure = ECk_ProceduralRig_Failure::InvalidRootScale;
             return;
         }
 
@@ -139,13 +139,13 @@ namespace ck
         CK_ENSURE_IF_NOT(PartsValid,
             TEXT("Procedural rig [{}] lost an authored part; rig has failed without partially posing its chain."), InHandle)
         {
-            InCurrent._Failure = ECk_ProceduralRig_Failure::MissingPart;
+            InRigComp._Failure = ECk_ProceduralRig_Failure::MissingPart;
             return;
         }
 
         const auto& Chain = InLegParams.Get_Chain();
         const auto& Lengths = Chain.Get_SegmentLengths();
-        const auto& Foot = InLegCurrent.Get_Foot();
+        const auto& Foot = InLegComp.Get_Foot();
         const auto Target = Foot.Get_Position();
         const auto Hip = BodyTransform.TransformPosition(InLegParams.Get_Placement().Get_HipLocal());
         const auto Pole = BodyTransform.TransformPosition(Chain.Get_PoleLocal());
@@ -153,7 +153,7 @@ namespace ck
         if (PoleDirection.IsNearlyZero())
         { PoleDirection = BodyTransform.GetRotation().GetAxisZ(); }
 
-        auto& Joints = InCurrent._Joints;
+        auto& Joints = InRigComp._Joints;
         Joints[0] = Hip;
 
         switch (Segments.Num())
@@ -169,7 +169,7 @@ namespace ck
                 const auto SeedJoint = Hip + PoleDirection * Lengths[0];
                 auto Joint = SeedJoint;
                 auto End = Target;
-                AnimationCore::SolveTwoBoneIK(Hip, SeedJoint, End, Pole, Target, Joint, End,
+                AnimationCore::SolveTwoBoneIK(Hip, SeedJoint, Target, Pole, Target, Joint, End,
                     Lengths[0], Lengths[1], AllowStretching, 1.0, 1.0);
                 Joints[1] = Joint;
                 Joints[2] = End;
@@ -193,8 +193,8 @@ namespace ck
         if (HasFoot)
         { ck_procedural_rig::Request_Pose(InParams.Get_Foot(), Joints.Last(), Foot.Get_Rotation()); }
 
-        InCurrent._DebugGaitSequence = Gait.Get<FFragment_ProceduralGait_Current>()._DebugSnapshot.Get_Sample().Get_Sequence();
-        InCurrent._Ready = true;
+        InRigComp._DebugGaitSequence = Gait.Get<FFragment_ProceduralGait>()._SolveSequence;
+        InRigComp._Ready = true;
     }
 }
 

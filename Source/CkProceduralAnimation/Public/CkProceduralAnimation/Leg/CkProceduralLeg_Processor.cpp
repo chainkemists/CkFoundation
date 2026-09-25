@@ -35,11 +35,11 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            FFragment_ProceduralLeg_Requests& InRequests)
+            FFragment_ProceduralLeg_Requests& InRequestsComp)
         -> void
     {
-        auto Requests = MoveTemp(InRequests._Requests);
-        InRequests._Requests.Reset();
+        auto Requests = MoveTemp(InRequestsComp._Requests);
+        InRequestsComp._Requests.Reset();
 
         algo::ForEachRequest(Requests, ck::Visitor(
         [&](const auto& InRequest) -> void
@@ -54,7 +54,7 @@ namespace ck
             Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
-        if (InRequests._Requests.IsEmpty())
+        if (InRequestsComp._Requests.IsEmpty())
         { InHandle.Remove<MarkedDirtyBy>(); }
     }
 
@@ -122,10 +122,10 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralLeg_Requests& InRequests)
+            const FFragment_ProceduralLeg_Requests& InRequestsComp)
         -> void
     {
-        request::FireCancelledForPending(InHandle, InRequests.Get_Requests());
+        request::FireCancelledForPending(InHandle, InRequestsComp.Get_Requests());
     }
 }
 
