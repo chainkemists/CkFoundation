@@ -24,6 +24,7 @@ class UCk_Utils_ProceduralAnimation_Debug_UE;
 namespace ck
 {
     class FProcessor_ProceduralLeg_HandleRequests;
+    class FProcessor_ProceduralGait_Setup;
     class FProcessor_ProceduralGait_Update;
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -42,21 +43,37 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ProceduralLeg);
 
     public:
+        friend class FProcessor_ProceduralGait_Setup;
         friend class FProcessor_ProceduralGait_Update;
         friend class ::UCk_Utils_ProceduralLeg_UE;
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
 
     private:
         FCk_ProceduralLeg_Foot _Foot;
-        // Body-local pose captured on the enabled-to-disabled transition; the gait re-expresses it in world space
-        // each frame so the frozen foot rides with the body.
-        FVector _FrozenFootLocal = FVector::ZeroVector;
-        FQuat _FrozenRotationLocal = FQuat::Identity;
-        bool _Frozen = false;
 
     public:
         CK_PROPERTY_GET(_Foot);
-        CK_PROPERTY_GET(_Frozen);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Present only while the leg is disabled: the body-local foot pose captured on the transition, which the gait
+    // re-expresses in world space every frame so the frozen foot rides with the body.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralLeg_FrozenPose
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralLeg_FrozenPose);
+
+    private:
+        FVector _FootLocal = FVector::ZeroVector;
+        FQuat _RotationLocal = FQuat::Identity;
+
+    public:
+        CK_PROPERTY(_FootLocal);
+        CK_PROPERTY(_RotationLocal);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralLeg_FrozenPose, _FootLocal, _RotationLocal);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

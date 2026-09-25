@@ -96,9 +96,9 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralLeg",
-              DisplayName="[Ck][ProceduralLeg] Get Is Enabled")
-    static bool
-    Get_IsEnabled(
+              DisplayName="[Ck][ProceduralLeg] Get Enable Disable")
+    static ECk_EnableDisable
+    Get_EnableDisable(
         const FCk_Handle_ProceduralLeg& InLeg);
 
 public:

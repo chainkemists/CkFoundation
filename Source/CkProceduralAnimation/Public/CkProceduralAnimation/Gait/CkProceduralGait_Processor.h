@@ -13,6 +13,37 @@
 
 namespace ck
 {
+    class CKPROCEDURALANIMATION_API FProcessor_ProceduralGait_Setup : public ck_exp::TProcessor<
+        FProcessor_ProceduralGait_Setup,
+        FCk_Handle_ProceduralGait,
+        TReadOnly<FFragment_ProceduralGait_Tunables>,
+        TReadWrite<FFragment_ProceduralGait>,
+        TReadOnly<FFragment_Transform>,
+        FTag_ProceduralGait_NeedsSetup,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Transform_Derived;
+        using RunAfter = TDepList<FProcessor_ProceduralLeg_HandleRequests>;
+        using MarkedDirtyBy = FTag_ProceduralGait_NeedsSetup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ProceduralGait_Tunables& InTunables,
+            FFragment_ProceduralGait& InGaitComp,
+            const FFragment_Transform& InTransform)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPROCEDURALANIMATION_API FProcessor_ProceduralGait_HandleRequests : public ck_exp::TProcessor<
         FProcessor_ProceduralGait_HandleRequests,
         FCk_Handle_ProceduralGait,
@@ -59,12 +90,14 @@ namespace ck
         TReadWrite<FFragment_ProceduralGait>,
         TReadWrite<FFragment_ProceduralGait_Debug>,
         TReadOnly<FFragment_Transform>,
+        TExclude<FTag_ProceduralGait_NeedsSetup>,
+        TExclude<FFragment_ProceduralGait_Failure>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Transform_Derived;
-        using RunAfter = TDepList<FProcessor_ProceduralLeg_HandleRequests, FProcessor_ProceduralGait_HandleRequests>;
+        using RunAfter = TDepList<FProcessor_ProceduralLeg_HandleRequests, FProcessor_ProceduralGait_Setup, FProcessor_ProceduralGait_HandleRequests>;
 
     public:
         using TProcessor::TProcessor;

@@ -11,6 +11,7 @@
 #include "CkEcs/Signal/CkSignal_Fragment.h"
 #include "CkEcs/Signal/CkSignal_Macros.h"
 #include "CkEcs/Signal/CkSignal_Utils.h"
+#include "CkEcs/Tag/CkTag.h"
 
 #include <variant>
 
@@ -23,9 +24,32 @@ class UCk_Utils_ProceduralAnimation_Debug_UE;
 
 namespace ck
 {
+    class FProcessor_ProceduralGait_Setup;
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
     class FProcessor_ProceduralRig_Update;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_ECS_TAG(FTag_ProceduralGait_NeedsSetup);
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Presence excludes the gait from Update; the reason is the diagnostic. Never removed: gait failure latches.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_Failure
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralGait_Failure);
+
+    private:
+        ECk_ProceduralGait_Failure _Reason = ECk_ProceduralGait_Failure::None;
+
+    public:
+        CK_PROPERTY_GET(_Reason);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralGait_Failure, _Reason);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -56,6 +80,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ProceduralGait);
 
     public:
+        friend class FProcessor_ProceduralGait_Setup;
         friend class FProcessor_ProceduralGait_HandleRequests;
         friend class FProcessor_ProceduralGait_Update;
         friend class FProcessor_ProceduralRig_Update;
@@ -70,9 +95,6 @@ namespace ck
         FProceduralGaitVelocityTracker _VelocityTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
-        bool _Initialized = false;
-        bool _Failed = false;
-        bool _Ready = false;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
