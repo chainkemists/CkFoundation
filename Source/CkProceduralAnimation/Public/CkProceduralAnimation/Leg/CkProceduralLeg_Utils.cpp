@@ -11,8 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProceduralLeg_UE, FCk_Handle_ProceduralLeg,
-    ck::FFragment_ProceduralLeg_Params, ck::FFragment_ProceduralLeg_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProceduralLeg_UE, FCk_Handle_ProceduralLeg, ck::FFragment_ProceduralLeg);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -20,7 +19,7 @@ auto
     UCk_Utils_ProceduralLeg_UE::
     Create(
         FCk_Handle_Transform& InBody,
-        const FCk_Fragment_ProceduralLeg_ParamsData& InParams)
+        const FCk_ProceduralLeg_Spec& InParams)
     -> FCk_Handle_ProceduralLeg
 {
     const auto BodyValid = ck::IsValid(InBody)
@@ -51,7 +50,7 @@ auto
 #endif
 
         InNewEntity.Add<ck::FFragment_ProceduralLeg_Params>(InParams);
-        InNewEntity.Add<ck::FFragment_ProceduralLeg_Current>();
+        InNewEntity.Add<ck::FFragment_ProceduralLeg>();
     });
 
     const auto IsNewLegEntityValid = ck::IsValid(NewEntity);
@@ -102,7 +101,7 @@ auto
         const FCk_Handle_ProceduralLeg& InLeg)
     -> FCk_ProceduralLeg_Foot
 {
-    return InLeg.Get<ck::FFragment_ProceduralLeg_Current>().Get_Foot();
+    return InLeg.Get<ck::FFragment_ProceduralLeg>().Get_Foot();
 }
 
 auto

@@ -11,8 +11,7 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
-CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProceduralGait_UE, FCk_Handle_ProceduralGait,
-    ck::FFragment_ProceduralGait_Params, ck::FFragment_ProceduralGait_Current);
+CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_ProceduralGait_UE, FCk_Handle_ProceduralGait, ck::FFragment_ProceduralGait);
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,6 +23,7 @@ auto
     -> FCk_Handle_ProceduralGait
 {
     const auto BodyValid = ck::IsValid(InBody)
+        && NOT InBody.Has<ck::FTag_DestroyEntity_Initiate>()
         && UCk_Utils_EntityLifetime_UE::Get_CanCreateEntity(InBody)
         && NOT Has(InBody);
     CK_ENSURE_IF_NOT(BodyValid,
@@ -48,18 +48,19 @@ auto
     { return {}; }
 
     // Admission is atomic: nothing attaches until every authored field has been checked.
-    auto Params = ck::FFragment_ProceduralGait_Params{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe()};
-    auto Current = ck::FFragment_ProceduralGait_Current{};
-    Current._Solver.Set_Settings(DoBuild_SolverSettings(Params, Legs.Num()));
-    Current._Legs = Legs;
-    Current._Probes.SetNum(Legs.Num());
-    Current._Inputs.SetNum(Legs.Num());
-    Current._Outputs.SetNum(Legs.Num());
-    Current._DebugScratchLegs.SetNum(Legs.Num());
-    Current._DebugSnapshot.Get_Legs().Reserve(Legs.Num());
+    auto Tunables = ck::FFragment_ProceduralGait_Tunables{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe()};
+    auto GaitComp = ck::FFragment_ProceduralGait{};
+    GaitComp._Solver.Set_Settings(DoBuild_SolverSettings(Tunables, Legs.Num()));
+    GaitComp._Legs = Legs;
+    GaitComp._Probes.SetNum(Legs.Num());
 
-    InBody.Add<ck::FFragment_ProceduralGait_Params>(MoveTemp(Params));
-    InBody.Add<ck::FFragment_ProceduralGait_Current>(MoveTemp(Current));
+    auto DebugComp = ck::FFragment_ProceduralGait_Debug{};
+    DebugComp._ScratchLegs.SetNum(Legs.Num());
+    DebugComp._Snapshot.Get_Legs().Reserve(Legs.Num());
+
+    InBody.Add<ck::FFragment_ProceduralGait_Tunables>(MoveTemp(Tunables));
+    InBody.Add<ck::FFragment_ProceduralGait>(MoveTemp(GaitComp));
+    InBody.Add<ck::FFragment_ProceduralGait_Debug>(MoveTemp(DebugComp));
 
     return CastChecked(InBody);
 }
@@ -72,7 +73,7 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> bool
 {
-    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait_Current>()._Ready;
+    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait>()._Ready;
 }
 
 auto
@@ -81,7 +82,7 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> bool
 {
-    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait_Current>()._Failed;
+    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait>()._Failed;
 }
 
 auto
@@ -90,7 +91,7 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> float
 {
-    return Get_IsReady(InGait) ? InGait.Get<ck::FFragment_ProceduralGait_Current>()._Solver.GetGaitClock() : 0.0f;
+    return Get_IsReady(InGait) ? InGait.Get<ck::FFragment_ProceduralGait>()._Solver.GetGaitClock() : 0.0f;
 }
 
 auto
@@ -102,7 +103,7 @@ auto
     if (NOT Get_IsReady(InGait))
     { return 0; }
 
-    return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait_Current>()._Legs,
+    return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait>()._Legs,
     [](const FCk_Handle_ProceduralLeg& InLeg) -> bool
     {
         return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_ContactTrusted();
@@ -118,7 +119,7 @@ auto
     if (NOT Get_IsReady(InGait))
     { return 0; }
 
-    return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait_Current>()._Legs,
+    return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait>()._Legs,
     [](const FCk_Handle_ProceduralLeg& InLeg) -> bool
     {
         return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_Planted();
@@ -143,12 +144,12 @@ auto
     if (ck::Is_NOT_Valid(InGait) || NOT Has(InGait))
     { return 0; }
 
-    const auto& Current = InGait.Get<ck::FFragment_ProceduralGait_Current>();
+    const auto& GaitComp = InGait.Get<ck::FFragment_ProceduralGait>();
     auto EnabledCount = 0;
-    for (auto Index = 0; Index < Current._Legs.Num(); ++Index)
+    for (auto Index = 0; Index < GaitComp._Legs.Num(); ++Index)
     {
-        const auto WasEnabled = (Current._EnabledMask & (uint64{1} << Index)) != 0;
-        if (WasEnabled && ck::IsValid(Current._Legs[Index]))
+        const auto WasEnabled = (GaitComp._EnabledMask & (uint64{1} << Index)) != 0;
+        if (WasEnabled && ck::IsValid(GaitComp._Legs[Index]))
         { ++EnabledCount; }
     }
     return EnabledCount;
@@ -171,7 +172,7 @@ auto
         && ck::IsValid(InData->Get_Timing())
         && ck::IsValid(InData->Get_Step())
         && ck::IsValid(InData->Get_Probe())
-        && InData->Get_Timing().Get_MaxSimultaneousSwings() <= InGait.Get<ck::FFragment_ProceduralGait_Current>()._Legs.Num();
+        && InData->Get_Timing().Get_MaxSimultaneousSwings() <= InGait.Get<ck::FFragment_ProceduralGait>()._Legs.Num();
     CK_ENSURE_IF_NOT(RequestValid,
         TEXT("Procedural gait Request_ApplyPreset rejected gait [{}]: the gait must be live and the preset present, well-formed and within the leg count."),
         InGait)
@@ -220,12 +221,12 @@ auto
 auto
     UCk_Utils_ProceduralGait_UE::
     DoBuild_SolverSettings(
-        const ck::FFragment_ProceduralGait_Params& InParams,
+        const ck::FFragment_ProceduralGait_Tunables& InTunables,
         int32 InEnabledCount)
     -> ck::FProceduralGaitSettings
 {
-    const auto& Timing = InParams.Get_Timing();
-    const auto& Step = InParams.Get_Step();
+    const auto& Timing = InTunables.Get_Timing();
+    const auto& Step = InTunables.Get_Step();
 
     const auto MaxSimultaneousSwings = Timing.Get_MaxSimultaneousSwings() == 0
         ? FMath::Max(1, InEnabledCount / 2)

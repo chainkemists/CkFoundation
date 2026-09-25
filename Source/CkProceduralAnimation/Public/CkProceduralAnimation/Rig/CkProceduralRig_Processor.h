@@ -18,9 +18,9 @@ namespace ck
         FProcessor_ProceduralRig_Update,
         FCk_Handle_ProceduralRig,
         TReadOnly<FFragment_ProceduralRig_Params>,
-        TReadWrite<FFragment_ProceduralRig_Current>,
+        TReadWrite<FFragment_ProceduralRig>,
         TReadOnly<FFragment_ProceduralLeg_Params>,
-        TReadOnly<FFragment_ProceduralLeg_Current>,
+        TReadOnly<FFragment_ProceduralLeg>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -37,9 +37,9 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProceduralRig_Params& InParams,
-            FFragment_ProceduralRig_Current& InCurrent,
+            FFragment_ProceduralRig& InRigComp,
             const FFragment_ProceduralLeg_Params& InLegParams,
-            const FFragment_ProceduralLeg_Current& InLegCurrent)
+            const FFragment_ProceduralLeg& InLegComp)
             -> void;
     };
 }

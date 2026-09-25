@@ -79,7 +79,7 @@ namespace ck_procedural_animation_utils
 
         for (const auto& Chain : InChains)
         {
-            const auto LegIndex = InRig.Get_Legs().IndexOfByPredicate([&](const FCk_Fragment_ProceduralLeg_ParamsData& InLeg) -> bool
+            const auto LegIndex = InRig.Get_Legs().IndexOfByPredicate([&](const FCk_ProceduralLeg_Spec& InLeg) -> bool
             {
                 return InLeg.Get_Id() == Chain.Get_LegId();
             });
@@ -128,7 +128,7 @@ auto
     { return {}; }
 
     const auto Legs = ck::algo::Transform<TArray<FCk_Handle_ProceduralLeg>>(InRig->Get_Legs(),
-    [&](const FCk_Fragment_ProceduralLeg_ParamsData& InLegParams)
+    [&](const FCk_ProceduralLeg_Spec& InLegParams)
     {
         return UCk_Utils_ProceduralLeg_UE::Create(InBody, InLegParams);
     });

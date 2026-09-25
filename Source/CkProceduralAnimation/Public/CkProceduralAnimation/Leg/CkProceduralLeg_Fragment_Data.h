@@ -114,12 +114,12 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralLeg_ChainGeometry, IsValid_Policy
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
-struct CKPROCEDURALANIMATION_API FCk_Fragment_ProceduralLeg_ParamsData
+struct CKPROCEDURALANIMATION_API FCk_ProceduralLeg_Spec
 {
     GENERATED_BODY()
 
 public:
-    CK_GENERATED_BODY(FCk_Fragment_ProceduralLeg_ParamsData);
+    CK_GENERATED_BODY(FCk_ProceduralLeg_Spec);
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -140,11 +140,11 @@ public:
     CK_PROPERTY(_Chain);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Fragment_ProceduralLeg_ParamsData, _Id, _Placement, _Chain);
+    CK_DEFINE_CONSTRUCTORS(FCk_ProceduralLeg_Spec, _Id, _Placement, _Chain);
 };
 
-CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_Fragment_ProceduralLeg_ParamsData, IsValid_Policy_Default,
-[=](const FCk_Fragment_ProceduralLeg_ParamsData& InParams)
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralLeg_Spec, IsValid_Policy_Default,
+[=](const FCk_ProceduralLeg_Spec& InParams)
 {
     return NOT InParams.Get_Id().IsNone()
         && ck::IsValid(InParams.Get_Placement())
