@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkProceduralAnimation/CkProceduralAnimation_Fragment_Data.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment_Data.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
 
@@ -65,9 +66,9 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralRig",
-              DisplayName="[Ck][ProceduralRig] Get Is Ready")
-    static bool
-    Get_IsReady(
+              DisplayName="[Ck][ProceduralRig] Get Status")
+    static ECk_ProceduralAnimation_Status
+    Get_Status(
         const FCk_Handle_ProceduralRig& InRig);
 
     UFUNCTION(BlueprintPure,

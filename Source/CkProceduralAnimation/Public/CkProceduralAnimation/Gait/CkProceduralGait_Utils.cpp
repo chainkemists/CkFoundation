@@ -61,6 +61,7 @@ auto
     InBody.Add<ck::FFragment_ProceduralGait_Tunables>(MoveTemp(Tunables));
     InBody.Add<ck::FFragment_ProceduralGait>(MoveTemp(GaitComp));
     InBody.Add<ck::FFragment_ProceduralGait_Debug>(MoveTemp(DebugComp));
+    InBody.Add<ck::FTag_ProceduralGait_NeedsSetup>();
 
     return CastChecked(InBody);
 }
@@ -69,20 +70,28 @@ auto
 
 auto
     UCk_Utils_ProceduralGait_UE::
-    Get_IsReady(
+    Get_Status(
         const FCk_Handle_ProceduralGait& InGait)
-    -> bool
+    -> ECk_ProceduralAnimation_Status
 {
-    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait>()._Ready;
+    if (ck::Is_NOT_Valid(InGait) || NOT Has(InGait) || InGait.Has<ck::FFragment_ProceduralGait_Failure>())
+    { return ECk_ProceduralAnimation_Status::Failed; }
+
+    if (InGait.Has<ck::FTag_ProceduralGait_NeedsSetup>())
+    { return ECk_ProceduralAnimation_Status::PendingSetup; }
+
+    return ECk_ProceduralAnimation_Status::Ready;
 }
 
 auto
     UCk_Utils_ProceduralGait_UE::
-    Get_HasFailed(
+    Get_Failure(
         const FCk_Handle_ProceduralGait& InGait)
-    -> bool
+    -> ECk_ProceduralGait_Failure
 {
-    return ck::IsValid(InGait) && Has(InGait) && InGait.Get<ck::FFragment_ProceduralGait>()._Failed;
+    return ck::IsValid(InGait) && Has(InGait) && InGait.Has<ck::FFragment_ProceduralGait_Failure>()
+        ? InGait.Get<ck::FFragment_ProceduralGait_Failure>().Get_Reason()
+        : ECk_ProceduralGait_Failure::None;
 }
 
 auto
@@ -91,7 +100,9 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> float
 {
-    return Get_IsReady(InGait) ? InGait.Get<ck::FFragment_ProceduralGait>()._Solver.GetGaitClock() : 0.0f;
+    return Get_Status(InGait) == ECk_ProceduralAnimation_Status::Ready
+        ? InGait.Get<ck::FFragment_ProceduralGait>()._Solver.GetGaitClock()
+        : 0.0f;
 }
 
 auto
@@ -100,13 +111,13 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> int32
 {
-    if (NOT Get_IsReady(InGait))
+    if (Get_Status(InGait) != ECk_ProceduralAnimation_Status::Ready)
     { return 0; }
 
     return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait>()._Legs,
     [](const FCk_Handle_ProceduralLeg& InLeg) -> bool
     {
-        return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_ContactTrusted();
+        return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted;
     });
 }
 
@@ -116,13 +127,13 @@ auto
         const FCk_Handle_ProceduralGait& InGait)
     -> int32
 {
-    if (NOT Get_IsReady(InGait))
+    if (Get_Status(InGait) != ECk_ProceduralAnimation_Status::Ready)
     { return 0; }
 
     return ck::algo::CountIf(InGait.Get<ck::FFragment_ProceduralGait>()._Legs,
     [](const FCk_Handle_ProceduralLeg& InLeg) -> bool
     {
-        return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_Planted();
+        return ck::IsValid(InLeg) && UCk_Utils_ProceduralLeg_UE::Get_Foot(InLeg).Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted;
     });
 }
 

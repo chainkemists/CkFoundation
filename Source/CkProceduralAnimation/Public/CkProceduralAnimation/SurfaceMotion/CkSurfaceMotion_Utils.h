@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkProceduralAnimation/CkProceduralAnimation_Fragment_Data.h"
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -67,16 +68,23 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SurfaceMotion",
-              DisplayName="[Ck][SurfaceMotion] Get Is Ready")
-    static bool
-    Get_IsReady(
+              DisplayName="[Ck][SurfaceMotion] Get Status")
+    static ECk_ProceduralAnimation_Status
+    Get_Status(
         const FCk_Handle_SurfaceMotion& InHandle);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SurfaceMotion",
-              DisplayName="[Ck][SurfaceMotion] Get Is Grounded")
-    static bool
-    Get_IsGrounded(
+              DisplayName="[Ck][SurfaceMotion] Get Failure")
+    static ECk_SurfaceMotion_Failure
+    Get_Failure(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Support")
+    static ECk_SurfaceMotion_Support
+    Get_Support(
         const FCk_Handle_SurfaceMotion& InHandle);
 
     UFUNCTION(BlueprintPure,
@@ -95,9 +103,9 @@ public:
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SurfaceMotion",
-              DisplayName="[Ck][SurfaceMotion] Get Has Trusted Contact")
-    static bool
-    Get_HasTrustedContact(
+              DisplayName="[Ck][SurfaceMotion] Get Contact Query")
+    static ECk_SurfaceMotion_ContactQuery
+    Get_ContactQuery(
         const FCk_Handle_SurfaceMotion& InHandle);
 
 public:

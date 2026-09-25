@@ -1,6 +1,8 @@
 #pragma once
 
+#include "CkProceduralAnimation/CkProceduralAnimation_Fragment_Data.h"
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
+#include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment_Data.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -121,14 +123,14 @@ struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLegRig
 
 private:
     bool _Composed = false;
-    bool _Ready = false;
+    ECk_ProceduralAnimation_Status _Status = ECk_ProceduralAnimation_Status::PendingSetup;
     ECk_ProceduralRig_Failure _Failure = ECk_ProceduralRig_Failure::None;
     TArray<FCk_ProceduralAnimation_DebugPart> _Segments;
     FCk_ProceduralAnimation_DebugPart _Foot;
 
 public:
     CK_PROPERTY(_Composed);
-    CK_PROPERTY(_Ready);
+    CK_PROPERTY(_Status);
     CK_PROPERTY(_Failure);
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_Foot);
@@ -169,21 +171,21 @@ struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugStatus
 private:
     bool _Available = false;
     bool _HasAcceptedSample = false;
-    bool _GaitReady = false;
-    bool _GaitFailed = false;
+    ECk_ProceduralAnimation_Status _GaitStatus = ECk_ProceduralAnimation_Status::PendingSetup;
+    ECk_ProceduralGait_Failure _GaitFailure = ECk_ProceduralGait_Failure::None;
     bool _HasSurfaceMotion = false;
     bool _HasRig = false;
-    bool _RigReady = false;
+    ECk_ProceduralAnimation_Status _RigStatus = ECk_ProceduralAnimation_Status::PendingSetup;
     ECk_ProceduralRig_Failure _RigFailure = ECk_ProceduralRig_Failure::None;
 
 public:
     CK_PROPERTY(_Available);
     CK_PROPERTY(_HasAcceptedSample);
-    CK_PROPERTY(_GaitReady);
-    CK_PROPERTY(_GaitFailed);
+    CK_PROPERTY(_GaitStatus);
+    CK_PROPERTY(_GaitFailure);
     CK_PROPERTY(_HasSurfaceMotion);
     CK_PROPERTY(_HasRig);
-    CK_PROPERTY(_RigReady);
+    CK_PROPERTY(_RigStatus);
     CK_PROPERTY(_RigFailure);
 };
 

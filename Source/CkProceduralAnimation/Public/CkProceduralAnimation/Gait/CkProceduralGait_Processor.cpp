@@ -17,6 +17,7 @@
 
 #include <Engine/World.h>
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralGait_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralGait_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralGait_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralGait_CancelPendingRequests);
@@ -37,6 +38,44 @@ namespace ck_procedural_gait
             && NOT InHit.Get_Normal().IsNearlyZero();
     }
 
+    // Returns the last attempt's hit; the caller decides trust with Get_TrustedHit.
+    auto
+        Get_GroundHit(
+            UWorld* InWorld,
+            const FVector& InIdeal,
+            const FVector& InUp,
+            const FVector& InRadial,
+            const FCk_ProceduralGait_Probe& InProbe,
+            FCk_ProceduralAnimation_DebugProbe* InDebugProbe)
+        -> FCk_Jolt_HitResult
+    {
+        auto Hit = FCk_Jolt_HitResult{};
+        for (auto Attempt = 0; Attempt < ck::ProceduralGroundProbeAttempts; ++Attempt)
+        {
+            const auto Span = ck::MakeProceduralGroundProbeSpan(Attempt, InProbe.Get_Up(), InProbe.Get_Down(), InProbe.Get_OutwardLean());
+            const auto Axis = ck::FProceduralGaitSolver::ComputeTraceAxis(InUp, InRadial, Span.Get_OutwardLean());
+            const auto ProbeStart = InIdeal + Axis * Span.Get_UpDistance();
+            const auto ProbeEnd = InIdeal - Axis * Span.Get_DownDistance();
+            Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld, ProbeStart, ProbeEnd, InProbe.Get_QueryFilter());
+
+            if (ck::IsValid(InDebugProbe, ck::IsValid_Policy_NullptrOnly{}))
+            {
+                InDebugProbe->Set_Start(ProbeStart)
+                    .Set_End(ProbeEnd)
+                    .Set_AttemptCount(Attempt + 1)
+                    .Set_Hit(Hit.Get_HasHit())
+                    .Set_HitFraction(Hit.Get_Fraction())
+                    .Set_HitPosition(Hit.Get_Position())
+                    .Set_HitNormal(Hit.Get_Normal());
+            }
+
+            if (Get_TrustedHit(Hit))
+            { break; }
+        }
+
+        return Hit;
+    }
+
     auto
         Get_LegBit(
             int32 InLegIndex)
@@ -50,6 +89,78 @@ namespace ck_procedural_gait
 
 namespace ck
 {
+    auto
+        FProcessor_ProceduralGait_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ProceduralGait_Tunables& InTunables,
+            FFragment_ProceduralGait& InGaitComp,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (ck::Is_NOT_Valid(World))
+        { return; }
+
+        const auto& Body = InTransform.Get_Transform();
+        const auto BodyFinite = NOT Body.ContainsNaN();
+        CK_ENSURE_IF_NOT(BodyFinite,
+            TEXT("Procedural gait [{}] body transform contains NaN; feature is failed."), InHandle)
+        {
+            InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::NanBody);
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        const auto Basis = Body.GetRotation();
+        const auto InverseBasis = Basis.Inverse();
+        const auto Up = Basis.GetAxisZ();
+
+        auto InitialFeet = TArray<FVector, TInlineAllocator<8>>{};
+        InitialFeet.Reserve(InGaitComp._Legs.Num());
+        for (auto& Leg : InGaitComp._Legs)
+        {
+            if (ck::Is_NOT_Valid(Leg))
+            {
+                InitialFeet.Add(InverseBasis.RotateVector(Body.GetLocation()));
+                continue;
+            }
+
+            const auto& Placement = Leg.Get<FFragment_ProceduralLeg_Params>().Get_Placement();
+            const auto Neutral = Body.TransformPosition(Placement.Get_RestFootLocal());
+            const auto Radial = FVector::VectorPlaneProject(Neutral - Body.GetLocation(), Up).GetSafeNormal();
+            const auto Hit = ck_procedural_gait::Get_GroundHit(World, Neutral, Up, Radial, InTunables.Get_Probe(), nullptr);
+            const auto Trusted = ck_procedural_gait::Get_TrustedHit(Hit);
+            const auto Position = Trusted ? Hit.Get_Position() : Neutral;
+            const auto Normal = Trusted ? Hit.Get_Normal().GetSafeNormal() : Up;
+
+            // Update freezes a leg disabled before Add from this published foot, so it must already hold the probed pose.
+            Leg.Get<FFragment_ProceduralLeg>()._Foot.Set_Position(Position)
+                .Set_Normal(Normal)
+                .Set_Rotation(Basis)
+                .Set_SwingAlpha(0.0f)
+                .Set_Phase(ECk_ProceduralLeg_FootPhase::Planted)
+                .Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed);
+
+            InitialFeet.Add(InverseBasis.RotateVector(Position));
+        }
+
+        const auto SolverReset = InGaitComp._Solver.Reset(InitialFeet);
+        CK_ENSURE_IF_NOT(SolverReset,
+            TEXT("Procedural gait [{}] solver rejected the initial foot positions; feature is failed."), InHandle)
+        {
+            InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::SolverReset);
+            InHandle.Remove<MarkedDirtyBy>();
+            return;
+        }
+
+        InGaitComp._Basis = Basis;
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProcessor_ProceduralGait_HandleRequests::
         ForEachEntity(
@@ -109,23 +220,19 @@ namespace ck
         -> void
     {
         const auto Dt = InDeltaT.Get_Seconds();
-        if (InGaitComp._Failed || NOT FMath::IsFinite(Dt) || Dt < 0.0)
+        if (NOT FMath::IsFinite(Dt) || Dt < 0.0)
         { return; }
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
-        {
-            InGaitComp._Ready = false;
-            return;
-        }
+        { return; }
 
         const auto& Body = InTransform.Get_Transform();
         const auto BodyFinite = NOT Body.ContainsNaN();
         CK_ENSURE_IF_NOT(BodyFinite,
             TEXT("Procedural gait [{}] body transform contains NaN; feature is failed."), InHandle)
         {
-            InGaitComp._Ready = false;
-            InGaitComp._Failed = true;
+            InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::NanBody);
             return;
         }
 
@@ -137,20 +244,14 @@ namespace ck
         const auto Up = Basis.GetAxisZ();
         const auto Velocity = InGaitComp._VelocityTracker.Update(Body.GetLocation(), InDeltaT);
         const auto PlanarVelocity = InverseBasis.RotateVector(FVector::VectorPlaneProject(Velocity, Up));
-        const auto YawDelta = InGaitComp._Initialized
-            ? FMath::Atan2(FVector::DotProduct(FVector::CrossProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()), Up),
-                FVector::DotProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()))
-            : 0.0;
+        const auto YawDelta = FMath::Atan2(FVector::DotProduct(FVector::CrossProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()), Up),
+            FVector::DotProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()));
         const auto YawRate = Dt > 0.0 ? FMath::Abs(YawDelta) / Dt : 0.0;
         const auto Lead = (Velocity * Timing.Get_StepDuration().Get_Seconds()).GetClampedToMaxSize(Step.Get_MaxVelocityLead());
 
-        if (InGaitComp._Initialized)
-        { InGaitComp._Solver.TransformState(InverseBasis * InGaitComp._Basis); }
+        InGaitComp._Solver.TransformState(InverseBasis * InGaitComp._Basis);
 
         const auto LegCount = InGaitComp._Legs.Num();
-        auto InitialFeet = TArray<FVector, TInlineAllocator<8>>{};
-        if (NOT InGaitComp._Initialized)
-        { InitialFeet.Reserve(LegCount); }
 
         auto Inputs = TArray<FProceduralGaitLegInput, TInlineAllocator<8>>{};
         Inputs.SetNum(LegCount);
@@ -178,8 +279,6 @@ namespace ck
             if (NOT LegValid)
             {
                 EnabledMask &= ~ck_procedural_gait::Get_LegBit(Index);
-                if (NOT InGaitComp._Initialized)
-                { InitialFeet.Add(InverseBasis.RotateVector(Body.GetLocation())); }
                 continue;
             }
 
@@ -195,27 +294,24 @@ namespace ck
             if (NOT Enabled)
             {
                 EnabledMask &= ~ck_procedural_gait::Get_LegBit(Index);
-                if (NOT InGaitComp._Initialized)
-                { InitialFeet.Add(InverseBasis.RotateVector(Neutral)); }
 
                 if (WasEnabled)
                 {
-                    const auto FootPosition = InGaitComp._Initialized ? LegComp._Foot.Get_Position() : Neutral;
-                    const auto FootRotation = InGaitComp._Initialized ? LegComp._Foot.Get_Rotation() : Basis;
-                    LegComp._FrozenFootLocal = Body.InverseTransformPosition(FootPosition);
-                    LegComp._FrozenRotationLocal = InverseBasis * FootRotation;
-                    LegComp._Frozen = true;
+                    Leg.AddOrGet<FFragment_ProceduralLeg_FrozenPose>()
+                        .Set_FootLocal(Body.InverseTransformPosition(LegComp._Foot.Get_Position()))
+                        .Set_RotationLocal((InverseBasis * LegComp._Foot.Get_Rotation()).GetNormalized());
                 }
 
-                LegComp._Foot.Set_Position(Body.TransformPosition(LegComp._FrozenFootLocal))
-                    .Set_Rotation((Basis * LegComp._FrozenRotationLocal).GetNormalized())
-                    .Set_Planted(true)
+                const auto& Frozen = Leg.Get<FFragment_ProceduralLeg_FrozenPose>();
+                LegComp._Foot.Set_Position(Body.TransformPosition(Frozen.Get_FootLocal()))
+                    .Set_Rotation((Basis * Frozen.Get_RotationLocal()).GetNormalized())
+                    .Set_Phase(ECk_ProceduralLeg_FootPhase::Planted)
                     .Set_SwingAlpha(0.0f)
-                    .Set_ContactTrusted(false);
+                    .Set_Contact(ECk_ProceduralLeg_FootContact::Guessed);
 
                 // The frozen pose is the source of truth so a re-enabled leg swings from where it is drawn.
                 // On the transition frame the solver's own reconcile freezes this same pose.
-                const auto SolverHoldsDisabledLeg = InGaitComp._Initialized && NOT InGaitComp._Solver.IsLegEnabled(Index);
+                const auto SolverHoldsDisabledLeg = NOT InGaitComp._Solver.IsLegEnabled(Index);
                 if (SolverHoldsDisabledLeg)
                 {
                     const auto PoseSynced = InGaitComp._Solver.SetDisabledPose(Index,
@@ -227,8 +323,7 @@ namespace ck
                         TEXT("Procedural gait [{}] could not sync the frozen pose of disabled leg [{}]; feature is failed."),
                         InHandle, Index)
                     {
-                        InGaitComp._Ready = false;
-                        InGaitComp._Failed = true;
+                        InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::DisabledPoseSync);
                         return;
                     }
                 }
@@ -236,7 +331,7 @@ namespace ck
             }
 
             if (NOT WasEnabled)
-            { LegComp._Frozen = false; }
+            { Leg.Try_Remove<FFragment_ProceduralLeg_FrozenPose>(); }
 
             ++EnabledCount;
             const auto Ideal = Neutral + Lead;
@@ -244,34 +339,14 @@ namespace ck
             MeanFootRadius += FVector::VectorPlaneProject(Placement.Get_RestFootLocal(), FVector::UpVector).Size();
             const auto Radial = FVector::VectorPlaneProject(Ideal - Body.GetLocation(), Up).GetSafeNormal();
 
-            auto Hit = FCk_Jolt_HitResult{};
-            for (auto Attempt = 0; Attempt < ProceduralGroundProbeAttempts; ++Attempt)
-            {
-                const auto Span = MakeProceduralGroundProbeSpan(Attempt, Probe.Get_Up(), Probe.Get_Down(), Probe.Get_OutwardLean());
-                const auto Axis = FProceduralGaitSolver::ComputeTraceAxis(Up, Radial, Span.Get_OutwardLean());
-                const auto ProbeStart = Ideal + Axis * Span.Get_UpDistance();
-                const auto ProbeEnd = Ideal - Axis * Span.Get_DownDistance();
-                Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, ProbeStart, ProbeEnd, Probe.Get_QueryFilter());
-                DebugLeg.Get_Probe().Set_Start(ProbeStart)
-                    .Set_End(ProbeEnd)
-                    .Set_AttemptCount(Attempt + 1)
-                    .Set_Hit(Hit.Get_HasHit())
-                    .Set_HitFraction(Hit.Get_Fraction())
-                    .Set_HitPosition(Hit.Get_Position())
-                    .Set_HitNormal(Hit.Get_Normal());
-
-                if (ck_procedural_gait::Get_TrustedHit(Hit))
-                { break; }
-            }
-
+            const auto Hit = ck_procedural_gait::Get_GroundHit(World, Ideal, Up, Radial, Probe, &DebugLeg.Get_Probe());
             const auto Trusted = ck_procedural_gait::Get_TrustedHit(Hit);
             const auto ProbeAdvanced = InGaitComp._Probes[Index].Advance(Trusted, InDeltaT, Probe.Get_ContactGrace());
             CK_ENSURE_IF_NOT(ProbeAdvanced,
                 TEXT("Procedural gait [{}] foot probe of leg [{}] rejected its elapsed time or contact grace; feature is failed."),
                 InHandle, Index)
             {
-                InGaitComp._Ready = false;
-                InGaitComp._Failed = true;
+                InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::ProbeAdvance);
                 return;
             }
 
@@ -289,9 +364,7 @@ namespace ck
                 .Set_TargetValid(TargetValid)
                 .Set_ClearanceGroundZ(-FLT_MAX);
 
-            if (NOT InGaitComp._Initialized)
-            { InitialFeet.Add(Input.Get_IdealTarget()); }
-            else if (NOT LegComp._Foot.Get_Planted())
+            if (LegComp._Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Swinging)
             {
                 const auto Foot = LegComp._Foot.Get_Position();
                 const auto ClearanceHit = UCk_Utils_JoltQuery_UE::Get_RayCast(World,
@@ -301,26 +374,12 @@ namespace ck
                 { Input.Set_ClearanceGroundZ(InverseBasis.RotateVector(ClearanceHit.Get_Position()).Z); }
             }
 
-            LegComp._Foot.Set_ContactTrusted(Trusted);
+            LegComp._Foot.Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed);
             DebugLeg.Get_Targeting().Set_IdealTarget(Position)
                 .Set_TargetValid(TargetValid);
             DebugLeg.Get_Foot().Set_ContactTrusted(Trusted);
             DebugLeg.Get_Probe().Set_State(ProbeState)
                 .Set_MissingContact(InGaitComp._Probes[Index].Get_MissingDuration());
-        }
-
-        if (NOT InGaitComp._Initialized)
-        {
-            const auto SolverReset = InGaitComp._Solver.Reset(InitialFeet);
-            CK_ENSURE_IF_NOT(SolverReset,
-                TEXT("Procedural gait [{}] solver rejected the initial foot positions; feature is failed."), InHandle)
-            {
-                InGaitComp._Ready = false;
-                InGaitComp._Failed = true;
-                return;
-            }
-
-            InGaitComp._Initialized = true;
         }
 
         if (EnabledMask != InGaitComp._EnabledMask)
@@ -334,14 +393,16 @@ namespace ck
 
         auto Airborne = EnabledCount > 0 && AllLost;
         if (UCk_Utils_SurfaceMotion_UE::Has(InHandle))
-        { Airborne = NOT UCk_Utils_SurfaceMotion_UE::Get_IsGrounded(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)); }
+        {
+            Airborne = UCk_Utils_SurfaceMotion_UE::Get_Support(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle))
+                == ECk_SurfaceMotion_Support::Airborne;
+        }
 
         const auto CadenceSpeed = PlanarVelocity.Size() + YawRate * MeanFootRadius / FMath::Max(EnabledCount, 1);
         const auto Solved = InGaitComp._Solver.Step(InDeltaT, CadenceSpeed, PlanarVelocity, Inputs, Outputs, Airborne);
         CK_ENSURE_IF_NOT(Solved, TEXT("Procedural gait [{}] solver rejected runtime inputs; feature is failed, planted state retained."), InHandle)
         {
-            InGaitComp._Ready = false;
-            InGaitComp._Failed = true;
+            InHandle.Add<FFragment_ProceduralGait_Failure>(ECk_ProceduralGait_Failure::SolverStep);
             return;
         }
 
@@ -356,7 +417,7 @@ namespace ck
                 .Set_Normal(Basis.RotateVector(Output.Get_Normal()))
                 .Set_Rotation((Basis * Output.Get_Rotation()).GetNormalized())
                 .Set_SwingAlpha(Output.Get_SwingAlpha())
-                .Set_Planted(Output.Get_Planted());
+                .Set_Phase(Output.Get_Planted() ? ECk_ProceduralLeg_FootPhase::Planted : ECk_ProceduralLeg_FootPhase::Swinging);
         }
 
         if (InDeltaT > FCk_Time{})
@@ -394,21 +455,21 @@ namespace ck
                 .Set_SupportNormal(Up);
             Snapshot.Set_Legs(InDebugComp._ScratchLegs);
 
-            if (InHandle.Has<FFragment_SurfaceMotion>())
+            if (InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>())
             {
                 const auto& Motion = InHandle.Get<FFragment_SurfaceMotion>();
-                Snapshot.Get_Motion().Set_Velocity(Motion._Velocity)
+                const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>();
+                Snapshot.Get_Motion().Set_Velocity(Support._Velocity)
                     .Set_RequestedDirection(Motion._Direction)
                     .Set_RequestedSpeed(Motion._Speed)
-                    .Set_Grounded(Motion._Grounded)
-                    .Set_TrustedContact(Motion._TrustedContact)
-                    .Set_MissingContact(Motion._MissingContact);
-                Snapshot.Get_Gait().Set_SupportNormal(Motion._SupportNormal);
+                    .Set_Grounded(Support._Support == ECk_SurfaceMotion_Support::Grounded)
+                    .Set_TrustedContact(Support._ContactQuery == ECk_SurfaceMotion_ContactQuery::Trusted)
+                    .Set_MissingContact(Support._MissingContact);
+                Snapshot.Get_Gait().Set_SupportNormal(Support._SupportNormal);
             }
         }
 
         InGaitComp._Basis = Basis;
-        InGaitComp._Ready = true;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

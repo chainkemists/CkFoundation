@@ -85,11 +85,9 @@ auto
         InLeg)
     { return {}; }
 
-    auto RigComp = ck::FFragment_ProceduralRig{};
-    RigComp._Joints.SetNum(InParams.Get_Segments().Num() + 1);
-
     InLeg.Add<ck::FFragment_ProceduralRig_Params>(InParams);
-    InLeg.Add<ck::FFragment_ProceduralRig>(MoveTemp(RigComp));
+    InLeg.Add<ck::FFragment_ProceduralRig>();
+    InLeg.Add<ck::FTag_ProceduralRig_NeedsSetup>();
 
     return CastChecked(InLeg);
 }
@@ -98,11 +96,17 @@ auto
 
 auto
     UCk_Utils_ProceduralRig_UE::
-    Get_IsReady(
+    Get_Status(
         const FCk_Handle_ProceduralRig& InRig)
-    -> bool
+    -> ECk_ProceduralAnimation_Status
 {
-    return ck::IsValid(InRig) && Has(InRig) && InRig.Get<ck::FFragment_ProceduralRig>()._Ready;
+    if (ck::Is_NOT_Valid(InRig) || NOT Has(InRig) || InRig.Has<ck::FFragment_ProceduralRig_Failure>())
+    { return ECk_ProceduralAnimation_Status::Failed; }
+
+    if (InRig.Has<ck::FTag_ProceduralRig_NeedsSetup>())
+    { return ECk_ProceduralAnimation_Status::PendingSetup; }
+
+    return ECk_ProceduralAnimation_Status::Ready;
 }
 
 auto
@@ -111,9 +115,9 @@ auto
         const FCk_Handle_ProceduralRig& InRig)
     -> ECk_ProceduralRig_Failure
 {
-    return ck::IsValid(InRig) && Has(InRig)
-        ? InRig.Get<ck::FFragment_ProceduralRig>()._Failure
-        : ECk_ProceduralRig_Failure::MissingPart;
+    return ck::IsValid(InRig) && Has(InRig) && InRig.Has<ck::FFragment_ProceduralRig_Failure>()
+        ? InRig.Get<ck::FFragment_ProceduralRig_Failure>().Get_Reason()
+        : ECk_ProceduralRig_Failure::None;
 }
 
 auto

@@ -23,6 +23,35 @@ CK_DEFINE_CUSTOM_ISVALID_AND_FORMATTER_HANDLE_TYPESAFE(FCk_Handle_SurfaceMotion)
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_Support : uint8
+{
+    Grounded,
+    Airborne
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_Support);
+
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_ContactQuery : uint8
+{
+    Trusted,
+    Missed
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactQuery);
+
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_Failure : uint8
+{
+    None,
+    NanBody
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_Failure);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_SurfaceMotion_Contact
 {

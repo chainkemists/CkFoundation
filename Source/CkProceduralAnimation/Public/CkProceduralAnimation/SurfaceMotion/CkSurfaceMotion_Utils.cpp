@@ -37,14 +37,10 @@ auto
         InBody)
     { return {}; }
 
-    const auto Body = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InBody);
-    auto MotionComp = ck::FFragment_SurfaceMotion{};
-    MotionComp._SupportNormal = Body.GetRotation().GetAxisZ();
-    MotionComp._TravelTangent = Body.GetRotation().GetAxisX();
-    MotionComp._Direction = MotionComp._TravelTangent;
-
     InBody.Add<ck::FFragment_SurfaceMotion_Params>(InParams);
-    InBody.Add<ck::FFragment_SurfaceMotion>(MoveTemp(MotionComp));
+    InBody.Add<ck::FFragment_SurfaceMotion>();
+    InBody.Add<ck::FFragment_SurfaceMotion_Support>();
+    InBody.Add<ck::FTag_SurfaceMotion_NeedsSetup>();
 
     return CastChecked(InBody);
 }
@@ -53,20 +49,39 @@ auto
 
 auto
     UCk_Utils_SurfaceMotion_UE::
-    Get_IsReady(
+    Get_Status(
         const FCk_Handle_SurfaceMotion& InHandle)
-    -> bool
+    -> ECk_ProceduralAnimation_Status
 {
-    return ck::IsValid(InHandle) && Has(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._Ready;
+    if (ck::Is_NOT_Valid(InHandle) || NOT Has(InHandle) || InHandle.Has<ck::FFragment_SurfaceMotion_Failure>())
+    { return ECk_ProceduralAnimation_Status::Failed; }
+
+    if (InHandle.Has<ck::FTag_SurfaceMotion_NeedsSetup>())
+    { return ECk_ProceduralAnimation_Status::PendingSetup; }
+
+    return ECk_ProceduralAnimation_Status::Ready;
 }
 
 auto
     UCk_Utils_SurfaceMotion_UE::
-    Get_IsGrounded(
+    Get_Failure(
         const FCk_Handle_SurfaceMotion& InHandle)
-    -> bool
+    -> ECk_SurfaceMotion_Failure
 {
-    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._Grounded;
+    return ck::IsValid(InHandle) && Has(InHandle) && InHandle.Has<ck::FFragment_SurfaceMotion_Failure>()
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Failure>().Get_Reason()
+        : ECk_SurfaceMotion_Failure::None;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_Support(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_Support
+{
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._Support
+        : ECk_SurfaceMotion_Support::Airborne;
 }
 
 auto
@@ -75,16 +90,20 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> FVector
 {
-    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion>()._SupportNormal : FVector::UpVector;
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._SupportNormal
+        : FVector::UpVector;
 }
 
 auto
     UCk_Utils_SurfaceMotion_UE::
-    Get_HasTrustedContact(
+    Get_ContactQuery(
         const FCk_Handle_SurfaceMotion& InHandle)
-    -> bool
+    -> ECk_SurfaceMotion_ContactQuery
 {
-    return Get_IsReady(InHandle) && InHandle.Get<ck::FFragment_SurfaceMotion>()._TrustedContact;
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._ContactQuery
+        : ECk_SurfaceMotion_ContactQuery::Missed;
 }
 
 auto
@@ -93,7 +112,9 @@ auto
         const FCk_Handle_SurfaceMotion& InHandle)
     -> FVector
 {
-    return Get_IsReady(InHandle) ? InHandle.Get<ck::FFragment_SurfaceMotion>()._Velocity : FVector::ZeroVector;
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._Velocity
+        : FVector::ZeroVector;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

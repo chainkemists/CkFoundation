@@ -106,11 +106,11 @@ auto
 
 auto
     UCk_Utils_ProceduralLeg_UE::
-    Get_IsEnabled(
+    Get_EnableDisable(
         const FCk_Handle_ProceduralLeg& InLeg)
-    -> bool
+    -> ECk_EnableDisable
 {
-    return NOT InLeg.Has<ck::FTag_ProceduralLeg_Disabled>();
+    return InLeg.Has<ck::FTag_ProceduralLeg_Disabled>() ? ECk_EnableDisable::Disable : ECk_EnableDisable::Enable;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

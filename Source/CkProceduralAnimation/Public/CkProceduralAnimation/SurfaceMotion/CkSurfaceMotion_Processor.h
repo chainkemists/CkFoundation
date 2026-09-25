@@ -12,17 +12,49 @@
 
 namespace ck
 {
+    class CKPROCEDURALANIMATION_API FProcessor_SurfaceMotion_Setup : public ck_exp::TProcessor<
+        FProcessor_SurfaceMotion_Setup,
+        FCk_Handle_SurfaceMotion,
+        TReadWrite<FFragment_SurfaceMotion>,
+        TReadWrite<FFragment_SurfaceMotion_Support>,
+        TReadOnly<FFragment_Transform>,
+        FTag_SurfaceMotion_NeedsSetup,
+        TExclude<FTag_DestroyEntity_Initiate>,
+        CK_IGNORE_PENDING_KILL>
+    {
+    public:
+        using Group = FGroup_Physics;
+        using MarkedDirtyBy = FTag_SurfaceMotion_NeedsSetup;
+
+    public:
+        using TProcessor::TProcessor;
+
+    public:
+        static auto
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Support& InSupportComp,
+            const FFragment_Transform& InTransform)
+            -> void;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPROCEDURALANIMATION_API FProcessor_SurfaceMotion_HandleRequests : public ck_exp::TProcessor<
         FProcessor_SurfaceMotion_HandleRequests,
         FCk_Handle_SurfaceMotion,
         TReadOnly<FFragment_SurfaceMotion_Params>,
         TReadWrite<FFragment_SurfaceMotion>,
         TReadWrite<FFragment_SurfaceMotion_Requests>,
+        TExclude<FTag_SurfaceMotion_NeedsSetup>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
     public:
         using Group = FGroup_Physics;
+        using RunAfter = TDepList<FProcessor_SurfaceMotion_Setup>;
         using MarkedDirtyBy = FFragment_SurfaceMotion_Requests;
 
     public:
@@ -47,8 +79,11 @@ namespace ck
         FProcessor_SurfaceMotion_Update,
         FCk_Handle_SurfaceMotion,
         TReadOnly<FFragment_SurfaceMotion_Params>,
-        TReadWrite<FFragment_SurfaceMotion>,
+        TReadOnly<FFragment_SurfaceMotion>,
+        TReadWrite<FFragment_SurfaceMotion_Support>,
         TReadOnly<FFragment_Transform>,
+        TExclude<FTag_SurfaceMotion_NeedsSetup>,
+        TExclude<FFragment_SurfaceMotion_Failure>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -65,7 +100,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion& InMotionComp,
+            const FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Support& InSupportComp,
             const FFragment_Transform& InTransform)
             -> void;
     };
