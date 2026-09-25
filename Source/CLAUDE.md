@@ -61,6 +61,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS camera shake | `CkCamera` |
 | proximity voice chat (talkers / channel entities / local ears) | `CkVoiceChat` (campaign in progress — see its Claude.md) |
 | ECS animation assets | `CkAnimation` |
+| procedural foot planting, N-leg gait, surface motion and rigid two-bone rigs | `CkProceduralAnimation` (independent features; Jolt contact queries) |
 | ECS state machine (data-asset conditions) | `CkStateMachine` |
 | ECS inventory + 2D grid | `CkInventory` + `CkGrid` |
 | ECS physics acceleration/forces | `CkPhysics` |
@@ -185,6 +186,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings (channel entities stamp `FFragment_SaveKey`, which lives in CkEcs — no Snapshot dep) |
 | CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record,ResourceLoader |
+| CkProceduralAnimation | Core,Ecs,EcsExt,Jolt,Log (pure gait core plus independent surface motion and rigid presentation) |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
