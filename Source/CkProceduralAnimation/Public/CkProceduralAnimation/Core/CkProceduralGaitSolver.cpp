@@ -120,23 +120,23 @@ namespace ck
         for (const auto& Position : InInitialFootPositions)
         {
             auto& State = _LegStates.AddDefaulted_GetRef();
-            State._PlantedPosition = Position;
-            State._AirPosition = Position;
-            State._CurrentPosition = Position;
-            State._CurrentRotation = State._PlantedRotation;
+            State._Plant._Position = Position;
+            State._Emitted._AirPosition = Position;
+            State._Emitted._Position = Position;
+            State._Emitted._Rotation = State._Plant._Rotation;
         }
         _GaitClock = 0.0f;
         _LastCadenceScale = 1.0f;
         _RestTime = FCk_Time{};
         _WasAirborne = false;
-        _CurrentPatternIndex = INDEX_NONE;
-        _PatternBlendAlpha = 1.0f;
-        _EffectiveCycleScale = 1.0f;
-        _BlendFromCycleScale = 1.0f;
-        _EffectivePhaseOffsets.Reset();
-        _BlendFromOffsets.Reset();
-        _RedistributedOffsets.Reset();
-        _HasRedistributedOffsets = false;
+        _PatternBlend._CurrentIndex = INDEX_NONE;
+        _PatternBlend._Alpha = 1.0f;
+        _PatternBlend._EffectiveCycleScale = 1.0f;
+        _PatternBlend._FromCycleScale = 1.0f;
+        _PatternBlend._EffectiveOffsets.Reset();
+        _PatternBlend._FromOffsets.Reset();
+        _PatternBlend._RedistributedOffsets.Reset();
+        _PatternBlend._HasRedistributedOffsets = false;
         return true;
     }
 
@@ -222,18 +222,18 @@ namespace ck
     {
         if (InPosition.ContainsNaN() || InNormal.ContainsNaN() || NOT InNormal.IsNormalized())
         { return; }
-        if (IsLegEnabled(InLegIndex) && NOT _LegStates[InLegIndex]._Swinging)
+        if (IsLegEnabled(InLegIndex) && NOT _LegStates[InLegIndex]._Swing._Active)
         {
             auto& State = _LegStates[InLegIndex];
 
             const auto NormalDelta = FQuat::FindBetweenNormals(
-                State._PlantedNormal.GetSafeNormal(KINDA_SMALL_NUMBER, FVector::UpVector),
+                State._Plant._Normal.GetSafeNormal(KINDA_SMALL_NUMBER, FVector::UpVector),
                 InNormal.GetSafeNormal(KINDA_SMALL_NUMBER, FVector::UpVector));
-            State._PlantedRotation = NormalDelta * State._PlantedRotation;
-            State._PlantedPosition = InPosition;
-            State._PlantedNormal = InNormal;
-            State._CurrentPosition = State._PlantedPosition;
-            State._CurrentRotation = State._PlantedRotation;
+            State._Plant._Rotation = NormalDelta * State._Plant._Rotation;
+            State._Plant._Position = InPosition;
+            State._Plant._Normal = InNormal;
+            State._Emitted._Position = State._Plant._Position;
+            State._Emitted._Rotation = State._Plant._Rotation;
         }
     }
 
@@ -257,12 +257,12 @@ namespace ck
         { return false; }
 
         auto& State = _LegStates[InLegIndex];
-        State._CurrentPosition = InPosition;
-        State._CurrentRotation = InRotation;
-        State._PlantedPosition = InPosition;
-        State._PlantedRotation = InRotation;
-        State._PlantedNormal = InNormal;
-        State._AirPosition = InPosition;
+        State._Emitted._Position = InPosition;
+        State._Emitted._Rotation = InRotation;
+        State._Plant._Position = InPosition;
+        State._Plant._Rotation = InRotation;
+        State._Plant._Normal = InNormal;
+        State._Emitted._AirPosition = InPosition;
         return true;
     }
 
@@ -281,11 +281,11 @@ namespace ck
         }
 
         auto& State = _LegStates[InLegIndex];
-        State._PendingStepTarget = InTarget;
+        State._PendingStep._Target = InTarget;
 
-        State._PendingStepTime = _Settings._CatchStepLifetime > FCk_Time{}
-            ? _Settings._CatchStepLifetime
-            : FMath::Max(_Settings._CycleDuration, FCk_Time{KINDA_SMALL_NUMBER});
+        State._PendingStep._Time = _Settings._Schedule._CatchStepLifetime > FCk_Time{}
+            ? _Settings._Schedule._CatchStepLifetime
+            : FMath::Max(_Settings._Cadence._CycleDuration, FCk_Time{KINDA_SMALL_NUMBER});
         return true;
     }
 
@@ -301,16 +301,16 @@ namespace ck
         { return; }
         for (auto& State : _LegStates)
         {
-            State._PendingStepTarget = InDelta.RotateVector(State._PendingStepTarget);
-            State._PlantedPosition = InDelta.RotateVector(State._PlantedPosition);
-            State._PlantedNormal = InDelta.RotateVector(State._PlantedNormal);
-            State._SwingStartPosition = InDelta.RotateVector(State._SwingStartPosition);
-            State._SwingTarget = InDelta.RotateVector(State._SwingTarget);
-            State._AirPosition = InDelta.RotateVector(State._AirPosition);
-            State._CurrentPosition = InDelta.RotateVector(State._CurrentPosition);
-            State._CurrentRotation = InDelta * State._CurrentRotation;
-            State._PlantedRotation = InDelta * State._PlantedRotation;
-            State._SwingStartRotation = InDelta * State._SwingStartRotation;
+            State._PendingStep._Target = InDelta.RotateVector(State._PendingStep._Target);
+            State._Plant._Position = InDelta.RotateVector(State._Plant._Position);
+            State._Plant._Normal = InDelta.RotateVector(State._Plant._Normal);
+            State._Swing._StartPosition = InDelta.RotateVector(State._Swing._StartPosition);
+            State._Swing._Target = InDelta.RotateVector(State._Swing._Target);
+            State._Emitted._AirPosition = InDelta.RotateVector(State._Emitted._AirPosition);
+            State._Emitted._Position = InDelta.RotateVector(State._Emitted._Position);
+            State._Emitted._Rotation = InDelta * State._Emitted._Rotation;
+            State._Plant._Rotation = InDelta * State._Plant._Rotation;
+            State._Swing._StartRotation = InDelta * State._Swing._StartRotation;
         }
     }
 
@@ -323,7 +323,7 @@ namespace ck
         -> bool
     {
         const auto Local = FMath::Frac(_GaitClock - InPhaseOffset + 1.0f);
-        return Local < _Settings._SwingWindow;
+        return Local < _Settings._Cadence._SwingWindow;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -338,50 +338,50 @@ namespace ck
         -> void
     {
         const auto NumInputs = InInputs.Num();
-        _EffectivePhaseOffsets.SetNum(NumInputs);
+        _PatternBlend._EffectiveOffsets.SetNum(NumInputs);
 
-        const auto HasPatterns = _Settings._Patterns.Num() > 0;
-        if (NOT HasPatterns && NOT _HasRedistributedOffsets && _PatternBlendAlpha >= 1.0f)
+        const auto HasPatterns = _Settings._Pattern._Patterns.Num() > 0;
+        if (NOT HasPatterns && NOT _PatternBlend._HasRedistributedOffsets && _PatternBlend._Alpha >= 1.0f)
         {
             for (auto LegIndex = 0; LegIndex < NumInputs; ++LegIndex)
             {
-                _EffectivePhaseOffsets[LegIndex] = InInputs[LegIndex]._PhaseOffset;
+                _PatternBlend._EffectiveOffsets[LegIndex] = InInputs[LegIndex]._PhaseOffset;
             }
-            _CurrentPatternIndex = INDEX_NONE;
-            _PatternBlendAlpha = 1.0f;
-            _EffectiveCycleScale = 1.0f;
+            _PatternBlend._CurrentIndex = INDEX_NONE;
+            _PatternBlend._Alpha = 1.0f;
+            _PatternBlend._EffectiveCycleScale = 1.0f;
             return;
         }
 
         if (HasPatterns)
         { DoSelectPattern(InBodyPlanarSpeed, InAdvance); }
         else
-        { _CurrentPatternIndex = INDEX_NONE; }
+        { _PatternBlend._CurrentIndex = INDEX_NONE; }
 
         if (InAdvance)
         {
-            _PatternBlendAlpha = FMath::Min(1.0f,
-                _PatternBlendAlpha + static_cast<float>(InDeltaTime / FMath::Max(_Settings._PatternBlendTime, FCk_Time{KINDA_SMALL_NUMBER})));
+            _PatternBlend._Alpha = FMath::Min(1.0f,
+                _PatternBlend._Alpha + static_cast<float>(InDeltaTime / FMath::Max(_Settings._Pattern._BlendTime, FCk_Time{KINDA_SMALL_NUMBER})));
         }
 
-        const auto Pattern = HasPatterns ? &_Settings._Patterns[_CurrentPatternIndex] : nullptr;
-        const auto Alpha = FMath::SmoothStep(0.0f, 1.0f, _PatternBlendAlpha);
+        const auto Pattern = HasPatterns ? &_Settings._Pattern._Patterns[_PatternBlend._CurrentIndex] : nullptr;
+        const auto Alpha = FMath::SmoothStep(0.0f, 1.0f, _PatternBlend._Alpha);
         for (auto LegIndex = 0; LegIndex < NumInputs; ++LegIndex)
         {
-            if (_HasRedistributedOffsets && NOT _LegStates[LegIndex]._Enabled)
+            if (_PatternBlend._HasRedistributedOffsets && NOT _LegStates[LegIndex]._Enabled)
             { continue; }
 
             const auto AuthoredOffset = HasPatterns && Pattern->_PhaseOffsets.IsValidIndex(LegIndex)
                 ? Pattern->_PhaseOffsets[LegIndex]
                 : InInputs[LegIndex]._PhaseOffset;
-            const auto Target = _HasRedistributedOffsets ? _RedistributedOffsets[LegIndex] : AuthoredOffset;
-            const auto From = _BlendFromOffsets.IsValidIndex(LegIndex) ? _BlendFromOffsets[LegIndex] : Target;
+            const auto Target = _PatternBlend._HasRedistributedOffsets ? _PatternBlend._RedistributedOffsets[LegIndex] : AuthoredOffset;
+            const auto From = _PatternBlend._FromOffsets.IsValidIndex(LegIndex) ? _PatternBlend._FromOffsets[LegIndex] : Target;
 
             const auto Delta = FMath::Frac(Target - From + 1.5f) - 0.5f;
-            _EffectivePhaseOffsets[LegIndex] = FMath::Frac(From + Delta * Alpha + 1.0f);
+            _PatternBlend._EffectiveOffsets[LegIndex] = FMath::Frac(From + Delta * Alpha + 1.0f);
         }
-        _EffectiveCycleScale = HasPatterns
-            ? FMath::Lerp(_BlendFromCycleScale, Pattern->_CycleDurationScale, Alpha)
+        _PatternBlend._EffectiveCycleScale = HasPatterns
+            ? FMath::Lerp(_PatternBlend._FromCycleScale, Pattern->_CycleDurationScale, Alpha)
             : 1.0f;
     }
 
@@ -398,9 +398,9 @@ namespace ck
         auto DesiredMinSpeed = -FLT_MAX;
         auto Slowest = 0;
         auto SlowestMinSpeed = FLT_MAX;
-        for (auto PatternIndex = 0; PatternIndex < _Settings._Patterns.Num(); ++PatternIndex)
+        for (auto PatternIndex = 0; PatternIndex < _Settings._Pattern._Patterns.Num(); ++PatternIndex)
         {
-            const auto MinSpeed = _Settings._Patterns[PatternIndex]._MinSpeed;
+            const auto MinSpeed = _Settings._Pattern._Patterns[PatternIndex]._MinSpeed;
             if (MinSpeed < SlowestMinSpeed)
             {
                 SlowestMinSpeed = MinSpeed;
@@ -417,26 +417,26 @@ namespace ck
             Desired = Slowest;
         }
 
-        if (NOT _Settings._Patterns.IsValidIndex(_CurrentPatternIndex))
+        if (NOT _Settings._Pattern._Patterns.IsValidIndex(_PatternBlend._CurrentIndex))
         {
-            _CurrentPatternIndex = Desired;
-            _PatternBlendAlpha = 1.0f;
-            _BlendFromOffsets.Reset();
-            _BlendFromCycleScale = _Settings._Patterns[Desired]._CycleDurationScale;
+            _PatternBlend._CurrentIndex = Desired;
+            _PatternBlend._Alpha = 1.0f;
+            _PatternBlend._FromOffsets.Reset();
+            _PatternBlend._FromCycleScale = _Settings._Pattern._Patterns[Desired]._CycleDurationScale;
         }
-        else if (Desired != _CurrentPatternIndex && InAdvance)
+        else if (Desired != _PatternBlend._CurrentIndex && InAdvance)
         {
             const auto Downward =
-                _Settings._Patterns[Desired]._MinSpeed < _Settings._Patterns[_CurrentPatternIndex]._MinSpeed;
+                _Settings._Pattern._Patterns[Desired]._MinSpeed < _Settings._Pattern._Patterns[_PatternBlend._CurrentIndex]._MinSpeed;
             const auto Allowed = NOT Downward
-                || InBodyPlanarSpeed < _Settings._Patterns[_CurrentPatternIndex]._MinSpeed
-                    * FMath::Clamp(_Settings._PatternSwitchHysteresis, 0.0f, 1.0f);
+                || InBodyPlanarSpeed < _Settings._Pattern._Patterns[_PatternBlend._CurrentIndex]._MinSpeed
+                    * FMath::Clamp(_Settings._Pattern._SwitchHysteresis, 0.0f, 1.0f);
             if (Allowed)
             {
-                _BlendFromOffsets = _EffectivePhaseOffsets;
-                _BlendFromCycleScale = _EffectiveCycleScale;
-                _PatternBlendAlpha = 0.0f;
-                _CurrentPatternIndex = Desired;
+                _PatternBlend._FromOffsets = _PatternBlend._EffectiveOffsets;
+                _PatternBlend._FromCycleScale = _PatternBlend._EffectiveCycleScale;
+                _PatternBlend._Alpha = 0.0f;
+                _PatternBlend._CurrentIndex = Desired;
             }
         }
     }
@@ -451,29 +451,29 @@ namespace ck
     {
         const float ScalarValues[] =
         {
-            InSettings._StepThreshold,
-            InSettings._EmergencyStepFactor,
-            InSettings._StepHeight,
-            InSettings._SwingWindow,
-            InSettings._MoveSpeedThreshold,
-            InSettings._CadenceSpeedRef,
-            InSettings._MaxCadenceScale,
-            InSettings._RetargetSmoothing,
-            InSettings._RetargetFreezePhase,
-            InSettings._SwingApexPhase,
-            InSettings._SwingApexSharpness,
-            InSettings._SprintApexHeightScale,
-            InSettings._ObstacleClearance,
-            InSettings._StrokeOvershootFraction,
-            InSettings._MaxStrokeOvershoot,
-            InSettings._ScheduleAdvanceFraction,
-            InSettings._ScheduleAdvanceRate,
-            InSettings._SettleThresholdFraction,
-            InSettings._AirborneTuckLift,
-            InSettings._AirborneFollowSpeed,
-            InSettings._LandingStepDurationScale,
-            InSettings._PatternSwitchHysteresis,
-            InSettings._SwingToePitchDegrees,
+            InSettings._Step._Threshold,
+            InSettings._Step._EmergencyFactor,
+            InSettings._Swing._Height,
+            InSettings._Cadence._SwingWindow,
+            InSettings._Cadence._MoveSpeedThreshold,
+            InSettings._Cadence._CadenceSpeedRef,
+            InSettings._Cadence._MaxCadenceScale,
+            InSettings._Step._RetargetSmoothing,
+            InSettings._Step._RetargetFreezePhase,
+            InSettings._Swing._ApexPhase,
+            InSettings._Swing._ApexSharpness,
+            InSettings._Swing._SprintApexHeightScale,
+            InSettings._Swing._ObstacleClearance,
+            InSettings._Step._StrokeOvershootFraction,
+            InSettings._Step._MaxStrokeOvershoot,
+            InSettings._Schedule._AdvanceFraction,
+            InSettings._Schedule._AdvanceRate,
+            InSettings._Settle._ThresholdFraction,
+            InSettings._Airborne._TuckLift,
+            InSettings._Airborne._FollowSpeed,
+            InSettings._Airborne._LandingStepDurationScale,
+            InSettings._Pattern._SwitchHysteresis,
+            InSettings._Swing._ToePitchDegrees,
         };
         for (const auto Value : ScalarValues)
         {
@@ -482,11 +482,11 @@ namespace ck
         }
         const FCk_Time Durations[] =
         {
-            InSettings._StepDuration,
-            InSettings._CycleDuration,
-            InSettings._CatchStepLifetime,
-            InSettings._SettleDelay,
-            InSettings._PatternBlendTime,
+            InSettings._Step._Duration,
+            InSettings._Cadence._CycleDuration,
+            InSettings._Schedule._CatchStepLifetime,
+            InSettings._Settle._Delay,
+            InSettings._Pattern._BlendTime,
         };
         for (const auto Duration : Durations)
         {
@@ -495,21 +495,21 @@ namespace ck
         }
         const auto UnitInterval = [](float InValue) -> bool { return InValue >= 0.0f && InValue <= 1.0f; };
         const auto PositiveUnitInterval = [](float InValue) -> bool { return InValue > 0.0f && InValue <= 1.0f; };
-        if (InSettings._StepThreshold <= 0.0f || InSettings._StepDuration <= FCk_Time{}
-            || InSettings._CycleDuration <= FCk_Time{} || InSettings._StepHeight < 0.0f
-            || InSettings._EmergencyStepFactor < 1.0f || NOT PositiveUnitInterval(InSettings._SwingWindow)
-            || InSettings._MoveSpeedThreshold < 0.0f || InSettings._CadenceSpeedRef < 0.0f
-            || InSettings._MaxCadenceScale < 1.0f || InSettings._RetargetSmoothing < 0.0f
-            || NOT UnitInterval(InSettings._RetargetFreezePhase) || InSettings._MaxSimultaneousSwings < 0
-            || NOT UnitInterval(InSettings._SwingApexPhase) || InSettings._SwingApexSharpness <= 0.0f
-            || InSettings._SprintApexHeightScale < 0.0f || InSettings._ObstacleClearance < 0.0f
-            || InSettings._StrokeOvershootFraction < 0.0f || InSettings._MaxStrokeOvershoot < 0.0f
-            || NOT UnitInterval(InSettings._ScheduleAdvanceFraction) || InSettings._ScheduleAdvanceRate < 0.0f
-            || NOT PositiveUnitInterval(InSettings._SettleThresholdFraction) || InSettings._AirborneTuckLift < 0.0f
-            || InSettings._AirborneFollowSpeed < 0.0f || NOT PositiveUnitInterval(InSettings._LandingStepDurationScale)
-            || NOT PositiveUnitInterval(InSettings._PatternSwitchHysteresis))
+        if (InSettings._Step._Threshold <= 0.0f || InSettings._Step._Duration <= FCk_Time{}
+            || InSettings._Cadence._CycleDuration <= FCk_Time{} || InSettings._Swing._Height < 0.0f
+            || InSettings._Step._EmergencyFactor < 1.0f || NOT PositiveUnitInterval(InSettings._Cadence._SwingWindow)
+            || InSettings._Cadence._MoveSpeedThreshold < 0.0f || InSettings._Cadence._CadenceSpeedRef < 0.0f
+            || InSettings._Cadence._MaxCadenceScale < 1.0f || InSettings._Step._RetargetSmoothing < 0.0f
+            || NOT UnitInterval(InSettings._Step._RetargetFreezePhase) || InSettings._Cadence._MaxSimultaneousSwings < 0
+            || NOT UnitInterval(InSettings._Swing._ApexPhase) || InSettings._Swing._ApexSharpness <= 0.0f
+            || InSettings._Swing._SprintApexHeightScale < 0.0f || InSettings._Swing._ObstacleClearance < 0.0f
+            || InSettings._Step._StrokeOvershootFraction < 0.0f || InSettings._Step._MaxStrokeOvershoot < 0.0f
+            || NOT UnitInterval(InSettings._Schedule._AdvanceFraction) || InSettings._Schedule._AdvanceRate < 0.0f
+            || NOT PositiveUnitInterval(InSettings._Settle._ThresholdFraction) || InSettings._Airborne._TuckLift < 0.0f
+            || InSettings._Airborne._FollowSpeed < 0.0f || NOT PositiveUnitInterval(InSettings._Airborne._LandingStepDurationScale)
+            || NOT PositiveUnitInterval(InSettings._Pattern._SwitchHysteresis))
         { return false; }
-        for (const auto& Pattern : InSettings._Patterns)
+        for (const auto& Pattern : InSettings._Pattern._Patterns)
         {
             if (NOT FMath::IsFinite(Pattern._MinSpeed) || Pattern._MinSpeed < 0.0f
                 || NOT FMath::IsFinite(Pattern._CycleDurationScale) || Pattern._CycleDurationScale <= 0.0f)
@@ -562,8 +562,8 @@ namespace ck
         {
             for (auto LegIndex = 0; LegIndex < OutOutputs.Num(); ++LegIndex)
             {
-                _LegStates[LegIndex]._CurrentPosition = OutOutputs[LegIndex]._Position;
-                _LegStates[LegIndex]._CurrentRotation = OutOutputs[LegIndex]._Rotation;
+                _LegStates[LegIndex]._Emitted._Position = OutOutputs[LegIndex]._Position;
+                _LegStates[LegIndex]._Emitted._Rotation = OutOutputs[LegIndex]._Rotation;
             }
         }
         return Advanced;
@@ -591,7 +591,7 @@ namespace ck
             { EnabledSetChanged = true; }
         }
 
-        if (EnabledSetChanged && _Settings._LegLossPolicy == EProceduralGaitLegLossPolicy::RedistributeOffsets)
+        if (EnabledSetChanged && _Settings._Pattern._LegLossPolicy == EProceduralGaitLegLossPolicy::RedistributeOffsets)
         {
             if (NumEnabledLegs() == NumLegs())
             { DoClearRedistribution(); }
@@ -599,16 +599,16 @@ namespace ck
             { DoRedistributeOffsets(); }
         }
 
-        if (_Settings._LegLossPolicy == EProceduralGaitLegLossPolicy::KeepAuthoredOffsets && _HasRedistributedOffsets)
+        if (_Settings._Pattern._LegLossPolicy == EProceduralGaitLegLossPolicy::KeepAuthoredOffsets && _PatternBlend._HasRedistributedOffsets)
         { DoClearRedistribution(); }
 
         if (Advance)
         {
             for (auto& State : _LegStates)
             {
-                if (State._PendingStepTime > FCk_Time{})
+                if (State._PendingStep._Time > FCk_Time{})
                 {
-                    State._PendingStepTime = FMath::Max(State._PendingStepTime - InDeltaTime, FCk_Time{});
+                    State._PendingStep._Time = FMath::Max(State._PendingStep._Time - InDeltaTime, FCk_Time{});
                 }
             }
         }
@@ -616,26 +616,26 @@ namespace ck
         UpdatePatternSelection(InDeltaTime, InBodyPlanarSpeed, InInputs, Advance);
 
         auto CadenceScale = 1.0f;
-        if (_Settings._CadenceSpeedRef > KINDA_SMALL_NUMBER)
+        if (_Settings._Cadence._CadenceSpeedRef > KINDA_SMALL_NUMBER)
         {
-            CadenceScale = FMath::Clamp(InBodyPlanarSpeed / _Settings._CadenceSpeedRef, 1.0f, FMath::Max(_Settings._MaxCadenceScale, 1.0f));
+            CadenceScale = FMath::Clamp(InBodyPlanarSpeed / _Settings._Cadence._CadenceSpeedRef, 1.0f, FMath::Max(_Settings._Cadence._MaxCadenceScale, 1.0f));
         }
 
         if (Advance)
         { _LastCadenceScale = CadenceScale; }
 
-        const auto Moving = InBodyPlanarSpeed > _Settings._MoveSpeedThreshold;
+        const auto Moving = InBodyPlanarSpeed > _Settings._Cadence._MoveSpeedThreshold;
 
         if (Advance)
         {
             _RestTime = (NOT Moving && NOT InAirborne) ? _RestTime + InDeltaTime : FCk_Time{};
         }
-        const auto SettleActive = _Settings._SettleAtRest && _RestTime >= _Settings._SettleDelay;
+        const auto SettleActive = _Settings._Settle._AtRest && _RestTime >= _Settings._Settle._Delay;
 
         if (Advance && Moving && NOT InAirborne)
         {
             _GaitClock = FMath::Frac(_GaitClock + static_cast<float>(InDeltaTime * CadenceScale
-                / FMath::Max(_Settings._CycleDuration * _EffectiveCycleScale, FCk_Time{KINDA_SMALL_NUMBER})));
+                / FMath::Max(_Settings._Cadence._CycleDuration * _PatternBlend._EffectiveCycleScale, FCk_Time{KINDA_SMALL_NUMBER})));
         }
 
         if (Advance && InAirborne && NOT _WasAirborne)
@@ -646,14 +646,14 @@ namespace ck
                 if (NOT State._Enabled)
                 { continue; }
 
-                State._AirPosition = State._CurrentPosition;
-                State._PlantedRotation = State._CurrentRotation;
-                State._Swinging = false;
-                State._SwingPhase = 0.0f;
-                State._TargetFrozen = false;
-                State._Overshoot = false;
-                State._CatchStep = false;
-                State._SwingDurationScale = 1.0f;
+                State._Emitted._AirPosition = State._Emitted._Position;
+                State._Plant._Rotation = State._Emitted._Rotation;
+                State._Swing._Active = false;
+                State._Swing._Phase = 0.0f;
+                State._Swing._TargetFrozen = false;
+                State._Swing._Overshoot = false;
+                State._Swing._CatchStep = false;
+                State._Swing._DurationScale = 1.0f;
             }
         }
         else if (Advance && NOT InAirborne && _WasAirborne)
@@ -665,17 +665,17 @@ namespace ck
                 { continue; }
 
                 const auto& In = InInputs[LegIndex];
-                State._Swinging = true;
-                State._SwingPhase = 0.0f;
-                State._SwingStartPosition = State._AirPosition;
-                State._SwingStartRotation = State._PlantedRotation;
-                State._SwingTarget = In._TargetValid ? In._IdealTarget : State._AirPosition;
-                State._TargetFrozen = false;
+                State._Swing._Active = true;
+                State._Swing._Phase = 0.0f;
+                State._Swing._StartPosition = State._Emitted._AirPosition;
+                State._Swing._StartRotation = State._Plant._Rotation;
+                State._Swing._Target = In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition;
+                State._Swing._TargetFrozen = false;
 
-                State._Overshoot = false;
+                State._Swing._Overshoot = false;
 
-                State._CatchStep = false;
-                State._SwingDurationScale = FMath::Clamp(_Settings._LandingStepDurationScale, 0.1f, 1.0f);
+                State._Swing._CatchStep = false;
+                State._Swing._DurationScale = FMath::Clamp(_Settings._Airborne._LandingStepDurationScale, 0.1f, 1.0f);
             }
         }
         if (Advance)
@@ -697,18 +697,18 @@ namespace ck
                     continue;
                 }
 
-                const auto TuckTarget = In._IdealTarget + FVector{0.0, 0.0, _Settings._AirborneTuckLift};
+                const auto TuckTarget = In._IdealTarget + FVector{0.0, 0.0, _Settings._Airborne._TuckLift};
                 const auto TuckRotation = MakeFootRotation(In._FacingDirection, FVector::UpVector);
                 if (Advance)
                 {
-                    State._AirPosition = procedural_gait_solver::Damp(State._AirPosition, TuckTarget, FMath::Max(_Settings._AirborneFollowSpeed, KINDA_SMALL_NUMBER), InDeltaTime);
-                    State._PlantedRotation = procedural_gait_solver::Damp(State._PlantedRotation, TuckRotation,
-                        FMath::Max(_Settings._AirborneFollowSpeed, KINDA_SMALL_NUMBER), InDeltaTime);
+                    State._Emitted._AirPosition = procedural_gait_solver::Damp(State._Emitted._AirPosition, TuckTarget, FMath::Max(_Settings._Airborne._FollowSpeed, KINDA_SMALL_NUMBER), InDeltaTime);
+                    State._Plant._Rotation = procedural_gait_solver::Damp(State._Plant._Rotation, TuckRotation,
+                        FMath::Max(_Settings._Airborne._FollowSpeed, KINDA_SMALL_NUMBER), InDeltaTime);
                 }
 
-                Out._Position = State._AirPosition;
+                Out._Position = State._Emitted._AirPosition;
                 Out._Normal = FVector::UpVector;
-                Out._Rotation = State._PlantedRotation;
+                Out._Rotation = State._Plant._Rotation;
                 Out._SwingAlpha = 1.0f;
                 Out._Planted = false;
             }
@@ -719,10 +719,10 @@ namespace ck
         auto SwingingOffsets = TArray<float, TInlineAllocator<8>>{};
         for (auto LegIndex = 0; LegIndex < _LegStates.Num(); ++LegIndex)
         {
-            if (_LegStates[LegIndex]._Swinging)
+            if (_LegStates[LegIndex]._Swing._Active)
             {
                 ++NumSwinging;
-                SwingingOffsets.Add(_EffectivePhaseOffsets[LegIndex]);
+                SwingingOffsets.Add(_PatternBlend._EffectiveOffsets[LegIndex]);
             }
         }
 
@@ -738,10 +738,10 @@ namespace ck
             return false;
         };
 
-        if (Advance && _Settings._ScheduleAdvanceFraction > 0.0f && _Settings._ScheduleAdvanceRate > 0.0f)
+        if (Advance && _Settings._Schedule._AdvanceFraction > 0.0f && _Settings._Schedule._AdvanceRate > 0.0f)
         {
-            const auto AdvanceTrigger = FMath::Max(_Settings._EmergencyStepFactor, 1.0f)
-                * FMath::Clamp(_Settings._ScheduleAdvanceFraction, 0.0f, 1.0f);
+            const auto AdvanceTrigger = FMath::Max(_Settings._Step._EmergencyFactor, 1.0f)
+                * FMath::Clamp(_Settings._Schedule._AdvanceFraction, 0.0f, 1.0f);
 
             auto WorstRatio = AdvanceTrigger;
             auto WorstGap = 0.0f;
@@ -749,15 +749,15 @@ namespace ck
             {
                 const auto& In = InInputs[LegIndex];
                 const auto& State = _LegStates[LegIndex];
-                const auto Offset = _EffectivePhaseOffsets[LegIndex];
+                const auto Offset = _PatternBlend._EffectiveOffsets[LegIndex];
 
-                if (NOT State._Enabled || State._Swinging || NOT In._TargetValid || IsWindowOpen(Offset))
+                if (NOT State._Enabled || State._Swing._Active || NOT In._TargetValid || IsWindowOpen(Offset))
                 {
                     continue;
                 }
 
-                const auto Threshold = _Settings._StepThreshold * FMath::Max(In._StepThresholdScale, KINDA_SMALL_NUMBER);
-                const auto Ratio = FVector::Dist(State._PlantedPosition, In._IdealTarget) / Threshold;
+                const auto Threshold = _Settings._Step._Threshold * FMath::Max(In._StepThresholdScale, KINDA_SMALL_NUMBER);
+                const auto Ratio = FVector::Dist(State._Plant._Position, In._IdealTarget) / Threshold;
                 if (Ratio > WorstRatio)
                 {
                     WorstRatio = Ratio;
@@ -769,7 +769,7 @@ namespace ck
             if (WorstGap > 0.0f)
             {
                 _GaitClock = FMath::Frac(_GaitClock
-                    + FMath::Min(WorstGap, static_cast<float>(InDeltaTime.Get_Seconds()) * _Settings._ScheduleAdvanceRate) + 1.0f);
+                    + FMath::Min(WorstGap, static_cast<float>(InDeltaTime.Get_Seconds()) * _Settings._Schedule._AdvanceRate) + 1.0f);
             }
         }
 
@@ -778,7 +778,7 @@ namespace ck
             const auto& In = InInputs[LegIndex];
             auto& State = _LegStates[LegIndex];
             auto& Out = OutOutputs[LegIndex];
-            const auto LegPhaseOffset = _EffectivePhaseOffsets[LegIndex];
+            const auto LegPhaseOffset = _PatternBlend._EffectiveOffsets[LegIndex];
 
             if (NOT State._Enabled)
             {
@@ -786,52 +786,52 @@ namespace ck
                 continue;
             }
 
-            if (State._Swinging)
+            if (State._Swing._Active)
             {
-                const auto SwingDuration = FMath::Max(_Settings._StepDuration * State._SwingDurationScale / CadenceScale, FCk_Time{KINDA_SMALL_NUMBER});
+                const auto SwingDuration = FMath::Max(_Settings._Step._Duration * State._Swing._DurationScale / CadenceScale, FCk_Time{KINDA_SMALL_NUMBER});
                 if (Advance)
                 {
-                    State._SwingPhase = FMath::Min(State._SwingPhase + static_cast<float>(InDeltaTime / SwingDuration), 1.0f);
+                    State._Swing._Phase = FMath::Min(State._Swing._Phase + static_cast<float>(InDeltaTime / SwingDuration), 1.0f);
 
-                    if (NOT State._CatchStep && NOT State._TargetFrozen
-                        && State._SwingPhase >= _Settings._RetargetFreezePhase && In._TargetValid)
+                    if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen
+                        && State._Swing._Phase >= _Settings._Step._RetargetFreezePhase && In._TargetValid)
                     {
-                        const auto RemainingTime = SwingDuration * (1.0f - State._SwingPhase);
-                        State._SwingTarget = In._IdealTarget + InBodyPlanarVelocity * RemainingTime.Get_Seconds();
-                        State._TargetFrozen = true;
+                        const auto RemainingTime = SwingDuration * (1.0f - State._Swing._Phase);
+                        State._Swing._Target = In._IdealTarget + InBodyPlanarVelocity * RemainingTime.Get_Seconds();
+                        State._Swing._TargetFrozen = true;
                     }
-                    else if (NOT State._CatchStep && NOT State._TargetFrozen)
+                    else if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen)
                     {
-                        const auto DesiredTarget = In._TargetValid ? In._IdealTarget : State._PlantedPosition;
-                        State._SwingTarget = procedural_gait_solver::Damp(State._SwingTarget, DesiredTarget, FMath::Max(_Settings._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime);
+                        const auto DesiredTarget = In._TargetValid ? In._IdealTarget : State._Plant._Position;
+                        State._Swing._Target = procedural_gait_solver::Damp(State._Swing._Target, DesiredTarget, FMath::Max(_Settings._Step._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime);
                     }
                 }
 
-                auto Target = State._SwingTarget;
-                if (State._Overshoot && _Settings._StrokeOvershootFraction > 0.0f)
+                auto Target = State._Swing._Target;
+                if (State._Swing._Overshoot && _Settings._Step._StrokeOvershootFraction > 0.0f)
                 {
-                    const auto Stroke = State._SwingTarget - State._SwingStartPosition;
+                    const auto Stroke = State._Swing._Target - State._Swing._StartPosition;
                     const auto StrokeLength = Stroke.Size();
                     if (StrokeLength > KINDA_SMALL_NUMBER)
                     {
                         const auto Overshoot = FMath::Min(
-                            StrokeLength * _Settings._StrokeOvershootFraction,
-                            FMath::Max(_Settings._MaxStrokeOvershoot, 0.0f));
+                            StrokeLength * _Settings._Step._StrokeOvershootFraction,
+                            FMath::Max(_Settings._Step._MaxStrokeOvershoot, 0.0f));
                         Target += (Stroke / StrokeLength) * Overshoot;
                     }
                 }
 
                 const auto LandingRotation = MakeFootRotation(In._FacingDirection,
-                    In._TargetValid ? In._GroundNormal : State._PlantedNormal);
+                    In._TargetValid ? In._GroundNormal : State._Plant._Normal);
 
-                if (State._SwingPhase >= 1.0f)
+                if (State._Swing._Phase >= 1.0f)
                 {
-                    State._Swinging = false;
-                    State._SwingPhase = 0.0f;
-                    State._SwingDurationScale = 1.0f;
-                    State._Overshoot = false;
+                    State._Swing._Active = false;
+                    State._Swing._Phase = 0.0f;
+                    State._Swing._DurationScale = 1.0f;
+                    State._Swing._Overshoot = false;
 
-                    if (In._TargetValid && NOT State._CatchStep)
+                    if (In._TargetValid && NOT State._Swing._CatchStep)
                     {
                         const auto BelowGround = FVector::DotProduct(In._IdealTarget - Target, In._GroundNormal);
                         if (BelowGround > 0.0f)
@@ -839,104 +839,104 @@ namespace ck
                             Target += In._GroundNormal * BelowGround;
                         }
                     }
-                    State._CatchStep = false;
+                    State._Swing._CatchStep = false;
 
-                    State._PlantedPosition = Target;
-                    State._PlantedNormal = In._TargetValid ? In._GroundNormal : State._PlantedNormal;
-                    State._PlantedRotation = LandingRotation;
+                    State._Plant._Position = Target;
+                    State._Plant._Normal = In._TargetValid ? In._GroundNormal : State._Plant._Normal;
+                    State._Plant._Rotation = LandingRotation;
 
-                    Out._Position = State._PlantedPosition;
-                    Out._Normal = State._PlantedNormal;
-                    Out._Rotation = State._PlantedRotation;
+                    Out._Position = State._Plant._Position;
+                    Out._Normal = State._Plant._Normal;
+                    Out._Rotation = State._Plant._Rotation;
                     Out._SwingAlpha = 0.0f;
                     Out._Planted = true;
                 }
                 else
                 {
-                    const auto Alpha = _Settings._SwingProfile.IsEaseValid()
-                        ? _Settings._SwingProfile.SampleEase(State._SwingPhase)
-                        : FMath::SmoothStep(0.0f, 1.0f, State._SwingPhase);
+                    const auto Alpha = _Settings._Swing._Profile.IsEaseValid()
+                        ? _Settings._Swing._Profile.SampleEase(State._Swing._Phase)
+                        : FMath::SmoothStep(0.0f, 1.0f, State._Swing._Phase);
                     const auto RotationAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
-                    auto Position = FMath::Lerp(State._SwingStartPosition, Target, Alpha);
+                    auto Position = FMath::Lerp(State._Swing._StartPosition, Target, Alpha);
 
-                    const auto ArcAlpha = _Settings._SwingProfile.IsArcValid()
-                        ? _Settings._SwingProfile.SampleArc(State._SwingPhase)
+                    const auto ArcAlpha = _Settings._Swing._Profile.IsArcValid()
+                        ? _Settings._Swing._Profile.SampleArc(State._Swing._Phase)
                         : procedural_gait_swing::ParametricArc(
-                            State._SwingPhase, _Settings._SwingApexPhase, _Settings._SwingApexSharpness);
+                            State._Swing._Phase, _Settings._Swing._ApexPhase, _Settings._Swing._ApexSharpness);
 
                     auto HeightScale = 1.0f;
-                    if (_Settings._MaxCadenceScale > 1.0f + KINDA_SMALL_NUMBER)
+                    if (_Settings._Cadence._MaxCadenceScale > 1.0f + KINDA_SMALL_NUMBER)
                     {
-                        const auto SprintBlend = (CadenceScale - 1.0f) / (_Settings._MaxCadenceScale - 1.0f);
-                        HeightScale = FMath::Lerp(1.0f, _Settings._SprintApexHeightScale, FMath::Clamp(SprintBlend, 0.0f, 1.0f));
+                        const auto SprintBlend = (CadenceScale - 1.0f) / (_Settings._Cadence._MaxCadenceScale - 1.0f);
+                        HeightScale = FMath::Lerp(1.0f, _Settings._Swing._SprintApexHeightScale, FMath::Clamp(SprintBlend, 0.0f, 1.0f));
                     }
-                    Position.Z += ArcAlpha * _Settings._StepHeight * HeightScale;
+                    Position.Z += ArcAlpha * _Settings._Swing._Height * HeightScale;
 
-                    if (_Settings._ObstacleClearance > 0.0f && In._ClearanceGroundZ > -FLT_MAX * 0.5f)
+                    if (_Settings._Swing._ObstacleClearance > 0.0f && In._ClearanceGroundZ > -FLT_MAX * 0.5f)
                     {
-                        const auto Deficit = (In._ClearanceGroundZ + _Settings._ObstacleClearance) - Position.Z;
+                        const auto Deficit = (In._ClearanceGroundZ + _Settings._Swing._ObstacleClearance) - Position.Z;
                         if (Deficit > 0.0f)
                         {
-                            Position.Z += Deficit * FMath::Sin(State._SwingPhase * PI);
+                            Position.Z += Deficit * FMath::Sin(State._Swing._Phase * PI);
                         }
                     }
 
-                    auto Rotation = FQuat::Slerp(State._SwingStartRotation, LandingRotation, RotationAlpha);
-                    if (NOT FMath::IsNearlyZero(_Settings._SwingToePitchDegrees))
+                    auto Rotation = FQuat::Slerp(State._Swing._StartRotation, LandingRotation, RotationAlpha);
+                    if (NOT FMath::IsNearlyZero(_Settings._Swing._ToePitchDegrees))
                     {
                         const auto RightAxis = Rotation.GetAxisY();
                         Rotation = FQuat{RightAxis,
-                            FMath::DegreesToRadians(_Settings._SwingToePitchDegrees) * ArcAlpha} * Rotation;
+                            FMath::DegreesToRadians(_Settings._Swing._ToePitchDegrees) * ArcAlpha} * Rotation;
                     }
 
                     Out._Position = Position;
-                    Out._Normal = In._TargetValid ? In._GroundNormal : State._PlantedNormal;
+                    Out._Normal = In._TargetValid ? In._GroundNormal : State._Plant._Normal;
                     Out._Rotation = Rotation;
-                    Out._SwingAlpha = State._SwingPhase;
+                    Out._SwingAlpha = State._Swing._Phase;
                     Out._Planted = false;
                 }
             }
             else
             {
-                const auto Threshold = _Settings._StepThreshold * FMath::Max(In._StepThresholdScale, KINDA_SMALL_NUMBER);
-                const auto Error = FVector::Dist(State._PlantedPosition, In._IdealTarget);
+                const auto Threshold = _Settings._Step._Threshold * FMath::Max(In._StepThresholdScale, KINDA_SMALL_NUMBER);
+                const auto Error = FVector::Dist(State._Plant._Position, In._IdealTarget);
 
                 const auto Wants = In._TargetValid && Error > Threshold;
-                const auto Emergency = In._TargetValid && Error > Threshold * FMath::Max(_Settings._EmergencyStepFactor, 1.0f);
-                const auto Budget = _Settings._MaxSimultaneousSwings <= 0 || NumSwinging < _Settings._MaxSimultaneousSwings;
+                const auto Emergency = In._TargetValid && Error > Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f);
+                const auto Budget = _Settings._Cadence._MaxSimultaneousSwings <= 0 || NumSwinging < _Settings._Cadence._MaxSimultaneousSwings;
 
                 const auto SettleWants = SettleActive && In._TargetValid
-                    && Error > Threshold * FMath::Clamp(_Settings._SettleThresholdFraction, 0.05f, 1.0f);
+                    && Error > Threshold * FMath::Clamp(_Settings._Settle._ThresholdFraction, 0.05f, 1.0f);
 
-                const auto CatchStep = State._PendingStepTime > FCk_Time{};
+                const auto CatchStep = State._PendingStep._Time > FCk_Time{};
 
                 if (Advance && NOT IsInhibited(LegPhaseOffset) &&
                     (CatchStep || Emergency || (Wants && IsWindowOpen(LegPhaseOffset) && Budget) || (SettleWants && Budget)))
                 {
                     const auto SwingTarget = CatchStep
-                        ? State._PendingStepTarget
-                        : (In._TargetValid ? In._IdealTarget : State._PlantedPosition);
-                    DoBeginSwing(State, State._PlantedPosition, State._PlantedRotation, SwingTarget);
-                    State._TargetFrozen = false;
+                        ? State._PendingStep._Target
+                        : (In._TargetValid ? In._IdealTarget : State._Plant._Position);
+                    DoBeginSwing(State, State._Plant._Position, State._Plant._Rotation, SwingTarget);
+                    State._Swing._TargetFrozen = false;
 
-                    State._Overshoot = NOT CatchStep && (Wants || Emergency);
+                    State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency);
 
-                    State._CatchStep = CatchStep;
-                    State._PendingStepTime = FCk_Time{};
+                    State._Swing._CatchStep = CatchStep;
+                    State._PendingStep._Time = FCk_Time{};
                     ++NumSwinging;
                     SwingingOffsets.Add(LegPhaseOffset);
 
-                    Out._Position = State._PlantedPosition;
-                    Out._Normal = State._PlantedNormal;
-                    Out._Rotation = State._PlantedRotation;
+                    Out._Position = State._Plant._Position;
+                    Out._Normal = State._Plant._Normal;
+                    Out._Rotation = State._Plant._Rotation;
                     Out._SwingAlpha = 0.0f;
                     Out._Planted = false;
                 }
                 else
                 {
-                    Out._Position = State._PlantedPosition;
-                    Out._Normal = State._PlantedNormal;
-                    Out._Rotation = State._PlantedRotation;
+                    Out._Position = State._Plant._Position;
+                    Out._Normal = State._Plant._Normal;
+                    Out._Rotation = State._Plant._Rotation;
                     Out._SwingAlpha = 0.0f;
                     Out._Planted = true;
                 }
@@ -959,31 +959,31 @@ namespace ck
 
         if (NOT InInput._Enabled)
         {
-            InOutState._Swinging = false;
-            InOutState._TargetFrozen = false;
-            InOutState._Overshoot = false;
-            InOutState._CatchStep = false;
-            InOutState._PendingStepTime = FCk_Time{};
-            InOutState._PlantedPosition = InOutState._CurrentPosition;
-            InOutState._PlantedRotation = InOutState._CurrentRotation;
+            InOutState._Swing._Active = false;
+            InOutState._Swing._TargetFrozen = false;
+            InOutState._Swing._Overshoot = false;
+            InOutState._Swing._CatchStep = false;
+            InOutState._PendingStep._Time = FCk_Time{};
+            InOutState._Plant._Position = InOutState._Emitted._Position;
+            InOutState._Plant._Rotation = InOutState._Emitted._Rotation;
             InOutState._Enabled = false;
             return true;
         }
 
         InOutState._Enabled = true;
         // Take-off skips disabled legs, so a leg re-enabled mid-air would otherwise tuck from a stale air pose.
-        InOutState._AirPosition = InOutState._CurrentPosition;
+        InOutState._Emitted._AirPosition = InOutState._Emitted._Position;
 
         const auto TargetIsAway = InInput._TargetValid
-            && FVector::DistSquared(InOutState._CurrentPosition, InInput._IdealTarget) > KINDA_SMALL_NUMBER;
+            && FVector::DistSquared(InOutState._Emitted._Position, InInput._IdealTarget) > KINDA_SMALL_NUMBER;
 
         if (TargetIsAway)
         {
-            DoBeginSwing(InOutState, InOutState._CurrentPosition, InOutState._CurrentRotation, InInput._IdealTarget);
+            DoBeginSwing(InOutState, InOutState._Emitted._Position, InOutState._Emitted._Rotation, InInput._IdealTarget);
             return true;
         }
 
-        InOutState._PlantedPosition = InOutState._CurrentPosition;
+        InOutState._Plant._Position = InOutState._Emitted._Position;
         return true;
     }
 
@@ -995,7 +995,7 @@ namespace ck
         -> void
     {
         const auto EnabledCount = NumEnabledLegs();
-        _RedistributedOffsets.SetNum(_LegStates.Num());
+        _PatternBlend._RedistributedOffsets.SetNum(_LegStates.Num());
 
         auto Rank = 0;
         for (auto LegIndex = 0; LegIndex < _LegStates.Num(); ++LegIndex)
@@ -1003,14 +1003,14 @@ namespace ck
             if (NOT _LegStates[LegIndex]._Enabled)
             { continue; }
 
-            _RedistributedOffsets[LegIndex] = static_cast<float>(Rank) / static_cast<float>(EnabledCount);
+            _PatternBlend._RedistributedOffsets[LegIndex] = static_cast<float>(Rank) / static_cast<float>(EnabledCount);
             ++Rank;
         }
-        _HasRedistributedOffsets = true;
+        _PatternBlend._HasRedistributedOffsets = true;
 
-        _BlendFromOffsets = _EffectivePhaseOffsets;
-        _BlendFromCycleScale = _EffectiveCycleScale;
-        _PatternBlendAlpha = 0.0f;
+        _PatternBlend._FromOffsets = _PatternBlend._EffectiveOffsets;
+        _PatternBlend._FromCycleScale = _PatternBlend._EffectiveCycleScale;
+        _PatternBlend._Alpha = 0.0f;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1020,12 +1020,12 @@ namespace ck
         DoClearRedistribution()
         -> void
     {
-        _HasRedistributedOffsets = false;
-        _RedistributedOffsets.Reset();
+        _PatternBlend._HasRedistributedOffsets = false;
+        _PatternBlend._RedistributedOffsets.Reset();
 
-        _BlendFromOffsets = _EffectivePhaseOffsets;
-        _BlendFromCycleScale = _EffectiveCycleScale;
-        _PatternBlendAlpha = 0.0f;
+        _PatternBlend._FromOffsets = _PatternBlend._EffectiveOffsets;
+        _PatternBlend._FromCycleScale = _PatternBlend._EffectiveCycleScale;
+        _PatternBlend._Alpha = 0.0f;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1039,12 +1039,12 @@ namespace ck
             const FVector& InTarget)
         -> void
     {
-        InOutState._Swinging = true;
-        InOutState._SwingPhase = 0.0f;
-        InOutState._SwingDurationScale = 1.0f;
-        InOutState._SwingStartPosition = InStartPosition;
-        InOutState._SwingStartRotation = InStartRotation;
-        InOutState._SwingTarget = InTarget;
+        InOutState._Swing._Active = true;
+        InOutState._Swing._Phase = 0.0f;
+        InOutState._Swing._DurationScale = 1.0f;
+        InOutState._Swing._StartPosition = InStartPosition;
+        InOutState._Swing._StartRotation = InStartRotation;
+        InOutState._Swing._Target = InTarget;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1056,9 +1056,9 @@ namespace ck
             FProceduralGaitLegOutput& OutOutput)
         -> void
     {
-        OutOutput._Position = InState._CurrentPosition;
-        OutOutput._Normal = InState._PlantedNormal;
-        OutOutput._Rotation = InState._CurrentRotation;
+        OutOutput._Position = InState._Emitted._Position;
+        OutOutput._Normal = InState._Plant._Normal;
+        OutOutput._Rotation = InState._Emitted._Rotation;
         OutOutput._SwingAlpha = 0.0f;
         OutOutput._Planted = true;
     }

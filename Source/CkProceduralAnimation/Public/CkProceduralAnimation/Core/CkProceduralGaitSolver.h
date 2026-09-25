@@ -39,6 +39,163 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKPROCEDURALANIMATION_API FProceduralGaitCadenceSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitCadenceSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        FCk_Time _CycleDuration = FCk_Time{0.5};
+        float _SwingWindow = 0.5f;
+        float _MoveSpeedThreshold = 5.0f;
+        float _CadenceSpeedRef = 0.0f;
+        float _MaxCadenceScale = 3.0f;
+        int32 _MaxSimultaneousSwings = 0;
+
+    public:
+        CK_PROPERTY(_CycleDuration);
+        CK_PROPERTY(_SwingWindow);
+        CK_PROPERTY(_MoveSpeedThreshold);
+        CK_PROPERTY(_CadenceSpeedRef);
+        CK_PROPERTY(_MaxCadenceScale);
+        CK_PROPERTY(_MaxSimultaneousSwings);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitStepSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitStepSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        float _Threshold = 25.0f;
+        float _EmergencyFactor = 1.75f;
+        FCk_Time _Duration = FCk_Time{0.25};
+        float _RetargetSmoothing = 14.0f;
+        float _RetargetFreezePhase = 0.7f;
+        float _StrokeOvershootFraction = 0.25f;
+        float _MaxStrokeOvershoot = 20.0f;
+
+    public:
+        CK_PROPERTY(_Threshold);
+        CK_PROPERTY(_EmergencyFactor);
+        CK_PROPERTY(_Duration);
+        CK_PROPERTY(_RetargetSmoothing);
+        CK_PROPERTY(_RetargetFreezePhase);
+        CK_PROPERTY(_StrokeOvershootFraction);
+        CK_PROPERTY(_MaxStrokeOvershoot);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitSwingSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitSwingSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        float _Height = 15.0f;
+        float _ApexPhase = 0.5f;
+        float _ApexSharpness = 1.0f;
+        float _SprintApexHeightScale = 0.65f;
+        float _ObstacleClearance = 6.0f;
+        FProceduralGaitSwingProfile _Profile;
+        float _ToePitchDegrees = 0.0f;
+
+    public:
+        CK_PROPERTY(_Height);
+        CK_PROPERTY(_ApexPhase);
+        CK_PROPERTY(_ApexSharpness);
+        CK_PROPERTY(_SprintApexHeightScale);
+        CK_PROPERTY(_ObstacleClearance);
+        CK_PROPERTY(_Profile);
+        CK_PROPERTY(_ToePitchDegrees);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitScheduleSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitScheduleSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        float _AdvanceFraction = 0.6f;
+        float _AdvanceRate = 1.5f;
+        FCk_Time _CatchStepLifetime = FCk_Time{0.0};
+
+    public:
+        CK_PROPERTY(_AdvanceFraction);
+        CK_PROPERTY(_AdvanceRate);
+        CK_PROPERTY(_CatchStepLifetime);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitSettleSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitSettleSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        bool _AtRest = true;
+        FCk_Time _Delay = FCk_Time{0.35};
+        float _ThresholdFraction = 0.35f;
+
+    public:
+        CK_PROPERTY(_AtRest);
+        CK_PROPERTY(_Delay);
+        CK_PROPERTY(_ThresholdFraction);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitAirborneSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitAirborneSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        float _TuckLift = 15.0f;
+        float _FollowSpeed = 8.0f;
+        float _LandingStepDurationScale = 0.5f;
+
+    public:
+        CK_PROPERTY(_TuckLift);
+        CK_PROPERTY(_FollowSpeed);
+        CK_PROPERTY(_LandingStepDurationScale);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitPatternSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitPatternSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        TArray<FProceduralGaitPattern> _Patterns;
+        FCk_Time _BlendTime = FCk_Time{0.4};
+        float _SwitchHysteresis = 0.85f;
+        EProceduralGaitLegLossPolicy _LegLossPolicy = EProceduralGaitLegLossPolicy::KeepAuthoredOffsets;
+
+    public:
+        CK_PROPERTY(_Patterns);
+        CK_PROPERTY(_BlendTime);
+        CK_PROPERTY(_SwitchHysteresis);
+        CK_PROPERTY(_LegLossPolicy);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FProceduralGaitSettings
     {
         CK_GENERATED_BODY(FProceduralGaitSettings);
@@ -46,74 +203,22 @@ namespace ck
     private:
         friend class FProceduralGaitSolver;
 
-        float _StepThreshold = 25.0f;
-        float _EmergencyStepFactor = 1.75f;
-        FCk_Time _StepDuration = FCk_Time{0.25};
-        float _StepHeight = 15.0f;
-        FCk_Time _CycleDuration = FCk_Time{0.5};
-        float _SwingWindow = 0.5f;
-        float _MoveSpeedThreshold = 5.0f;
-        float _CadenceSpeedRef = 0.0f;
-        float _MaxCadenceScale = 3.0f;
-        float _RetargetSmoothing = 14.0f;
-        float _RetargetFreezePhase = 0.7f;
-        int32 _MaxSimultaneousSwings = 0;
-        float _SwingApexPhase = 0.5f;
-        float _SwingApexSharpness = 1.0f;
-        float _SprintApexHeightScale = 0.65f;
-        float _ObstacleClearance = 6.0f;
-        FProceduralGaitSwingProfile _SwingProfile;
-        float _StrokeOvershootFraction = 0.25f;
-        float _MaxStrokeOvershoot = 20.0f;
-        float _ScheduleAdvanceFraction = 0.6f;
-        float _ScheduleAdvanceRate = 1.5f;
-        FCk_Time _CatchStepLifetime = FCk_Time{0.0};
-        bool _SettleAtRest = true;
-        FCk_Time _SettleDelay = FCk_Time{0.35};
-        float _SettleThresholdFraction = 0.35f;
-        float _AirborneTuckLift = 15.0f;
-        float _AirborneFollowSpeed = 8.0f;
-        float _LandingStepDurationScale = 0.5f;
-        TArray<FProceduralGaitPattern> _Patterns;
-        FCk_Time _PatternBlendTime = FCk_Time{0.4};
-        float _PatternSwitchHysteresis = 0.85f;
-        float _SwingToePitchDegrees = 0.0f;
-        EProceduralGaitLegLossPolicy _LegLossPolicy = EProceduralGaitLegLossPolicy::KeepAuthoredOffsets;
+        FProceduralGaitCadenceSettings _Cadence;
+        FProceduralGaitStepSettings _Step;
+        FProceduralGaitSwingSettings _Swing;
+        FProceduralGaitScheduleSettings _Schedule;
+        FProceduralGaitSettleSettings _Settle;
+        FProceduralGaitAirborneSettings _Airborne;
+        FProceduralGaitPatternSettings _Pattern;
 
     public:
-        CK_PROPERTY(_StepThreshold);
-        CK_PROPERTY(_EmergencyStepFactor);
-        CK_PROPERTY(_StepDuration);
-        CK_PROPERTY(_StepHeight);
-        CK_PROPERTY(_CycleDuration);
-        CK_PROPERTY(_SwingWindow);
-        CK_PROPERTY(_MoveSpeedThreshold);
-        CK_PROPERTY(_CadenceSpeedRef);
-        CK_PROPERTY(_MaxCadenceScale);
-        CK_PROPERTY(_RetargetSmoothing);
-        CK_PROPERTY(_RetargetFreezePhase);
-        CK_PROPERTY(_MaxSimultaneousSwings);
-        CK_PROPERTY(_SwingApexPhase);
-        CK_PROPERTY(_SwingApexSharpness);
-        CK_PROPERTY(_SprintApexHeightScale);
-        CK_PROPERTY(_ObstacleClearance);
-        CK_PROPERTY(_SwingProfile);
-        CK_PROPERTY(_StrokeOvershootFraction);
-        CK_PROPERTY(_MaxStrokeOvershoot);
-        CK_PROPERTY(_ScheduleAdvanceFraction);
-        CK_PROPERTY(_ScheduleAdvanceRate);
-        CK_PROPERTY(_CatchStepLifetime);
-        CK_PROPERTY(_SettleAtRest);
-        CK_PROPERTY(_SettleDelay);
-        CK_PROPERTY(_SettleThresholdFraction);
-        CK_PROPERTY(_AirborneTuckLift);
-        CK_PROPERTY(_AirborneFollowSpeed);
-        CK_PROPERTY(_LandingStepDurationScale);
-        CK_PROPERTY(_Patterns);
-        CK_PROPERTY(_PatternBlendTime);
-        CK_PROPERTY(_PatternSwitchHysteresis);
-        CK_PROPERTY(_SwingToePitchDegrees);
-        CK_PROPERTY(_LegLossPolicy);
+        CK_PROPERTY(_Cadence);
+        CK_PROPERTY(_Step);
+        CK_PROPERTY(_Swing);
+        CK_PROPERTY(_Schedule);
+        CK_PROPERTY(_Settle);
+        CK_PROPERTY(_Airborne);
+        CK_PROPERTY(_Pattern);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -170,6 +275,93 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKPROCEDURALANIMATION_API FProceduralGaitLegPlant
+    {
+        CK_GENERATED_BODY(FProceduralGaitLegPlant);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        FVector _Position = FVector::ZeroVector;
+        FVector _Normal = FVector::UpVector;
+        FQuat _Rotation = FQuat::Identity;
+
+    public:
+        CK_PROPERTY(_Position);
+        CK_PROPERTY(_Normal);
+        CK_PROPERTY(_Rotation);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitLegSwing
+    {
+        CK_GENERATED_BODY(FProceduralGaitLegSwing);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        FVector _StartPosition = FVector::ZeroVector;
+        FQuat _StartRotation = FQuat::Identity;
+        FVector _Target = FVector::ZeroVector;
+        float _Phase = 0.0f;
+        float _DurationScale = 1.0f;
+        bool _Active = false;
+        bool _TargetFrozen = false;
+        bool _Overshoot = false;
+        bool _CatchStep = false;
+
+    public:
+        CK_PROPERTY(_StartPosition);
+        CK_PROPERTY(_StartRotation);
+        CK_PROPERTY(_Target);
+        CK_PROPERTY(_Phase);
+        CK_PROPERTY(_DurationScale);
+        CK_PROPERTY(_Active);
+        CK_PROPERTY(_TargetFrozen);
+        CK_PROPERTY(_Overshoot);
+        CK_PROPERTY(_CatchStep);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitLegPendingStep
+    {
+        CK_GENERATED_BODY(FProceduralGaitLegPendingStep);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        FVector _Target = FVector::ZeroVector;
+        FCk_Time _Time = FCk_Time{0.0};
+
+    public:
+        CK_PROPERTY(_Target);
+        CK_PROPERTY(_Time);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Transitions start from the pose that was emitted, including clearance and authored swing shape.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitLegPose
+    {
+        CK_GENERATED_BODY(FProceduralGaitLegPose);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        FVector _Position = FVector::ZeroVector;
+        FQuat _Rotation = FQuat::Identity;
+        FVector _AirPosition = FVector::ZeroVector;
+
+    public:
+        CK_PROPERTY(_Position);
+        CK_PROPERTY(_Rotation);
+        CK_PROPERTY(_AirPosition);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegState
     {
         CK_GENERATED_BODY(FProceduralGaitLegState);
@@ -177,44 +369,17 @@ namespace ck
     private:
         friend class FProceduralGaitSolver;
 
-        FVector _PlantedPosition = FVector::ZeroVector;
-        FVector _PlantedNormal = FVector::UpVector;
-        FVector _SwingStartPosition = FVector::ZeroVector;
-        FVector _SwingTarget = FVector::ZeroVector;
-        FQuat _PlantedRotation = FQuat::Identity;
-        FQuat _SwingStartRotation = FQuat::Identity;
-        FVector _AirPosition = FVector::ZeroVector;
-        // Transitions start from the pose that was emitted, including clearance and authored swing shape.
-        FVector _CurrentPosition = FVector::ZeroVector;
-        FQuat _CurrentRotation = FQuat::Identity;
-        float _SwingPhase = 0.0f;
-        float _SwingDurationScale = 1.0f;
-        bool _Swinging = false;
-        bool _TargetFrozen = false;
-        bool _Overshoot = false;
-        FVector _PendingStepTarget = FVector::ZeroVector;
-        FCk_Time _PendingStepTime = FCk_Time{0.0};
-        bool _CatchStep = false;
+        FProceduralGaitLegPlant _Plant;
+        FProceduralGaitLegSwing _Swing;
+        FProceduralGaitLegPendingStep _PendingStep;
+        FProceduralGaitLegPose _Emitted;
         bool _Enabled = true;
 
     public:
-        CK_PROPERTY(_PlantedPosition);
-        CK_PROPERTY(_PlantedNormal);
-        CK_PROPERTY(_SwingStartPosition);
-        CK_PROPERTY(_SwingTarget);
-        CK_PROPERTY(_PlantedRotation);
-        CK_PROPERTY(_SwingStartRotation);
-        CK_PROPERTY(_AirPosition);
-        CK_PROPERTY_GET(_CurrentPosition);
-        CK_PROPERTY_GET(_CurrentRotation);
-        CK_PROPERTY(_SwingPhase);
-        CK_PROPERTY(_SwingDurationScale);
-        CK_PROPERTY(_Swinging);
-        CK_PROPERTY(_TargetFrozen);
-        CK_PROPERTY(_Overshoot);
-        CK_PROPERTY(_PendingStepTarget);
-        CK_PROPERTY(_PendingStepTime);
-        CK_PROPERTY(_CatchStep);
+        CK_PROPERTY(_Plant);
+        CK_PROPERTY(_Swing);
+        CK_PROPERTY(_PendingStep);
+        CK_PROPERTY_GET(_Emitted);
         CK_PROPERTY_GET(_Enabled);
     };
 
@@ -239,6 +404,35 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct CKPROCEDURALANIMATION_API FProceduralGaitPatternBlendState
+    {
+        CK_GENERATED_BODY(FProceduralGaitPatternBlendState);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        int32 _CurrentIndex = INDEX_NONE;
+        float _Alpha = 1.0f;
+        float _EffectiveCycleScale = 1.0f;
+        float _FromCycleScale = 1.0f;
+        TArray<float, TInlineAllocator<8>> _EffectiveOffsets;
+        TArray<float, TInlineAllocator<8>> _FromOffsets;
+        TArray<float, TInlineAllocator<8>> _RedistributedOffsets;
+        bool _HasRedistributedOffsets = false;
+
+    public:
+        CK_PROPERTY(_CurrentIndex);
+        CK_PROPERTY(_Alpha);
+        CK_PROPERTY(_EffectiveCycleScale);
+        CK_PROPERTY(_FromCycleScale);
+        CK_PROPERTY(_EffectiveOffsets);
+        CK_PROPERTY(_FromOffsets);
+        CK_PROPERTY(_RedistributedOffsets);
+        CK_PROPERTY(_HasRedistributedOffsets);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPROCEDURALANIMATION_API FProceduralGaitSolver
     {
         CK_GENERATED_BODY(FProceduralGaitSolver);
@@ -257,9 +451,9 @@ namespace ck
         auto GetLegState(int32 InLegIndex) const -> const FProceduralGaitLegState& { return _LegStates[InLegIndex]; }
         auto GetEffectivePhaseOffset(int32 InLegIndex) const -> float
         {
-            return _EffectivePhaseOffsets.IsValidIndex(InLegIndex) ? _EffectivePhaseOffsets[InLegIndex] : 0.0f;
+            return _PatternBlend._EffectiveOffsets.IsValidIndex(InLegIndex) ? _PatternBlend._EffectiveOffsets[InLegIndex] : 0.0f;
         }
-        auto GetCurrentPatternIndex() const -> int32 { return _CurrentPatternIndex; }
+        auto GetCurrentPatternIndex() const -> int32 { return _PatternBlend._CurrentIndex; }
         auto IsAirborne() const -> bool { return _WasAirborne; }
         auto GetRestTime() const -> FCk_Time { return _RestTime; }
         auto SetPlantedPose(int32 InLegIndex, const FVector& InPosition, const FVector& InNormal) -> void;
@@ -268,12 +462,12 @@ namespace ck
         auto RequestStep(int32 InLegIndex, const FVector& InTarget) -> bool;
         auto HasPendingStep(int32 InLegIndex) const -> bool
         {
-            return _LegStates.IsValidIndex(InLegIndex) && _LegStates[InLegIndex]._PendingStepTime > FCk_Time{};
+            return _LegStates.IsValidIndex(InLegIndex) && _LegStates[InLegIndex]._PendingStep._Time > FCk_Time{};
         }
         auto ClearPendingStep(int32 InLegIndex) -> void
         {
             if (_LegStates.IsValidIndex(InLegIndex))
-            { _LegStates[InLegIndex]._PendingStepTime = FCk_Time{}; }
+            { _LegStates[InLegIndex]._PendingStep._Time = FCk_Time{}; }
         }
         auto TransformState(const FQuat& InDelta) -> void;
         static auto MakeFootRotation(const FVector& InFacingDirection, const FVector& InGroundNormal) -> FQuat;
@@ -308,14 +502,7 @@ namespace ck
         float _LastCadenceScale = 1.0f;
         FCk_Time _RestTime;
         bool _WasAirborne = false;
-        int32 _CurrentPatternIndex = INDEX_NONE;
-        float _PatternBlendAlpha = 1.0f;
-        float _EffectiveCycleScale = 1.0f;
-        float _BlendFromCycleScale = 1.0f;
-        TArray<float, TInlineAllocator<8>> _EffectivePhaseOffsets;
-        TArray<float, TInlineAllocator<8>> _BlendFromOffsets;
-        TArray<float, TInlineAllocator<8>> _RedistributedOffsets;
-        bool _HasRedistributedOffsets = false;
+        FProceduralGaitPatternBlendState _PatternBlend;
 
     public:
         CK_PROPERTY(_Settings);

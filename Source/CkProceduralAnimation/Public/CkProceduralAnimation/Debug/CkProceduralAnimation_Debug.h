@@ -33,79 +33,244 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Value-only diagnostic records remain readable after their source entity is destroyed.
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLegTargeting
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugLegTargeting);
+
+private:
+    FVector _HipWorld = FVector::ZeroVector;
+    FVector _NeutralWorld = FVector::ZeroVector;
+    FVector _QueryTarget = FVector::ZeroVector;
+    FVector _IdealTarget = FVector::ZeroVector;
+    bool _TargetValid = false;
+    float _StepThreshold = 0.0f;
+
+public:
+    CK_PROPERTY(_HipWorld);
+    CK_PROPERTY(_NeutralWorld);
+    CK_PROPERTY(_QueryTarget);
+    CK_PROPERTY(_IdealTarget);
+    CK_PROPERTY(_TargetValid);
+    CK_PROPERTY(_StepThreshold);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugFoot
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugFoot);
+
+private:
+    FVector _Position = FVector::ZeroVector;
+    FQuat _Rotation = FQuat::Identity;
+    FVector _Normal = FVector::UpVector;
+    FVector _PlantedPosition = FVector::ZeroVector;
+    FVector _SwingTarget = FVector::ZeroVector;
+    float _SwingAlpha = 0.0f;
+    float _PhaseOffset = 0.0f;
+    bool _Planted = false;
+    bool _ContactTrusted = false;
+
+public:
+    CK_PROPERTY(_Position);
+    CK_PROPERTY(_Rotation);
+    CK_PROPERTY(_Normal);
+    CK_PROPERTY(_PlantedPosition);
+    CK_PROPERTY(_SwingTarget);
+    CK_PROPERTY(_SwingAlpha);
+    CK_PROPERTY(_PhaseOffset);
+    CK_PROPERTY(_Planted);
+    CK_PROPERTY(_ContactTrusted);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Probe fields describe the last actual attempt, including rejected inside-origin hits.
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugProbe
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugProbe);
+
+private:
+    ck::EProceduralFootProbeState _State = ck::EProceduralFootProbeState::Grounded;
+    FCk_Time _MissingContact;
+    FVector _Start = FVector::ZeroVector;
+    FVector _End = FVector::ZeroVector;
+    FVector _HitPosition = FVector::ZeroVector;
+    FVector _HitNormal = FVector::ZeroVector;
+    float _HitFraction = 0.0f;
+    int32 _AttemptCount = 0;
+    bool _Hit = false;
+
+public:
+    CK_PROPERTY(_State);
+    CK_PROPERTY(_MissingContact);
+    CK_PROPERTY(_Start);
+    CK_PROPERTY(_End);
+    CK_PROPERTY(_HitPosition);
+    CK_PROPERTY(_HitNormal);
+    CK_PROPERTY(_HitFraction);
+    CK_PROPERTY(_AttemptCount);
+    CK_PROPERTY(_Hit);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLegRig
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugLegRig);
+
+private:
+    bool _Composed = false;
+    bool _Ready = false;
+    ECk_ProceduralRig_Failure _Failure = ECk_ProceduralRig_Failure::None;
+    TArray<FCk_ProceduralAnimation_DebugPart> _Segments;
+    FCk_ProceduralAnimation_DebugPart _Foot;
+
+public:
+    CK_PROPERTY(_Composed);
+    CK_PROPERTY(_Ready);
+    CK_PROPERTY(_Failure);
+    CK_PROPERTY(_Segments);
+    CK_PROPERTY(_Foot);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Value-only diagnostic records remain readable after their source entity is destroyed.
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLeg
 {
     CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugLeg);
 
 private:
     FName _Id;
-    FVector _HipWorld = FVector::ZeroVector;
-    FVector _NeutralWorld = FVector::ZeroVector;
-    FVector _QueryTarget = FVector::ZeroVector;
-    FVector _IdealTarget = FVector::ZeroVector;
-    FVector _PlantedPosition = FVector::ZeroVector;
-    FVector _SwingTarget = FVector::ZeroVector;
-    FVector _FootPosition = FVector::ZeroVector;
-    FQuat _FootRotation = FQuat::Identity;
-    FVector _Normal = FVector::UpVector;
-    float _SwingAlpha = 0.0f;
-    float _PhaseOffset = 0.0f;
-    float _StepThreshold = 0.0f;
-    bool _Planted = false;
-    bool _TargetValid = false;
-    bool _ContactTrusted = false;
-    ck::EProceduralFootProbeState _ProbeState = ck::EProceduralFootProbeState::Grounded;
-    FCk_Time _MissingContact;
-    FVector _ProbeStart = FVector::ZeroVector;
-    FVector _ProbeEnd = FVector::ZeroVector;
-    FVector _ProbeHitPosition = FVector::ZeroVector;
-    FVector _ProbeHitNormal = FVector::ZeroVector;
-    float _ProbeHitFraction = 0.0f;
-    int32 _ProbeAttemptCount = 0;
-    bool _ProbeHit = false;
-    bool _HasRig = false;
-    bool _RigReady = false;
-    ECk_ProceduralRig_Failure _RigFailure = ECk_ProceduralRig_Failure::None;
-    bool _Enabled = true;
     FString _LegEntityId;
-    TArray<FCk_ProceduralAnimation_DebugPart> _Segments;
-    FCk_ProceduralAnimation_DebugPart _Foot;
+    bool _Enabled = true;
+    FCk_ProceduralAnimation_DebugLegTargeting _Targeting;
+    FCk_ProceduralAnimation_DebugFoot _Foot;
+    FCk_ProceduralAnimation_DebugProbe _Probe;
+    FCk_ProceduralAnimation_DebugLegRig _Rig;
 
 public:
     CK_PROPERTY(_Id);
-    CK_PROPERTY(_HipWorld);
-    CK_PROPERTY(_NeutralWorld);
-    CK_PROPERTY(_QueryTarget);
-    CK_PROPERTY(_IdealTarget);
-    CK_PROPERTY(_PlantedPosition);
-    CK_PROPERTY(_SwingTarget);
-    CK_PROPERTY(_FootPosition);
-    CK_PROPERTY(_FootRotation);
-    CK_PROPERTY(_Normal);
-    CK_PROPERTY(_SwingAlpha);
-    CK_PROPERTY(_PhaseOffset);
-    CK_PROPERTY(_StepThreshold);
-    CK_PROPERTY(_Planted);
-    CK_PROPERTY(_TargetValid);
-    CK_PROPERTY(_ContactTrusted);
-    CK_PROPERTY(_ProbeState);
-    CK_PROPERTY(_MissingContact);
-    CK_PROPERTY(_ProbeStart);
-    CK_PROPERTY(_ProbeEnd);
-    CK_PROPERTY(_ProbeHitPosition);
-    CK_PROPERTY(_ProbeHitNormal);
-    CK_PROPERTY(_ProbeHitFraction);
-    CK_PROPERTY(_ProbeAttemptCount);
-    CK_PROPERTY(_ProbeHit);
+    CK_PROPERTY(_LegEntityId);
+    CK_PROPERTY(_Enabled);
+    CK_PROPERTY(_Targeting);
+    CK_PROPERTY(_Foot);
+    CK_PROPERTY(_Probe);
+    CK_PROPERTY(_Rig);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugStatus
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugStatus);
+
+private:
+    bool _Available = false;
+    bool _HasAcceptedSample = false;
+    bool _GaitReady = false;
+    bool _GaitFailed = false;
+    bool _HasSurfaceMotion = false;
+    bool _HasRig = false;
+    bool _RigReady = false;
+    ECk_ProceduralRig_Failure _RigFailure = ECk_ProceduralRig_Failure::None;
+
+public:
+    CK_PROPERTY(_Available);
+    CK_PROPERTY(_HasAcceptedSample);
+    CK_PROPERTY(_GaitReady);
+    CK_PROPERTY(_GaitFailed);
+    CK_PROPERTY(_HasSurfaceMotion);
     CK_PROPERTY(_HasRig);
     CK_PROPERTY(_RigReady);
     CK_PROPERTY(_RigFailure);
-    CK_PROPERTY(_Enabled);
-    CK_PROPERTY(_LegEntityId);
-    CK_PROPERTY(_Segments);
-    CK_PROPERTY(_Foot);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugFreshness
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugFreshness);
+
+private:
+    bool _GaitFresh = false;
+    bool _MotionMatchesGaitFrame = false;
+    bool _RigMatchesGaitSequence = false;
+    bool _RigPosePending = false;
+
+public:
+    CK_PROPERTY(_GaitFresh);
+    CK_PROPERTY(_MotionMatchesGaitFrame);
+    CK_PROPERTY(_RigMatchesGaitSequence);
+    CK_PROPERTY(_RigPosePending);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugSample
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugSample);
+
+private:
+    uint64 _FrameNumber = 0;
+    uint64 _Sequence = 0;
+    FCk_Time _Time;
+
+public:
+    CK_PROPERTY(_FrameNumber);
+    CK_PROPERTY(_Sequence);
+    CK_PROPERTY(_Time);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugGait
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugGait);
+
+private:
+    FTransform _BodyTransform = FTransform::Identity;
+    float _Clock = 0.0f;
+    float _CadenceScale = 1.0f;
+    float _CadenceSpeed = 0.0f;
+    bool _Airborne = false;
+    FCk_Time _RestTime;
+    FVector _Velocity = FVector::ZeroVector;
+    FVector _SupportNormal = FVector::UpVector;
+
+public:
+    CK_PROPERTY(_BodyTransform);
+    CK_PROPERTY(_Clock);
+    CK_PROPERTY(_CadenceScale);
+    CK_PROPERTY(_CadenceSpeed);
+    CK_PROPERTY(_Airborne);
+    CK_PROPERTY(_RestTime);
+    CK_PROPERTY(_Velocity);
+    CK_PROPERTY(_SupportNormal);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugMotion
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugMotion);
+
+private:
+    FVector _Velocity = FVector::ZeroVector;
+    FVector _RequestedDirection = FVector::ZeroVector;
+    float _RequestedSpeed = 0.0f;
+    bool _Grounded = false;
+    bool _TrustedContact = false;
+    FCk_Time _MissingContact;
+
+public:
+    CK_PROPERTY(_Velocity);
+    CK_PROPERTY(_RequestedDirection);
+    CK_PROPERTY(_RequestedSpeed);
+    CK_PROPERTY(_Grounded);
+    CK_PROPERTY(_TrustedContact);
+    CK_PROPERTY(_MissingContact);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -120,69 +285,21 @@ struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugSnapshot
 private:
     FName _EntityName;
     FString _EntityId;
-    bool _Available = false;
-    bool _HasAcceptedSample = false;
-    bool _GaitReady = false;
-    bool _GaitFailed = false;
-    bool _HasSurfaceMotion = false;
-    bool _HasRig = false;
-    bool _RigReady = false;
-    ECk_ProceduralRig_Failure _RigFailure = ECk_ProceduralRig_Failure::None;
-    bool _GaitFresh = false;
-    bool _MotionMatchesGaitFrame = false;
-    bool _RigMatchesGaitSequence = false;
-    bool _RigPosePending = false;
-    uint64 _FrameNumber = 0;
-    uint64 _Sequence = 0;
-    FCk_Time _Time;
-    FTransform _BodyTransform = FTransform::Identity;
-    float _GaitClock = 0.0f;
-    float _CadenceScale = 1.0f;
-    float _CadenceSpeed = 0.0f;
-    bool _Airborne = false;
-    FCk_Time _RestTime;
-    FVector _Velocity = FVector::ZeroVector;
-    FVector _MotionVelocity = FVector::ZeroVector;
-    FVector _SupportNormal = FVector::UpVector;
-    FVector _RequestedDirection = FVector::ZeroVector;
-    float _RequestedSpeed = 0.0f;
-    bool _Grounded = false;
-    bool _TrustedContact = false;
-    FCk_Time _MissingContact;
+    FCk_ProceduralAnimation_DebugStatus _Status;
+    FCk_ProceduralAnimation_DebugFreshness _Freshness;
+    FCk_ProceduralAnimation_DebugSample _Sample;
+    FCk_ProceduralAnimation_DebugGait _Gait;
+    FCk_ProceduralAnimation_DebugMotion _Motion;
     TArray<FCk_ProceduralAnimation_DebugLeg> _Legs;
 
 public:
     CK_PROPERTY(_EntityName);
     CK_PROPERTY(_EntityId);
-    CK_PROPERTY(_Available);
-    CK_PROPERTY(_HasAcceptedSample);
-    CK_PROPERTY(_GaitReady);
-    CK_PROPERTY(_GaitFailed);
-    CK_PROPERTY(_HasSurfaceMotion);
-    CK_PROPERTY(_HasRig);
-    CK_PROPERTY(_RigReady);
-    CK_PROPERTY(_RigFailure);
-    CK_PROPERTY(_GaitFresh);
-    CK_PROPERTY(_MotionMatchesGaitFrame);
-    CK_PROPERTY(_RigMatchesGaitSequence);
-    CK_PROPERTY(_RigPosePending);
-    CK_PROPERTY(_FrameNumber);
-    CK_PROPERTY(_Sequence);
-    CK_PROPERTY(_Time);
-    CK_PROPERTY(_BodyTransform);
-    CK_PROPERTY(_GaitClock);
-    CK_PROPERTY(_CadenceScale);
-    CK_PROPERTY(_CadenceSpeed);
-    CK_PROPERTY(_Airborne);
-    CK_PROPERTY(_RestTime);
-    CK_PROPERTY(_Velocity);
-    CK_PROPERTY(_MotionVelocity);
-    CK_PROPERTY(_SupportNormal);
-    CK_PROPERTY(_RequestedDirection);
-    CK_PROPERTY(_RequestedSpeed);
-    CK_PROPERTY(_Grounded);
-    CK_PROPERTY(_TrustedContact);
-    CK_PROPERTY(_MissingContact);
+    CK_PROPERTY(_Status);
+    CK_PROPERTY(_Freshness);
+    CK_PROPERTY(_Sample);
+    CK_PROPERTY(_Gait);
+    CK_PROPERTY(_Motion);
     CK_PROPERTY(_Legs);
 };
 
