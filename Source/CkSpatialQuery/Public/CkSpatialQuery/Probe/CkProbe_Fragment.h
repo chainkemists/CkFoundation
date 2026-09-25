@@ -52,6 +52,7 @@ namespace ck { namespace details
         ECk_MotionType _MotionType = ECk_MotionType::Static;
         ECk_MotionQuality _MotionQuality = ECk_MotionQuality::Discrete;
         FCk_Probe_SurfaceInfo _SurfaceInfo;
+        ECk_Probe_ContactParticipation _ContactParticipation = ECk_Probe_ContactParticipation::PhysicalContacts;
 
     public:
         CK_PROPERTY_GET(_ProbeName);
@@ -61,10 +62,11 @@ namespace ck { namespace details
         CK_PROPERTY_GET(_MotionType);
         CK_PROPERTY_GET(_MotionQuality);
         CK_PROPERTY_GET(_SurfaceInfo);
+        CK_PROPERTY_GET(_ContactParticipation);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Probe_Params, _ProbeName, _ResponsePolicy, _Filter,
-            _ContextOverlapPolicy, _MotionType, _MotionQuality, _SurfaceInfo);
+            _ContextOverlapPolicy, _MotionType, _MotionQuality, _SurfaceInfo, _ContactParticipation);
     };
     using FFragment_Probe_DebugInfo = FCk_Probe_DebugInfo;
 
