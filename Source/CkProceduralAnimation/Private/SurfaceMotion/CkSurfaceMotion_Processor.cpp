@@ -1,0 +1,200 @@
+#include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Processor.h"
+#include "CkEcs/Request/CkRequest_Completion.h"
+#include "CkEcs/Scheduler/CkProcessorRegistration.h"
+#include "CkEcsExt/Transform/CkTransform_Utils.h"
+#include "CkJolt/Query/CkJoltQuery_Utils.h"
+#include <Engine/World.h>
+
+CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_HandleRequests);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_Update);
+CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_CancelPendingRequests);
+
+namespace ck_surface_motion
+{
+    auto
+        Get_TrustedHit(
+            const FCk_Jolt_HitResult& InHit,
+            const FVector& InRayDirection)
+        -> bool
+    {
+        return InHit.Get_HasHit() && InHit.Get_Fraction() > 0.0f && InHit.Get_Fraction() <= 1.0f
+            && NOT InHit.Get_Position().ContainsNaN()
+            && NOT InHit.Get_Normal().ContainsNaN() && NOT InHit.Get_Normal().IsNearlyZero()
+            && FVector::DotProduct(InHit.Get_Normal(), InRayDirection) < -KINDA_SMALL_NUMBER;
+    }
+
+    auto
+        Get_Contact(
+            UWorld* InWorld,
+            const FVector& InPosition,
+            const FVector& InUp,
+            const FVector& InForward,
+            const FCk_Fragment_SurfaceMotion_ParamsData& InParams,
+            bool InMoving)
+        -> FCk_Jolt_HitResult
+    {
+        // Forward contact is used only within the body's clearance, so a distant wall cannot
+        // pull a creature off its floor. All candidates are current world queries; held feet
+        // never masquerade as newly observed support normals.
+        if (InMoving)
+        {
+            const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld, InPosition,
+                InPosition + InForward * InParams.Get_Clearance(), InParams.Get_QueryFilter());
+            if (Get_TrustedHit(Hit, InForward))
+            { return Hit; }
+        }
+        auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld, InPosition + InUp * InParams.Get_Clearance(),
+            InPosition - InUp * InParams.Get_ProbeReach(), InParams.Get_QueryFilter());
+        if (Get_TrustedHit(Hit, -InUp))
+        { return Hit; }
+
+        // Recover around a convex edge from a bounded fan rather than extending a ray forever.
+        if (InMoving)
+        {
+            const auto Direction = (-InUp - InForward).GetSafeNormal();
+            Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld,
+                InPosition + InForward * InParams.Get_Clearance(),
+                InPosition + InForward * InParams.Get_Clearance() + Direction * InParams.Get_ProbeReach(),
+                InParams.Get_QueryFilter());
+            if (Get_TrustedHit(Hit, Direction))
+            { return Hit; }
+        }
+        return {};
+    }
+}
+
+namespace ck
+{
+    auto
+        FProcessor_SurfaceMotion_HandleRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SurfaceMotion_Params& InParams,
+            FFragment_SurfaceMotion_Current& InCurrent,
+            FFragment_SurfaceMotion_Requests& InRequests)
+        -> void
+    {
+        auto Requests = MoveTemp(InRequests._Requests);
+        InRequests._Requests.Reset();
+        for (const auto& Request : Requests)
+        {
+            auto Result = ECk_Request_OperationResult::Failed_Cancelled;
+            const auto Guard = MakeCompletionGuard(Request, InHandle, Result);
+            if (NOT ck::IsValid(InHandle) || InHandle.Has<FTag_DestroyEntity_Initiate>())
+            { continue; }
+            InCurrent._Direction = Request.Get_WorldDirection().GetSafeNormal();
+            InCurrent._Speed = FMath::Min(Request.Get_Speed(), InParams.Get_MaxSpeed());
+            Result = ECk_Request_OperationResult::Succeeded;
+        }
+        // A completion callback may enqueue more work; do not remove its new queue.
+        if (InRequests._Requests.IsEmpty())
+        { InHandle.Remove<MarkedDirtyBy>(); }
+    }
+
+    auto
+        FProcessor_SurfaceMotion_CancelPendingRequests::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SurfaceMotion_Requests& InRequests)
+        -> void
+    {
+        request::FireCancelledForPending(InHandle, InRequests.Get_Requests());
+    }
+
+    auto
+        FProcessor_SurfaceMotion_Update::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_SurfaceMotion_Params& InParams,
+            FFragment_SurfaceMotion_Current& InCurrent,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        const auto Dt = InDeltaT.Get_Seconds();
+        if (NOT FMath::IsFinite(Dt) || Dt <= 0.0)
+        { return; }
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        if (NOT ck::IsValid(World))
+        { InCurrent._Ready = false; return; }
+        auto Body = InTransform.Get_Transform();
+        if (Body.ContainsNaN())
+        { InCurrent._Ready = false; return; }
+        const auto StartPosition = Body.GetLocation();
+        // Bounded integration work, with swept fall contact below. A hitch advances the entire
+        // supplied duration instead of silently discarding time through a delta clamp.
+        constexpr auto IntegrationInterval = FCk_Time{0.016};
+        const auto Substeps = FMath::Clamp(FMath::CeilToInt(FMath::Min(Dt / IntegrationInterval.Get_Seconds(), 64.0)), 1, 64);
+        const auto Step = FCk_Time{Dt / Substeps};
+        for (auto Iteration = 0; Iteration < Substeps; ++Iteration)
+        {
+            const auto OldRotation = Body.GetRotation();
+            // Attachment owns the accepted surface frame. It must not use the visual body's
+            // partially eased up axis: doing so alternates floor/wall hits during a corner turn.
+            const auto Up = InCurrent._SupportNormal;
+            auto Forward = FVector::VectorPlaneProject(InCurrent._Direction, Up).GetSafeNormal();
+            if (Forward.IsNearlyZero())
+            { Forward = InCurrent._TravelTangent; }
+            const auto Candidate = Body.GetLocation() + Forward * (InCurrent._Speed * Step.Get_Seconds());
+            const auto Hit = ck_surface_motion::Get_Contact(World, Candidate, Up, Forward, InParams, InCurrent._Speed > 0.0f);
+            InCurrent._TrustedContact = Hit.Get_HasHit();
+            if (Hit.Get_HasHit())
+            {
+                const auto Normal = Hit.Get_Normal().GetSafeNormal();
+                const auto Transport = FQuat::FindBetweenNormals(Up, Normal);
+                const auto TargetForward = Transport.RotateVector(Forward);
+                InCurrent._SupportNormal = Normal;
+                InCurrent._TravelTangent = TargetForward;
+                const auto TargetRotation = FRotationMatrix::MakeFromZX(Normal, TargetForward).ToQuat();
+                const auto Angle = OldRotation.AngularDistance(TargetRotation);
+                const auto Alpha = Angle > KINDA_SMALL_NUMBER
+                    ? FMath::Min(1.0, FMath::DegreesToRadians(InParams.Get_SurfaceTurnRate()) * Step.Get_Seconds() / Angle) : 1.0;
+                Body.SetRotation(FQuat::Slerp(OldRotation, TargetRotation, Alpha).GetNormalized());
+                const auto Height = FVector::DotProduct(Candidate - Hit.Get_Position(), Normal);
+                const auto Correction = FMath::Clamp(InParams.Get_Clearance() - Height,
+                    -InParams.Get_ClearanceSpeed() * Step.Get_Seconds(), InParams.Get_ClearanceSpeed() * Step.Get_Seconds());
+                Body.SetLocation(Candidate + Normal * Correction);
+                InCurrent._MissingContact = FCk_Time{};
+                InCurrent._Grounded = true;
+                InCurrent._Velocity = (Body.GetLocation() - StartPosition) / (Step.Get_Seconds() * (Iteration + 1));
+                continue;
+            }
+            InCurrent._MissingContact += Step;
+            if (InCurrent._Grounded && InCurrent._MissingContact <= InParams.Get_ContactGrace())
+            {
+                Body.SetLocation(Candidate);
+                InCurrent._Velocity = Forward * InCurrent._Speed;
+                continue;
+            }
+            InCurrent._Grounded = false;
+            InCurrent._Velocity += InParams.Get_Gravity() * Step.Get_Seconds();
+            const auto FallStart = Body.GetLocation();
+            const auto FallEnd = FallStart + InCurrent._Velocity * Step.Get_Seconds();
+            const auto FallDirection = (FallEnd - FallStart).GetSafeNormal();
+            const auto FallHit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, FallStart,
+                FallEnd + FallDirection * InParams.Get_Clearance(), InParams.Get_QueryFilter());
+            if (ck_surface_motion::Get_TrustedHit(FallHit, FallDirection))
+            {
+                InCurrent._TrustedContact = true;
+                const auto Normal = FallHit.Get_Normal().GetSafeNormal();
+                Body.SetLocation(FallHit.Get_Position() + Normal * InParams.Get_Clearance());
+                Body.SetRotation(FRotationMatrix::MakeFromZX(Normal, Forward).ToQuat());
+                InCurrent._Velocity = FVector::ZeroVector;
+                InCurrent._Grounded = true;
+                InCurrent._SupportNormal = Normal;
+                InCurrent._TravelTangent = Body.GetRotation().GetAxisX();
+                InCurrent._MissingContact = FCk_Time{};
+            }
+            else
+            {
+                Body.SetLocation(FallEnd);
+            }
+        }
+        InCurrent._Ready = true;
+        InCurrent._DebugFrameNumber = GFrameCounter;
+        auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
+        UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, FCk_Request_Transform_SetTransform{Body}, {});
+    }
+}
