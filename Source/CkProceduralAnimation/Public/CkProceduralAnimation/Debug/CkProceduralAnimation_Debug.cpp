@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/Debug/CkProceduralAnimation_Debug.h"
 
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Fragment.h"
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
@@ -144,6 +146,13 @@ auto
         Snapshot.Get_Freshness().Set_MotionMatchesGaitFrame(Snapshot.Get_Status().Get_HasAcceptedSample()
             && UCk_Utils_SurfaceMotion_UE::Get_Status(MotionHandle) == ECk_ProceduralAnimation_Status::Ready
             && Body.Get<ck::FFragment_SurfaceMotion_Support>()._EvaluatedFrame == Snapshot.Get_Sample().Get_FrameNumber());
+    }
+
+    if (UCk_Utils_ProceduralBodyPose_UE::Has(Body))
+    {
+        Snapshot.Get_BodyPose().Set_Composed(true)
+            .Set_Status(UCk_Utils_ProceduralBodyPose_UE::Get_Status(UCk_Utils_ProceduralBodyPose_UE::CastChecked(Body)))
+            .Set_Offset(Body.Get<ck::FFragment_ProceduralBodyPose>()._Offset);
     }
 
     auto HasRig = false;
