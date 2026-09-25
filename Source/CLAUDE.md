@@ -5,7 +5,7 @@ dependency tier table, and the patterns that span modules. It does NOT restate r
 elsewhere: **style, naming, macros, signals, requests, error handling, non-negotiables,
 collaboration, engine/EnTT versions, skill index** → root [CLAUDE.md](../CLAUDE.md) (doctrine of
 record); **AngelScript** (language deltas, `utils_*`, dynamic handles, `asset ... of ...`
-definitions) → [Script/CLAUDE.md](../Script/CLAUDE.md); **editor-only modules** →
+definitions) → [Script/ARCHITECTURE.md](../Script/ARCHITECTURE.md); **editor-only modules** →
 [EDITOR_MODULES.md](EDITOR_MODULES.md).
 
 Facts below were verified against Build.cs files, headers, and git history on **2026-07-02**
@@ -61,7 +61,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS camera shake | `CkCamera` |
 | proximity voice chat (talkers / channel entities / local ears) | `CkVoiceChat` (campaign in progress — see its Claude.md) |
 | ECS animation assets | `CkAnimation` |
-| procedural foot planting, N-leg gait, surface motion and rigid two-bone rigs | `CkProceduralAnimation` (independent features; Jolt contact queries) |
+| procedural foot planting, N-leg gait, surface motion and rigid N-joint leg rigs (leg entities, data-asset layouts) | `CkProceduralAnimation` (Jolt contact queries) |
 | ECS state machine (data-asset conditions) | `CkStateMachine` |
 | ECS inventory + 2D grid | `CkInventory` + `CkGrid` |
 | ECS physics acceleration/forces | `CkPhysics` |
@@ -186,7 +186,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkActorRelay | Core,Ecs,EcsExt,Label,Log,Settings (channel entities stamp `FFragment_SaveKey`, which lives in CkEcs — no Snapshot dep) |
 | CkAggro | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkAnimation | Core,Ecs,EcsExt,Label,Log,Provider,Record,ResourceLoader |
-| CkProceduralAnimation | Core,Ecs,EcsExt,Jolt,Log (pure gait core plus independent surface motion and rigid presentation) |
+| CkProceduralAnimation | Core,Ecs,EcsExt,Jolt,Label,Log,Record (pure gait core plus independent surface motion and rigid presentation) |
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
@@ -282,6 +282,7 @@ CkGameplayDebugger's `CkInsightsDebugger`), `CkAssetExporter` (asset data → JS
 
 - **Scaffold by mimicry, not from the stale replacer script:** copy the smallest complete feature
   quartet (`CkTimer` — the root doctrine's canonical exemplar) and rename.
+- **Both headers and sources live under `Public/<Module>/…` — feature modules never add a `Private/` folder** (verified 2026-09-25: only renderers, Slate, editor tooling and test-only folders use one).
 - Build.cs inherits `CkModuleRules` (`Source/CkBuildConfig/CkBuildConfig.Build.cs`): C++20, unity
   build, per-config define matrix, auto-detected `WITH_ANGELSCRIPT_CK`. Only CkThirdParty and
   CkIskmRendererVF use plain `ModuleRules` — don't add a third without cause.
@@ -739,7 +740,7 @@ taught these but they exist nowhere in Source. The real API is `UCk_Utils_Owning
 Inside an EntityScript use `Get_AssociatedEntity()`; context owner via
 `UCk_Utils_ContextOwner_UE::Get_ContextOwner(InHandle)` (`CkEcs/ContextOwner/CkContextOwner_Utils.h:30`).
 The AngelScript equivalent is `ck::ToEntity(Actor)` / `ck::ToEntity(EntityScript)`
-(`Script/CkUtils_Common.as:5,10`) — see [Script/CLAUDE.md](../Script/CLAUDE.md).
+(`Script/CkUtils_Common.as:5,10`) — see [Script/ARCHITECTURE.md](../Script/ARCHITECTURE.md).
 
 **World from an entity:** `UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle)`
 (`CkEcs/EntityLifetime/CkEntityLifetime_Utils.h:128`).
@@ -760,7 +761,7 @@ const auto CurrentTime = TimeResult.Get_WorldTime().Get_Time();
   enum+value optionality, signal macros/binding policies, error handling & logging → root
   [CLAUDE.md](../CLAUDE.md). "No fallbacks that hide problems" is root non-negotiable #3.
 - Collaboration workflow (Research → Plan → Implement, stuck protocol) → root "Collaboration protocol".
-- AngelScript compatibility + `asset ... of ...` asset definitions → [Script/CLAUDE.md](../Script/CLAUDE.md).
+- AngelScript compatibility + `asset ... of ...` asset definitions → [Script/ARCHITECTURE.md](../Script/ARCHITECTURE.md).
 - Testing layers (AutoTest / Gauntlet / gym) → `ck-tests-authoring-and-running` skill (CkTests).
 
 ## Provenance and maintenance
