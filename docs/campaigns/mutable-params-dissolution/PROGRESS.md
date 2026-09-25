@@ -414,3 +414,158 @@ would pin it (`InputBias_RetuneAppliesToNextEvent` foremost) are among the 97 th
 `[EDITOR-VERIFY]` / follow-up, whoever owns CkTests wiring: find out why a `UCk_AutoTest_Base`
 subclass under `Script/CkInput/` produces no automation entry, then re-gate. Until then, treat
 CkInput and CkIntent as untested by the suite regardless of what the totals say.
+
+## Log (cont. 9) — 2026-09-24: third rebase onto dev (+625), and dev's post-fork features
+
+Rebased all four repos onto `origin/dev` (CkFoundation 625 behind / 40 ahead, CkTests 361/9,
+CkGameplayDebugger 281/10, superproject 26/3). Backups: `backup/prerebase-2026-09-24` in all four.
+
+- **The cont. 7 conflict doctrine held and is now automated.** A resolver takes each conflicted file,
+  derives the identifier map from the replayed commit's OWN pre-image -> post-image, proves it
+  reproduces the post-image byte-for-byte, and only then applies it to dev's side. Anything that fails
+  the proof is left for a human. CkFoundation: 11 (P3) + 36 (`_Current`) + 14 (Params tail) + 7 more
+  proven automatically; 13 files read by hand. CkTests: 41 proven, 0 by hand.
+- **A commit's premise can go stale under it.** P4 removed Params from `FProcessor_Probe_EndPlay` as a
+  dead view member; dev has since added a real read (`Get_MotionType`, to release static-probe Jolt
+  slots). Git auto-merged the `.h` removal while the `.cpp` conflicted — resolving only the conflict
+  would have compiled nothing. Re-derive "is this still dead?" against dev's code, not the commit message.
+- **The silent half of a structural commit is in the files that DIDN'T conflict.** Dev added
+  `.Get_Params()` hops on dissolved wrappers (CkVfx_Processor x3) and reads of fields moved to
+  `FFragment_Camera_Pov` in files git merged cleanly. Sweep the whole tree for the commit's contract
+  after resolving its conflicts, not just the conflicted files.
+
+### Convergence: 108 dangling identifiers, then one more
+
+Dev code arriving after the fork referenced 108 retired names across 221 files. The map came from the
+campaign's own `+StructRedirects`, every target checked declared before writing.
+
+- **It was filtered by shape, and shape was wrong again.** The map took redirects whose OldName contains
+  `ParamsData`; the dangling check took names ending `ParamsData|_Current|_Params`. P3 also renamed
+  `FCk_EntityReplicationDriver_ConstructionInfo` -> `FCk_EntityReplicationDriver_Spec`. Both filters
+  shared the assumption, so neither saw it; the compiler did (48 errors, one root cause).
+- **The shape-free check, which should be the FIRST post-rebase step from now on:**
+  `declared(origin/dev) - declared(now)` is everything this branch retired, whatever it looks like;
+  intersect with names still referenced in code. 242 retired, 0 referenced after the fix. It needs no
+  naming rule, no suffix list and no memory of which families were renamed.
+
+### Dev's post-fork features, converted
+
+CkGroundNav (Volume, Path), CkQueue (Queue, Coordinator), CkVisualLod (VisualLod, Arbiter), CkCrowd
+AvoidanceVolume, CkNavSurface (Markup, LinkTraversal), CkInventory OperationCoordinator: 7 Specs + 8
+bare fragments, StructRedirects for the 7 USTRUCTs keyed to their declaring module. Each keeps the
+whole-Spec alias (scan E finds nothing mutating them) — the CkInput/CkIntent precedent; no
+steady-state-read residue audit was done. Where the handle already owns `In<X>`, the fragment takes
+`In<X>Comp` (CkQueue).
+
+### CoreRedirects: the rename meets dev's module moves
+
+A redirect must land on a USTRUCT that exists in the module it names. Six did not:
+`CkUI.Ck_Fragment_WorldSpaceWidget_ParamsData` had TWO entries (the rename's, authored before dev moved
+the module, and dev's move, authored before the rename) — neither target existed; three older
+module-move entries pointed at names the rename then retired. All now go direct to the final target:
+`CoreRedirects.cpp:390` treats a chained asset redirect as a validation failure, so nothing here relies
+on A->B->C. **The first audit parser assumed one entry layout and silently skipped 22 of 213 entries**
+(no `/Script/` prefix, a space after the comma) — the same shape-assumption failure, in config.
+Eleven pre-existing entries (CkUnreal -> CkEntityBridge, CkAbility, CkChaos ApplyStrain) point at types
+removed long ago; not this branch's, left for their own change.
+
+### New on dev, and left for the maintainer: CkJoltBody's mutable Params
+
+`FProcessor_JoltBody_HandleRequests` (added on dev after the fork) declares Params `TReadWrite` and
+requests write `_MotionType` and `_CollisionProfileName` into the retained whole-Spec alias — the
+campaign's core defect class. Worse, motion type already has a proper home: the
+`FTag_JoltBody_MotionType_{Static,Kinematic,Dynamic}` tags the handler re-stamps, so the live value is
+held twice and kept in lockstep by hand (a split-brain mirror).
+
+A naive residue split would be 19 fields, past `CK_DEFINE_CONSTRUCTORS`' 9-arg cap
+(`CkMacros.h`, `CK_DEFINE_CONSTRUCTOR_9`). **The cap turned out to be moot, and the per-field read map is
+why:** after `FProcessor_JoltBody_Setup`, the ONLY Params fields anything reads are `_MotionType` and
+`_CollisionProfileName` — exactly the two requests mutate. The other 18 are read by Setup alone (body
+creation) and `_PersistContacts` by no processor. By "Params is EARNED by steady-state reads" the
+immutable residue is empty. Recommended shape: the Spec rides a one-shot
+`FFragment_JoltBody_PendingSetup` removed when Setup completes (AudioTrack's precedent), motion type
+lives only in its existing tags, `_CollisionProfileName` moves to `FFragment_JoltBody`. Held for the
+maintainer's go-ahead because it reshapes a physics feature's lifecycle (Setup re-polls while the mesh
+preload loads, and a request may arrive before Setup finishes).
+
+Still deferred from cont. 7: `CkCameraLayer` and `Ck2dGridCell` mutable Params (pre-existing on dev).
+
+### What the compiler found that no type check could: orphaned parameter names
+
+After every type check read clean (0 retired names referenced), the build still failed — on
+PARAMETER names. A rename commit renames the signature; dev's newer body lines in the same function
+keep the old name (`InCurrent`, `InParams`). No conflict, no dangling type. Eleven sites across
+CkCamera, CkCompass, CkMinimap, CkJoltStaticActor, CkCrowd (Neighbors, Steering) and CkProbe.
+
+- **The check for this class is scope-based:** an `In*` identifier used inside a function whose
+  parameter lists never declare it. It must require a TYPE token before a declared name —
+  the first version counted a call's `Foo(InParams)` as a declaration, which hid both a direct
+  argument use and, in the same function, three plain member accesses.
+- **The same argument-blindness broke a manual resolution.** Step 4 dropped Params from
+  `FProcessor_Probe_UpdateTransform` after searching dev's body for `InParams.` — but dev passes it
+  whole (`Get_ActivationMode(InParams)`). "Is this parameter still used?" must count every use,
+  not member access.
+- **An explicit residue is frozen at the moment it was cut.** P4's `FFragment_Probe_Params` residue
+  predates dev's new Spec field `_ContactParticipation`, which dev reads from Params at steady
+  state. A processor can only reach Spec data through Params, so every such field surfaces as a
+  member-not-found compile error; the fix is to decide it is earned and add it to the residue (and
+  to Add's unpacking), not to route around it.
+
+### Downstream repos: dev's fixtures built fragments from their Spec
+
+Five dev-added inspector tests in CkGameplayDebugger and CkTests hand-compose an entity instead
+of calling `Add`: `Entity.Add<FFragment_Compass_Params>(Spec)`, and likewise for Minimap,
+WorldSpaceWidget and MontagePlayer. On dev a Params wrapper took its whole Spec. On this branch
+a residue fragment takes only its own values (the "fragment never knows its Spec" rule), so each
+fixture now seeds the residue field by field, in the same order as the feature's `Add`. The
+WorldSpaceWidget fixture also seeds `_Tunables`. Without it the inspector reads defaults and the
+test's scaling/fading/occlusion values never reach it. The Camera inspector and its test read
+`Get_PovState`/`Get_OrientationIntention`/`Get_ViewInfo` off `FFragment_Camera`. Those fields
+moved to `FFragment_Camera_Pov`, which `Add` always composes alongside.
+
+The "shape-free" retired-names check still made one shape assumption: it only considered `F` and
+`E` type names. P3 also renamed a UObject. The DataAsset `UCk_2dGridSystem_Spec` became
+`UCk_2dGridSystem_AuthoringSpec`, because the old name reflects as `Ck_2dGridSystem_Spec`, the
+same name as the renamed `FCk_2dGridSystem_Spec`. Dev's CkGridEditor (GD `5deede36`) and an
+AS test-asset file (CkTests `cec71bb9`) came after the fork and use the old name in 31 places
+across 7 files. The ClassRedirect at `DefaultCkFoundation.ini:451` already covers serialized
+assets, so only source needed changing. The check now scans `F|E|U|A|I` declarations: 243
+retired names, 0 still referenced.
+
+A new API from dev assumed the whole Spec is still around at runtime. The probe contact filter
+(`a9f7ad1ea`, `6acf76d10`) added `Get_OrRegisterSignature(const FCk_Probe_Spec&)`, and Setup
+called it with its Params. On dev that worked because Params was the whole Spec; on this branch
+the processor holds only the P4 residue. The four fields the filter reads (ProbeName,
+ResponsePolicy, ContactParticipation, Filter) are all in the residue, so the residue does not
+change. The API does: it now takes the filter's own value type, `FCk_ProbeContactSignature`,
+built from the residue at Setup and from plain values in its spec. The rejected alternative was
+an overload taking `FFragment_Probe_Params`, which would tie a Jolt group filter to an ECS
+fragment.
+
+### Gate (2026-09-24, Development, full suite, `Saved/Logs/Rebase3Gate4.log`)
+
+Build green. Tests: **1920 total, 1911 passed, 9 failed.** The pre-rebase failing pair
+(PathNetworkFollower `DesiredNavmeshClearanceMovesInward` and
+`ProjectsRibbonWaypointWithinNavQueryExtent`) no longer fails. Each of the 9 failures was re-run
+alone (`--parallel 1`, `Triage_1..9.log`). None is attributed to this branch:
+
+| Test | Alone | Verdict |
+|---|---|---|
+| Crowd_AvoidanceVolume_InitialPathAvoidsExpandedObb | pass | lane-contention flake |
+| Crowd_SteeringPerf | pass | lane-contention flake (perf) |
+| Angelscript CodeCoverage IntegrationTest | pass | lane-contention flake |
+| CkUsf SolidOutlineRendersToTexture | pass with `--no-nullrhi` | environmental: the test requires a real RHI |
+| CkUI PrimaryLayoutTeardown.DeactivatesRootBeforeChildren | fail | environmental: loads `/Game/BusterBlock/...` |
+| GroundNav CostOnlyPublishRepathsWhenSavedFilterDeniesCorridor | fail | dev's (confirmed from code): `8efa89cbf` (09-11) rejects unregistered area tags; the test (09-08) excludes one |
+| Queue_ClaimFirstTransformProximityReconciles | fail | dev's (inferred): the full path is identical to dev except for renames |
+| Queue_ReserveDistanceRefreshPerf | fail | dev's (inferred): same path; dev changed the nav provider after the test |
+| IsmProxy AuthoredInspectorComposition | fail | dev's or environmental (inferred): simulated Slate input under nullrhi; renames-only path |
+
+"Renames-only path" is a mechanical check (`nonrename_diff.py`). Both sides of the
+branch-vs-origin/dev diff are normalized for the rename families (ParamsData->Spec,
+X_Current->X, In* params, the explicit `_Tunables`/`_SkeletalMesh` renames), and the leftover
+lines are listed. CkQueue, CkNavigation, CkGroundNav, CkIsmRenderer and CkUI (55 files): 0
+leftovers. CkCrowd: only the campaign's VoxelNavPath `_Params`->`_Volume` rename. CkEcsExt
+Transform: the Interpolation wrapper collapsed to an alias, `Get_Data().Get_X()` ->
+`Get_X()`, which does not change behavior. The three inferred verdicts would become
+confirmed with an A/B run of the same patterns on origin/dev binaries.
