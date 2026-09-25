@@ -4,7 +4,7 @@ CkFoundation is the Chainkemists ECS framework for Unreal Engine. This file is t
 doctrine for the whole Ck plugin suite: **CkGameplayDebugger and CkTests defer to this file** for
 everything not plugin-specific. Style rules live HERE and only here; topology lives in
 [Source/CLAUDE.md](Source/CLAUDE.md); AngelScript language rules live in
-[Script/CLAUDE.md](Script/CLAUDE.md); depth (runbooks, rationale, incident history) lives in the
+[Script/ARCHITECTURE.md](Script/ARCHITECTURE.md); depth (runbooks, rationale, incident history) lives in the
 skill library (index at the bottom). Facts below marked with a date were verified against
 code/disk on that date.
 
@@ -476,7 +476,7 @@ Full expansions, constraints, and add-a-new-X checklists: `ck-macros-and-codegen
 
 - [Source/CLAUDE.md](Source/CLAUDE.md) — module topology: decision tree ("I need to X → module Y"),
   tier table, cross-module patterns, module-authoring rules.
-- [Script/CLAUDE.md](Script/CLAUDE.md) — AngelScript language deltas, `utils_*` layer, dynamic
+- [Script/ARCHITECTURE.md](Script/ARCHITECTURE.md) — AngelScript language deltas, `utils_*` layer, dynamic
   handles, generated-script hygiene. Required before editing any `.as`.
 - `Source/<Module>/Claude.md` — 89 per-module docs (purpose, key API, anti-patterns). Read the
   target module's before coding in it. Some are stale (see `.claude/reports/DECISIONS.md` §15);
@@ -493,7 +493,7 @@ superproject with `.claude/scripts/sync-skills.ps1`).
 
 | Task | Skill (home) |
 |---|---|
-| Use/compose an EXISTING feature (attributes, timers, …) | no skill needed — [Source/CLAUDE.md](Source/CLAUDE.md) decision tree (+ Script/CLAUDE.md §5 for AS) |
+| Use/compose an EXISTING feature (attributes, timers, …) | no skill needed — [Source/CLAUDE.md](Source/CLAUDE.md) decision tree (+ Script/ARCHITECTURE.md §5 for AS) |
 | Classify/gate a change; what "done" requires | `ck-change-control` (CkFoundation) |
 | Any build/UHT/linker/AS-compile failure, packaged-only crash | `ck-debugging-playbook` (CkFoundation) |
 | "Has this been tried before?" — incidents, reverts, dead ends | `ck-failure-archaeology` (CkFoundation) |
