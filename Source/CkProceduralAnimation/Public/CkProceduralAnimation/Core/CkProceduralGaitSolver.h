@@ -464,21 +464,9 @@ namespace ck
         {
             return _LegStates.IsValidIndex(InLegIndex) && _LegStates[InLegIndex]._PendingStep._Time > FCk_Time{};
         }
-        auto ClearPendingStep(int32 InLegIndex) -> void
-        {
-            if (_LegStates.IsValidIndex(InLegIndex))
-            { _LegStates[InLegIndex]._PendingStep._Time = FCk_Time{}; }
-        }
         auto TransformState(const FQuat& InDelta) -> void;
         static auto MakeFootRotation(const FVector& InFacingDirection, const FVector& InGroundNormal) -> FQuat;
         static auto ComputeTraceAxis(const FVector& InBodyUp, const FVector& InRadialDirection, float InOutwardLean) -> FVector;
-        static auto WrapLerpClock(float InCurrent, float InTarget, float InAlpha) -> float
-        {
-            const auto Delta = FMath::Frac(InTarget - InCurrent + 1.5f) - 0.5f;
-            return FMath::Frac(InCurrent + Delta * FMath::Clamp(InAlpha, 0.0f, 1.0f) + 1.0f);
-        }
-        auto NudgeClock(float InTargetClock, float InAlpha) -> void
-        { _GaitClock = WrapLerpClock(_GaitClock, InTargetClock, InAlpha); }
         static auto ValidateSettings(const FProceduralGaitSettings& InSettings) -> bool;
 
     private:

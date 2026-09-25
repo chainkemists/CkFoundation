@@ -136,7 +136,7 @@ public:
     static FCk_Handle_ProceduralGait
     Request_ApplyPreset(
         UPARAM(ref) FCk_Handle_ProceduralGait& InGait,
-        const UCk_ProceduralGait_Data* InData,
+        const FCk_Request_ProceduralGait_ApplyPreset& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate);
 
 public:
