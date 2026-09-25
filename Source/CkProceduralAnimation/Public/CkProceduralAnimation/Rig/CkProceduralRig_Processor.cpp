@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Processor.h"
 
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Fragment.h"
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -147,6 +149,11 @@ namespace ck
             return;
         }
 
+        // The body pose update ran earlier this frame; the presentation entity's own transform is still a pending request.
+        const auto Posed = UCk_Utils_ProceduralBodyPose_UE::Has(Body)
+            ? Body.Get<FFragment_ProceduralBodyPose>().Get_Offset() * BodyTransform
+            : BodyTransform;
+
         const auto& Segments = InParams.Get_Segments();
         const auto HasFoot = InParams.Get_Foot() != FCk_Handle_Transform{};
         const auto PartsValid = algo::AllOf(Segments, [](const FCk_Handle_Transform& InPart) -> bool
@@ -165,8 +172,8 @@ namespace ck
         const auto& Lengths = Chain.Get_SegmentLengths();
         const auto& Foot = InLegComp.Get_Foot();
         const auto Target = Foot.Get_Position();
-        const auto Hip = BodyTransform.TransformPosition(InLegParams.Get_Placement().Get_HipLocal());
-        const auto Pole = BodyTransform.TransformPosition(Chain.Get_PoleLocal());
+        const auto Hip = Posed.TransformPosition(InLegParams.Get_Placement().Get_HipLocal());
+        const auto Pole = Posed.TransformPosition(Chain.Get_PoleLocal());
         auto PoleDirection = (Pole - Hip).GetSafeNormal();
         if (PoleDirection.IsNearlyZero())
         { PoleDirection = BodyTransform.GetRotation().GetAxisZ(); }

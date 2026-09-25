@@ -277,6 +277,23 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugBodyPose
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugBodyPose);
+
+private:
+    bool _Composed = false;
+    ECk_ProceduralAnimation_Status _Status = ECk_ProceduralAnimation_Status::PendingSetup;
+    FTransform _Offset = FTransform::Identity;
+
+public:
+    CK_PROPERTY(_Composed);
+    CK_PROPERTY(_Status);
+    CK_PROPERTY(_Offset);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Body, motion, probe and solver values belong to the last accepted advancing solve.
 // Current status/freshness flags and actual rig transforms are overlaid at query time.
 // RigPosePending marks parts whose deferred transform requests have not yet applied.
@@ -292,6 +309,7 @@ private:
     FCk_ProceduralAnimation_DebugSample _Sample;
     FCk_ProceduralAnimation_DebugGait _Gait;
     FCk_ProceduralAnimation_DebugMotion _Motion;
+    FCk_ProceduralAnimation_DebugBodyPose _BodyPose;
     TArray<FCk_ProceduralAnimation_DebugLeg> _Legs;
 
 public:
@@ -302,6 +320,7 @@ public:
     CK_PROPERTY(_Sample);
     CK_PROPERTY(_Gait);
     CK_PROPERTY(_Motion);
+    CK_PROPERTY(_BodyPose);
     CK_PROPERTY(_Legs);
 };
 
