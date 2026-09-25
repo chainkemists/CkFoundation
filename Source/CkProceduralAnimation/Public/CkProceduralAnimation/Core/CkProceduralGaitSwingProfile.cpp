@@ -1,5 +1,8 @@
 #include "CkProceduralAnimation/Core/CkProceduralGaitSwingProfile.h"
+
 #include <limits>
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
@@ -11,6 +14,8 @@ namespace ck
         _EaseValid = false;
         _ArcValid = false;
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProceduralGaitSwingProfile::
@@ -32,6 +37,8 @@ namespace ck
         return true;
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProceduralGaitSwingProfile::
         SetEase(
@@ -44,6 +51,8 @@ namespace ck
         return true;
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProceduralGaitSwingProfile::
         SetArc(
@@ -55,6 +64,8 @@ namespace ck
         _ArcValid = true;
         return true;
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProceduralGaitSwingProfile::
@@ -69,6 +80,8 @@ namespace ck
         return FMath::Lerp(InTable[Lower], InTable[Upper], Scaled - static_cast<float>(Lower));
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProceduralGaitSwingProfile::
         SampleEase(
@@ -79,6 +92,8 @@ namespace ck
         { return std::numeric_limits<float>::quiet_NaN(); }
         return _EaseValid ? Read(_EaseTable, InPhase) : FMath::Clamp(InPhase, 0.0f, 1.0f);
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     auto
         FProceduralGaitSwingProfile::
@@ -91,3 +106,5 @@ namespace ck
         return _ArcValid ? Read(_ArcTable, InPhase) : 0.0f;
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

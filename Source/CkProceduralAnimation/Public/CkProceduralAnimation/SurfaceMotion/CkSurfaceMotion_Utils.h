@@ -1,13 +1,20 @@
 #pragma once
 
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
+
+#include "CkCore/Macros/CkMacros.h"
+
 #include "CkEcs/Request/CkRequest_Completion.h"
-#include <Kismet/BlueprintFunctionLibrary.h>
+
+#include "CkEcsExt/CkEcsExt_Utils.h"
+#include "CkEcsExt/Transform/CkTransform_Fragment_Data.h"
 
 #include "CkSurfaceMotion_Utils.generated.h"
 
-UCLASS(NotBlueprintable, meta = (ScriptMixin = "FCk_Handle_SurfaceMotion"))
-class CKPROCEDURALANIMATION_API UCk_Utils_SurfaceMotion_UE : public UBlueprintFunctionLibrary
+// --------------------------------------------------------------------------------------------------------------------
+
+UCLASS(NotBlueprintable, Meta = (ScriptMixin = "FCk_Handle_SurfaceMotion"))
+class CKPROCEDURALANIMATION_API UCk_Utils_SurfaceMotion_UE : public UCk_Utils_Ecs_Base_UE
 {
     GENERATED_BODY()
 
@@ -16,58 +23,93 @@ public:
     CK_DEFINE_CPP_CASTCHECKED_TYPESAFE(FCk_Handle_SurfaceMotion);
 
 public:
-    UFUNCTION(BlueprintCallable, Category = "Ck|SurfaceMotion")
+    friend class UCk_Utils_Ecs_Base_UE;
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Add")
     static FCk_Handle_SurfaceMotion
     Add(
-        UPARAM(ref) FCk_Handle& InHandle,
+        UPARAM(ref) FCk_Handle_Transform& InBody,
         const FCk_Fragment_SurfaceMotion_ParamsData& InParams);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
+public:
     static bool
     Has(
         const FCk_Handle& InHandle);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
-    static bool
-    Get_IsReady(
-        const FCk_Handle_SurfaceMotion& InHandle);
-
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
-    static bool
-    Get_IsGrounded(
-        const FCk_Handle_SurfaceMotion& InHandle);
-
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
-    static FVector
-    Get_Velocity(
-        const FCk_Handle_SurfaceMotion& InHandle);
-
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
-    static FVector
-    Get_SupportNormal(
-        const FCk_Handle_SurfaceMotion& InHandle);
-
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion")
-    static bool
-    Get_HasTrustedContact(
-        const FCk_Handle_SurfaceMotion& InHandle);
-
-    UFUNCTION(BlueprintCallable, Category = "Ck|SurfaceMotion", meta = (AutoCreateRefTerm = "InDelegate"))
-    static FCk_Handle_SurfaceMotion
-    Request_Steering(
-        UPARAM(ref) FCk_Handle_SurfaceMotion& InHandle,
-        FCk_Request_SurfaceMotion_Steering InRequest, const FCk_Delegate_Request_OnCompleted& InDelegate);
-
 private:
-
-    UFUNCTION(BlueprintCallable, Category = "Ck|SurfaceMotion", meta = (ExpandEnumAsExecs = "OutResult"))
+    UFUNCTION(BlueprintCallable,
+        Category = "Ck|Utils|SurfaceMotion",
+        DisplayName="[Ck][SurfaceMotion] Cast",
+        meta = (ExpandEnumAsExecs = "OutResult"))
     static FCk_Handle_SurfaceMotion
     DoCast(
         UPARAM(ref) FCk_Handle& InHandle,
         ECk_SucceededFailed& OutResult);
 
-    UFUNCTION(BlueprintPure, Category = "Ck|SurfaceMotion", meta = (BlueprintAutocast, CompactNodeTitle = "<AsSurfaceMotion>"))
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SurfaceMotion",
+        DisplayName="[Ck][SurfaceMotion] Handle -> SurfaceMotion Handle",
+        meta = (CompactNodeTitle = "<AsSurfaceMotion>", BlueprintAutocast))
     static FCk_Handle_SurfaceMotion
     DoCastChecked(
         FCk_Handle InHandle);
+
+    UFUNCTION(BlueprintPure,
+        DisplayName="[Ck] Get Invalid SurfaceMotion Handle",
+        Category = "Ck|Utils|SurfaceMotion",
+        meta = (CompactNodeTitle = "INVALID_SurfaceMotionHandle", Keywords = "make"))
+    static FCk_Handle_SurfaceMotion
+    Get_InvalidHandle() { return {}; };
+
+public:
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Is Ready")
+    static bool
+    Get_IsReady(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Is Grounded")
+    static bool
+    Get_IsGrounded(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Velocity")
+    static FVector
+    Get_Velocity(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Support Normal")
+    static FVector
+    Get_SupportNormal(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Has Trusted Contact")
+    static bool
+    Get_HasTrustedContact(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+public:
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Request Steering",
+              meta = (AutoCreateRefTerm = "InDelegate"))
+    static FCk_Handle_SurfaceMotion
+    Request_Steering(
+        UPARAM(ref) FCk_Handle_SurfaceMotion& InHandle,
+        FCk_Request_SurfaceMotion_Steering InRequest,
+        const FCk_Delegate_Request_OnCompleted& InDelegate);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
