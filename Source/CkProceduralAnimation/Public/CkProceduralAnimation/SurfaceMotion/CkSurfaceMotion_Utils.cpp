@@ -23,6 +23,7 @@ auto
     -> FCk_Handle_SurfaceMotion
 {
     const auto BodyValid = ck::IsValid(InBody)
+        && NOT InBody.Has<ck::FTag_DestroyEntity_Initiate>()
         && UCk_Utils_EntityLifetime_UE::Get_CanCreateEntity(InBody)
         && NOT Has(InBody);
     CK_ENSURE_IF_NOT(BodyValid,

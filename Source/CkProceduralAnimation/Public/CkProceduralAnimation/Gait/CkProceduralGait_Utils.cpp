@@ -161,29 +161,28 @@ auto
     UCk_Utils_ProceduralGait_UE::
     Request_ApplyPreset(
         FCk_Handle_ProceduralGait& InGait,
-        const UCk_ProceduralGait_Data* InData,
+        const FCk_Request_ProceduralGait_ApplyPreset& InRequest,
         const FCk_Delegate_Request_OnCompleted& InDelegate)
     -> FCk_Handle_ProceduralGait
 {
+    auto Request = InRequest;
+    if (InDelegate.IsBound())
+    { Request.Set_CompletionDelegate(InDelegate); }
+
     const auto RequestValid = ck::IsValid(InGait)
         && Has(InGait)
         && NOT InGait.Has<ck::FTag_DestroyEntity_Initiate>()
-        && ck::IsValid(InData)
-        && ck::IsValid(InData->Get_Timing())
-        && ck::IsValid(InData->Get_Step())
-        && ck::IsValid(InData->Get_Probe())
-        && InData->Get_Timing().Get_MaxSimultaneousSwings() <= InGait.Get<ck::FFragment_ProceduralGait>()._Legs.Num();
+        && ck::IsValid(InRequest.Get_Timing())
+        && ck::IsValid(InRequest.Get_Step())
+        && ck::IsValid(InRequest.Get_Probe())
+        && InRequest.Get_Timing().Get_MaxSimultaneousSwings() <= InGait.Get<ck::FFragment_ProceduralGait>()._Legs.Num();
     CK_ENSURE_IF_NOT(RequestValid,
-        TEXT("Procedural gait Request_ApplyPreset rejected gait [{}]: the gait must be live and the preset present, well-formed and within the leg count."),
+        TEXT("Procedural gait Request_ApplyPreset rejected gait [{}]: the gait must be live and the preset well-formed and within the leg count."),
         InGait)
     {
-        InDelegate.ExecuteIfBound(InGait, ECk_Request_OperationResult::Failed_NotEnqueued);
+        Request.TryFireCompletion(InGait, ECk_Request_OperationResult::Failed_NotEnqueued);
         return InGait;
     }
-
-    auto Request = FCk_Request_ProceduralGait_ApplyPreset{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe()};
-    if (InDelegate.IsBound())
-    { Request.Set_CompletionDelegate(InDelegate); }
 
     InGait.AddOrGet<ck::FFragment_ProceduralGait_Requests>()._Requests.Emplace(MoveTemp(Request));
 

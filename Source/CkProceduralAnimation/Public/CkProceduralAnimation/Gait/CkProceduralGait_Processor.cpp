@@ -265,7 +265,16 @@ namespace ck
             }
 
             const auto Trusted = ck_procedural_gait::Get_TrustedHit(Hit);
-            InGaitComp._Probes[Index].Advance(Trusted, InDeltaT, Probe.Get_ContactGrace());
+            const auto ProbeAdvanced = InGaitComp._Probes[Index].Advance(Trusted, InDeltaT, Probe.Get_ContactGrace());
+            CK_ENSURE_IF_NOT(ProbeAdvanced,
+                TEXT("Procedural gait [{}] foot probe of leg [{}] rejected its elapsed time or contact grace; feature is failed."),
+                InHandle, Index)
+            {
+                InGaitComp._Ready = false;
+                InGaitComp._Failed = true;
+                return;
+            }
+
             const auto ProbeState = InGaitComp._Probes[Index].Get_State();
             // A brief miss holds the plant by withholding a target. A prolonged loss lets the
             // leg gather toward its CURRENT rest pose; the fallback never becomes trusted ground.
@@ -323,13 +332,13 @@ namespace ck
             UUtils_Signal_OnProceduralGait_LegSetChanged::Broadcast(InHandle, MakePayload(InHandle, EnabledCount, LegCount));
         }
 
-        auto Airborne = AllLost;
+        auto Airborne = EnabledCount > 0 && AllLost;
         if (UCk_Utils_SurfaceMotion_UE::Has(InHandle))
         { Airborne = NOT UCk_Utils_SurfaceMotion_UE::Get_IsGrounded(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)); }
 
         const auto CadenceSpeed = PlanarVelocity.Size() + YawRate * MeanFootRadius / FMath::Max(EnabledCount, 1);
         const auto Solved = InGaitComp._Solver.Step(InDeltaT, CadenceSpeed, PlanarVelocity, Inputs, Outputs, Airborne);
-        CK_ENSURE_IF_NOT(Solved, TEXT("Procedural gait solver rejected runtime inputs; feature is failed, planted state retained."))
+        CK_ENSURE_IF_NOT(Solved, TEXT("Procedural gait [{}] solver rejected runtime inputs; feature is failed, planted state retained."), InHandle)
         {
             InGaitComp._Ready = false;
             InGaitComp._Failed = true;
