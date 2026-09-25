@@ -71,18 +71,10 @@ auto
         return false;
     }
 
-    // The two endpoints are projected differently, on purpose.
-    //
-    // The START goes through the query's policy: the search has to begin on a polygon that policy
-    // allows, and moving it to the nearest such polygon changes nothing the caller asked for - the
-    // agent still walks from where it stands. It is what lets an agent standing inside its own
-    // excluded markup plan under that policy at all.
-    //
-    // The END goes onto the SURFACE and never through the policy. A policy that excludes the area
-    // under the goal must come back as a route that ends short of it, so the caller can tell "no
-    // route under this policy" from "arrived". Projecting it through the policy instead moves the
-    // goal to the nearest allowed polygon, up to the projection extent away, and the route to the
-    // moved goal reads Ready: the agent is told it arrived somewhere it never asked to go.
+    // The start goes through the policy so the search begins on an allowed polygon. The end goes onto
+    // the surface: through the policy, a goal inside excluded area would move up to the projection
+    // extent to the nearest allowed polygon, and the route to it would read Ready, as if the agent
+    // had arrived.
     const auto SurfaceFilter = InNavData.GetDefaultQueryFilter();
 
     auto StartProj = FNavLocation{};

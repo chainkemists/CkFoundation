@@ -338,10 +338,6 @@ namespace ck
             return {};
         }
 
-        // The markup is a BOX, not a column: it marks only the polygons within its vertical
-        // half-extent of the painter's feet. A body above or below that band - on a mezzanine, or
-        // lifted clear of the mesh - is not standing in it, and escaping it would launch a path query
-        // from a point the navmesh cannot project.
         const auto IsInsideAny = [&](const FVector& InPoint) -> bool
         {
             for (auto Idx = 0; Idx < Centers.Num(); ++Idx)
