@@ -1,15 +1,37 @@
 #pragma once
 
-#include "CkCore/Macros/CkMacros.h"
-#include "CkCore/Time/CkTime.h"
-#include "CkEcs/Handle/CkHandle.h"
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
+
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
+
+#include "CkEcs/Handle/CkHandle.h"
+
 #include <Kismet/BlueprintFunctionLibrary.h>
 
 #include "CkProceduralAnimation_Debug.generated.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 class UWorld;
+
+// --------------------------------------------------------------------------------------------------------------------
+
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugPart
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugPart);
+
+private:
+    bool _Available = false;
+    FTransform _Transform = FTransform::Identity;
+
+public:
+    CK_PROPERTY(_Available);
+    CK_PROPERTY(_Transform);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // Value-only diagnostic records remain readable after their source entity is destroyed.
 // Probe fields describe the last actual attempt, including rejected inside-origin hits.
@@ -44,12 +66,12 @@ private:
     int32 _ProbeAttemptCount = 0;
     bool _ProbeHit = false;
     bool _HasRig = false;
-    bool _UpperAvailable = false;
-    bool _LowerAvailable = false;
-    bool _FootAvailable = false;
-    FTransform _UpperTransform = FTransform::Identity;
-    FTransform _LowerTransform = FTransform::Identity;
-    FTransform _FootTransform = FTransform::Identity;
+    bool _RigReady = false;
+    ECk_ProceduralRig_Failure _RigFailure = ECk_ProceduralRig_Failure::None;
+    bool _Enabled = true;
+    FString _LegEntityId;
+    TArray<FCk_ProceduralAnimation_DebugPart> _Segments;
+    FCk_ProceduralAnimation_DebugPart _Foot;
 
 public:
     CK_PROPERTY(_Id);
@@ -78,13 +100,15 @@ public:
     CK_PROPERTY(_ProbeAttemptCount);
     CK_PROPERTY(_ProbeHit);
     CK_PROPERTY(_HasRig);
-    CK_PROPERTY(_UpperAvailable);
-    CK_PROPERTY(_LowerAvailable);
-    CK_PROPERTY(_FootAvailable);
-    CK_PROPERTY(_UpperTransform);
-    CK_PROPERTY(_LowerTransform);
-    CK_PROPERTY(_FootTransform);
+    CK_PROPERTY(_RigReady);
+    CK_PROPERTY(_RigFailure);
+    CK_PROPERTY(_Enabled);
+    CK_PROPERTY(_LegEntityId);
+    CK_PROPERTY(_Segments);
+    CK_PROPERTY(_Foot);
 };
+
+// --------------------------------------------------------------------------------------------------------------------
 
 // Body, motion, probe and solver values belong to the last accepted advancing solve.
 // Current status/freshness flags and actual rig transforms are overlaid at query time.
@@ -162,6 +186,8 @@ public:
     CK_PROPERTY(_Legs);
 };
 
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(NotBlueprintable)
 class CKPROCEDURALANIMATION_API UCk_Utils_ProceduralAnimation_Debug_UE : public UBlueprintFunctionLibrary
 {
@@ -170,13 +196,18 @@ class CKPROCEDURALANIMATION_API UCk_Utils_ProceduralAnimation_Debug_UE : public 
 public:
     CK_GENERATED_BODY(UCk_Utils_ProceduralAnimation_Debug_UE);
 
+public:
     // Game-thread only. No queries, simulation, asset loads or entity mutation.
     static auto
     Get_Snapshot(
-        const FCk_Handle& InHandle) -> FCk_ProceduralAnimation_DebugSnapshot;
+        const FCk_Handle& InHandle)
+        -> FCk_ProceduralAnimation_DebugSnapshot;
 
     // Discovery returns live handles; history must retain only copied snapshots.
     static auto
     Get_Entities(
-        UWorld* InWorld) -> TArray<FCk_Handle>;
+        UWorld* InWorld)
+        -> TArray<FCk_Handle>;
 };
+
+// --------------------------------------------------------------------------------------------------------------------
