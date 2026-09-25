@@ -468,11 +468,12 @@ namespace ck
         // Replicate runs before this processor in the main pass and in the settle pass, and its view needs the tag
         // removed above, so a request that survived it can never be processed. It survives only when the entity got
         // no ReplicationDriver, i.e. no replicated actor in its ownership chain. On a networked authority that means
-        // a Replicates entity no client will ever receive; a standalone world has no driver to replicate through.
+        // a Replicates entity no client will ever receive; in a standalone world no client can be missing it, so it is
+        // retired without diagnosis.
         if (InHandle.Has<FRequest_EntityScript_Replicate>())
         {
-            const auto IsUnreachableByClients = ck_entity_script_processor::Get_IsNetworkedAuthorityWorld(InHandle);
-            CK_ENSURE_IF_NOT(NOT IsUnreachableByClients,
+            const auto NoClientAwaitsThisEntity = NOT ck_entity_script_processor::Get_IsNetworkedAuthorityWorld(InHandle);
+            CK_ENSURE_IF_NOT(NoClientAwaitsThisEntity,
                 TEXT("EntityScript [{}] declares Replicates but finished construction without a ReplicationDriver "
                      "(owner [{}], owning actor in chain [{}]), so it will never replicate to clients. Spawn it under "
                      "an owner whose chain has a replicated actor, or make it DoesNotReplicate."),
