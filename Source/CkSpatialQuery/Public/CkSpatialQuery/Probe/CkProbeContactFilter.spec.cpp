@@ -16,11 +16,11 @@ bool FCkTest_ProbeContactFilter_RejectsCapacityExhaustion::RunTest(const FString
     auto Filter = JPH::Ref<ck::spatialquery::FCk_ProbeContactFilter>{
         new ck::spatialquery::FCk_ProbeContactFilter{1}};
 
-    const auto NotifyParams = FCk_Probe_Spec{TAG_Probe};
-    auto SilentParams = NotifyParams;
-    SilentParams.Set_ResponsePolicy(ECk_ProbeResponse_Policy::Silent);
+    const auto NotifySignature = ck::spatialquery::FCk_ProbeContactSignature{.ProbeName = TAG_Probe};
+    auto SilentSignature = NotifySignature;
+    SilentSignature.ResponsePolicy = ECk_ProbeResponse_Policy::Silent;
 
-    const auto FirstSignature = Filter->Get_OrRegisterSignature(NotifyParams);
+    const auto FirstSignature = Filter->Get_OrRegisterSignature(NotifySignature);
     TestEqual(TEXT("first signature uses the reserved slot"), FirstSignature, uint32{0});
 
     // Editor builds report each deliberate rejection through both CkEnsure and CkEnsures.
@@ -29,16 +29,16 @@ bool FCkTest_ProbeContactFilter_RejectsCapacityExhaustion::RunTest(const FString
         EAutomationExpectedErrorFlags::Contains,
         4);
 
-    const auto RejectedSignature = Filter->Get_OrRegisterSignature(SilentParams);
+    const auto RejectedSignature = Filter->Get_OrRegisterSignature(SilentSignature);
     TestEqual(TEXT("capacity exhaustion is explicitly representable"),
         RejectedSignature, JPH::CollisionGroup::cInvalidSubGroup);
 
-    const auto RejectedRetry = Filter->Get_OrRegisterSignature(SilentParams);
+    const auto RejectedRetry = Filter->Get_OrRegisterSignature(SilentSignature);
     TestEqual(TEXT("rejected signature does not mutate or publish the table"),
         RejectedRetry, JPH::CollisionGroup::cInvalidSubGroup);
 
     TestEqual(TEXT("an already published signature remains stable after rejection"),
-        Filter->Get_OrRegisterSignature(NotifyParams), FirstSignature);
+        Filter->Get_OrRegisterSignature(NotifySignature), FirstSignature);
 
     return true;
 }
@@ -56,18 +56,18 @@ bool FCkTest_ProbeContactFilter_ContactParticipationAdmission::RunTest(const FSt
     auto Filter = JPH::Ref<ck::spatialquery::FCk_ProbeContactFilter>{
         new ck::spatialquery::FCk_ProbeContactFilter{3}};
 
-    const auto NotifyParams = FCk_Probe_Spec{TAG_Probe};
-    auto SilentParams = NotifyParams;
-    SilentParams.Set_ResponsePolicy(ECk_ProbeResponse_Policy::Silent);
-    auto QueryOnlyParams = NotifyParams;
-    QueryOnlyParams.Set_ContactParticipation(ECk_Probe_ContactParticipation::QueryOnly);
+    const auto NotifySignature = ck::spatialquery::FCk_ProbeContactSignature{.ProbeName = TAG_Probe};
+    auto SilentSignature = NotifySignature;
+    SilentSignature.ResponsePolicy = ECk_ProbeResponse_Policy::Silent;
+    auto QueryOnlySignature = NotifySignature;
+    QueryOnlySignature.ContactParticipation = ECk_Probe_ContactParticipation::QueryOnly;
 
     const auto NotifyGroup = JPH::CollisionGroup{
-        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(NotifyParams)};
+        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(NotifySignature)};
     const auto SilentGroup = JPH::CollisionGroup{
-        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(SilentParams)};
+        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(SilentSignature)};
     const auto QueryOnlyGroup = JPH::CollisionGroup{
-        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(QueryOnlyParams)};
+        Filter.GetPtr(), 0, Filter->Get_OrRegisterSignature(QueryOnlySignature)};
 
     // Silent cannot receive, but Notify can: preserve the directional targetable contract.
     TestTrue(TEXT("Notify receiver admits a Silent target"), Filter->CanCollide(NotifyGroup, SilentGroup));
