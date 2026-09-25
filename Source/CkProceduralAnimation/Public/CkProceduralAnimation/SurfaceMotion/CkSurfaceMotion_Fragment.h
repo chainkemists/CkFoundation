@@ -2,21 +2,40 @@
 
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
 
+#include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
+
+// --------------------------------------------------------------------------------------------------------------------
+
 class UCk_Utils_SurfaceMotion_UE;
 class UCk_Utils_ProceduralAnimation_Debug_UE;
 
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
+    class FProcessor_SurfaceMotion_HandleRequests;
+    class FProcessor_SurfaceMotion_Update;
+    class FProcessor_ProceduralGait_Update;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     using FFragment_SurfaceMotion_Params = FCk_Fragment_SurfaceMotion_ParamsData;
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Current
     {
+    public:
         CK_GENERATED_BODY(FFragment_SurfaceMotion_Current);
+
+    public:
         friend class FProcessor_SurfaceMotion_Update;
         friend class FProcessor_SurfaceMotion_HandleRequests;
-        friend class UCk_Utils_SurfaceMotion_UE;
         friend class FProcessor_ProceduralGait_Update;
-        friend class UCk_Utils_ProceduralAnimation_Debug_UE;
+        friend class ::UCk_Utils_SurfaceMotion_UE;
+        friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
+
     private:
         FVector _Direction = FVector::ForwardVector;
         FVector _Velocity = FVector::ZeroVector;
@@ -30,14 +49,23 @@ namespace ck
         bool _Ready = false;
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Requests
     {
+    public:
         CK_GENERATED_BODY(FFragment_SurfaceMotion_Requests);
+
+    public:
         friend class FProcessor_SurfaceMotion_HandleRequests;
-        friend class UCk_Utils_SurfaceMotion_UE;
+        friend class ::UCk_Utils_SurfaceMotion_UE;
+
     private:
         TArray<FCk_Request_SurfaceMotion_Steering> _Requests;
+
     public:
         CK_PROPERTY_GET(_Requests);
     };
 }
+
+// --------------------------------------------------------------------------------------------------------------------

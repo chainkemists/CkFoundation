@@ -1,16 +1,20 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+
 #include "CoreMinimal.h"
 #include "Templates/Function.h"
+
+// --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
 {
     struct CKPROCEDURALANIMATION_API FProceduralGaitSwingProfile
     {
         CK_GENERATED_BODY(FProceduralGaitSwingProfile);
+
     public:
-        static constexpr int32 NumSamples = 17;
+        static constexpr auto NumSamples = int32{17};
         auto Reset() -> void;
         auto IsEaseValid() const -> bool { return _EaseValid; }
         auto IsArcValid() const -> bool { return _ArcValid; }
@@ -22,14 +26,19 @@ namespace ck
         // Nonfinite phase returns NaN without indexing the table.
         auto SampleEase(float InPhase) const -> float;
         auto SampleArc(float InPhase) const -> float;
+
     private:
         static auto Fill(float (&OutTable)[NumSamples], TFunctionRef<float(float)> InEvaluator) -> bool;
         static auto Read(const float (&InTable)[NumSamples], float InPhase) -> float;
+
+    private:
         float _EaseTable[NumSamples] = {};
         float _ArcTable[NumSamples] = {};
         bool _EaseValid = false;
         bool _ArcValid = false;
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     namespace procedural_gait_swing
     {
@@ -43,3 +52,5 @@ namespace ck
         }
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

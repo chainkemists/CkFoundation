@@ -14,7 +14,9 @@ public class CkProceduralAnimation : CkModuleRules
             "CkEcs",
             "CkEcsExt",
             "CkJolt",
+            "CkLabel",
             "CkLog",
+            "CkRecord",
         });
 
         PrivateDependencyModuleNames.Add("AnimationCore");

@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -26,6 +28,8 @@ namespace ck
         return true;
     }
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         FProceduralFootProbeState::
         Reset()
@@ -35,8 +39,15 @@ namespace ck
         _State = EProceduralFootProbeState::Grounded;
     }
 
-    auto MakeProceduralGroundProbeSpan(int32 InAttempt, float InUpDistance, float InDownDistance,
-        float InOutwardLean) -> FProceduralGroundProbeSpan
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        MakeProceduralGroundProbeSpan(
+            int32 InAttempt,
+            float InUpDistance,
+            float InDownDistance,
+            float InOutwardLean)
+        -> FProceduralGroundProbeSpan
     {
         constexpr float UpScale[ProceduralGroundProbeAttempts] = {1.0f, 4.0f, 12.0f};
         constexpr float DownScale[ProceduralGroundProbeAttempts] = {1.0f, 1.5f, 2.5f};
@@ -47,3 +58,5 @@ namespace ck
             .Set_OutwardLean(Attempt == 0 ? InOutwardLean : 0.0f);
     }
 }
+
+// --------------------------------------------------------------------------------------------------------------------

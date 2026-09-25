@@ -4,6 +4,8 @@
 #include "CkCore/Time/CkTime.h"
 #include "CkProceduralAnimation/Core/CkProceduralGaitSwingProfile.h"
 
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     // Coordinates are in a support-aligned frame whose +Z is up. The caller supplies
@@ -17,15 +19,25 @@ namespace ck
     private:
         friend class FProceduralGaitSolver;
 
-        float _MinSpeed = 0.f;
+        float _MinSpeed = 0.0f;
         TArray<float, TInlineAllocator<8>> _PhaseOffsets;
-        float _CycleDurationScale = 1.f;
+        float _CycleDurationScale = 1.0f;
 
     public:
         CK_PROPERTY(_MinSpeed);
         CK_PROPERTY(_PhaseOffsets);
         CK_PROPERTY(_CycleDurationScale);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    enum class EProceduralGaitLegLossPolicy : uint8
+    {
+        KeepAuthoredOffsets,
+        RedistributeOffsets
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPROCEDURALANIMATION_API FProceduralGaitSettings
     {
@@ -34,38 +46,39 @@ namespace ck
     private:
         friend class FProceduralGaitSolver;
 
-        float _StepThreshold = 25.f;
+        float _StepThreshold = 25.0f;
         float _EmergencyStepFactor = 1.75f;
         FCk_Time _StepDuration = FCk_Time{0.25};
-        float _StepHeight = 15.f;
+        float _StepHeight = 15.0f;
         FCk_Time _CycleDuration = FCk_Time{0.5};
         float _SwingWindow = 0.5f;
-        float _MoveSpeedThreshold = 5.f;
-        float _CadenceSpeedRef = 0.f;
-        float _MaxCadenceScale = 3.f;
-        float _RetargetSmoothing = 14.f;
+        float _MoveSpeedThreshold = 5.0f;
+        float _CadenceSpeedRef = 0.0f;
+        float _MaxCadenceScale = 3.0f;
+        float _RetargetSmoothing = 14.0f;
         float _RetargetFreezePhase = 0.7f;
         int32 _MaxSimultaneousSwings = 0;
         float _SwingApexPhase = 0.5f;
-        float _SwingApexSharpness = 1.f;
+        float _SwingApexSharpness = 1.0f;
         float _SprintApexHeightScale = 0.65f;
-        float _ObstacleClearance = 6.f;
+        float _ObstacleClearance = 6.0f;
         FProceduralGaitSwingProfile _SwingProfile;
         float _StrokeOvershootFraction = 0.25f;
-        float _MaxStrokeOvershoot = 20.f;
+        float _MaxStrokeOvershoot = 20.0f;
         float _ScheduleAdvanceFraction = 0.6f;
         float _ScheduleAdvanceRate = 1.5f;
-        FCk_Time _CatchStepLifetime = FCk_Time{0.};
+        FCk_Time _CatchStepLifetime = FCk_Time{0.0};
         bool _SettleAtRest = true;
         FCk_Time _SettleDelay = FCk_Time{0.35};
         float _SettleThresholdFraction = 0.35f;
-        float _AirborneTuckLift = 15.f;
-        float _AirborneFollowSpeed = 8.f;
+        float _AirborneTuckLift = 15.0f;
+        float _AirborneFollowSpeed = 8.0f;
         float _LandingStepDurationScale = 0.5f;
         TArray<FProceduralGaitPattern> _Patterns;
         FCk_Time _PatternBlendTime = FCk_Time{0.4};
         float _PatternSwitchHysteresis = 0.85f;
-        float _SwingToePitchDegrees = 0.f;
+        float _SwingToePitchDegrees = 0.0f;
+        EProceduralGaitLegLossPolicy _LegLossPolicy = EProceduralGaitLegLossPolicy::KeepAuthoredOffsets;
 
     public:
         CK_PROPERTY(_StepThreshold);
@@ -100,7 +113,10 @@ namespace ck
         CK_PROPERTY(_PatternBlendTime);
         CK_PROPERTY(_PatternSwitchHysteresis);
         CK_PROPERTY(_SwingToePitchDegrees);
+        CK_PROPERTY(_LegLossPolicy);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
@@ -111,11 +127,12 @@ namespace ck
 
         FVector _IdealTarget = FVector::ZeroVector;
         FVector _GroundNormal = FVector::UpVector;
-        float _PhaseOffset = 0.f;
-        float _StepThresholdScale = 1.f;
+        float _PhaseOffset = 0.0f;
+        float _StepThresholdScale = 1.0f;
         FVector _FacingDirection = FVector::ForwardVector;
         bool _TargetValid = true;
         float _ClearanceGroundZ = -FLT_MAX;
+        bool _Enabled = true;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -125,7 +142,10 @@ namespace ck
         CK_PROPERTY(_FacingDirection);
         CK_PROPERTY(_TargetValid);
         CK_PROPERTY(_ClearanceGroundZ);
+        CK_PROPERTY(_Enabled);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegOutput
     {
@@ -137,7 +157,7 @@ namespace ck
         FVector _Position = FVector::ZeroVector;
         FVector _Normal = FVector::UpVector;
         FQuat _Rotation = FQuat::Identity;
-        float _SwingAlpha = 0.f;
+        float _SwingAlpha = 0.0f;
         bool _Planted = true;
 
     public:
@@ -147,6 +167,8 @@ namespace ck
         CK_PROPERTY(_SwingAlpha);
         CK_PROPERTY(_Planted);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegState
     {
@@ -165,14 +187,15 @@ namespace ck
         // Transitions start from the pose that was emitted, including clearance and authored swing shape.
         FVector _CurrentPosition = FVector::ZeroVector;
         FQuat _CurrentRotation = FQuat::Identity;
-        float _SwingPhase = 0.f;
-        float _SwingDurationScale = 1.f;
+        float _SwingPhase = 0.0f;
+        float _SwingDurationScale = 1.0f;
         bool _Swinging = false;
         bool _TargetFrozen = false;
         bool _Overshoot = false;
         FVector _PendingStepTarget = FVector::ZeroVector;
-        FCk_Time _PendingStepTime = FCk_Time{0.};
+        FCk_Time _PendingStepTime = FCk_Time{0.0};
         bool _CatchStep = false;
+        bool _Enabled = true;
 
     public:
         CK_PROPERTY(_PlantedPosition);
@@ -192,26 +215,34 @@ namespace ck
         CK_PROPERTY(_PendingStepTarget);
         CK_PROPERTY(_PendingStepTime);
         CK_PROPERTY(_CatchStep);
+        CK_PROPERTY_GET(_Enabled);
     };
+
+    // --------------------------------------------------------------------------------------------------------------------
 
     class CKPROCEDURALANIMATION_API FProceduralGaitVelocityTracker
     {
         CK_GENERATED_BODY(FProceduralGaitVelocityTracker);
+
     public:
         auto Reset() -> void;
         auto Update(const FVector& InWorldPosition, FCk_Time InDeltaTime) -> FVector;
         auto GetVelocity() const -> FVector;
+
     private:
-        static constexpr int32 MaxSamples = 5;
+        static constexpr auto MaxSamples = int32{5};
         TArray<FVector, TInlineAllocator<MaxSamples>> _Samples;
         FVector _PreviousPosition = FVector::ZeroVector;
         int32 _NextSample = 0;
         bool _HasPrevious = false;
     };
 
+    // --------------------------------------------------------------------------------------------------------------------
+
     class CKPROCEDURALANIMATION_API FProceduralGaitSolver
     {
         CK_GENERATED_BODY(FProceduralGaitSolver);
+
     public:
         // Rejected input never changes state or the caller's output array.
         auto Reset(TArrayView<const FVector> InInitialFootPositions) -> bool;
@@ -219,6 +250,8 @@ namespace ck
             TArrayView<const FProceduralGaitLegInput> InInputs,
             TArrayView<FProceduralGaitLegOutput> OutOutputs, bool InAirborne = false) -> bool;
         auto NumLegs() const -> int32 { return _LegStates.Num(); }
+        auto IsLegEnabled(int32 InLegIndex) const -> bool;
+        auto NumEnabledLegs() const -> int32;
         auto GetGaitClock() const -> float { return _GaitClock; }
         auto IsWindowOpen(float InPhaseOffset) const -> bool;
         auto GetLegState(int32 InLegIndex) const -> const FProceduralGaitLegState& { return _LegStates[InLegIndex]; }
@@ -230,6 +263,8 @@ namespace ck
         auto IsAirborne() const -> bool { return _WasAirborne; }
         auto GetRestTime() const -> FCk_Time { return _RestTime; }
         auto SetPlantedPose(int32 InLegIndex, const FVector& InPosition, const FVector& InNormal) -> void;
+        auto SetDisabledPose(int32 InLegIndex, const FVector& InPosition, const FQuat& InRotation,
+            const FVector& InNormal) -> bool;
         auto RequestStep(int32 InLegIndex, const FVector& InTarget) -> bool;
         auto HasPendingStep(int32 InLegIndex) const -> bool
         {
@@ -251,12 +286,22 @@ namespace ck
         auto NudgeClock(float InTargetClock, float InAlpha) -> void
         { _GaitClock = WrapLerpClock(_GaitClock, InTargetClock, InAlpha); }
         static auto ValidateSettings(const FProceduralGaitSettings& InSettings) -> bool;
+
     private:
         auto DoStep(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
             TArrayView<const FProceduralGaitLegInput> InInputs, TArrayView<FProceduralGaitLegOutput> OutOutputs,
             bool InAirborne) -> bool;
         auto UpdatePatternSelection(FCk_Time InDeltaTime, float InBodyPlanarSpeed,
             TArrayView<const FProceduralGaitLegInput> InInputs, bool InAdvance) -> void;
+        auto DoSelectPattern(float InBodyPlanarSpeed, bool InAdvance) -> void;
+        static auto DoReconcileEnabled(FProceduralGaitLegState& InOutState, const FProceduralGaitLegInput& InInput) -> bool;
+        auto DoRedistributeOffsets() -> void;
+        auto DoClearRedistribution() -> void;
+        static auto DoBeginSwing(FProceduralGaitLegState& InOutState, const FVector& InStartPosition,
+            const FQuat& InStartRotation, const FVector& InTarget) -> void;
+        static auto DoWriteDisabledOutput(const FProceduralGaitLegState& InState, FProceduralGaitLegOutput& OutOutput) -> void;
+
+    private:
         FProceduralGaitSettings _Settings;
         TArray<FProceduralGaitLegState> _LegStates;
         float _GaitClock = 0.0f;
@@ -269,8 +314,13 @@ namespace ck
         float _BlendFromCycleScale = 1.0f;
         TArray<float, TInlineAllocator<8>> _EffectivePhaseOffsets;
         TArray<float, TInlineAllocator<8>> _BlendFromOffsets;
+        TArray<float, TInlineAllocator<8>> _RedistributedOffsets;
+        bool _HasRedistributedOffsets = false;
+
     public:
         CK_PROPERTY(_Settings);
         CK_PROPERTY_GET(_LastCadenceScale);
     };
 }
+
+// --------------------------------------------------------------------------------------------------------------------
