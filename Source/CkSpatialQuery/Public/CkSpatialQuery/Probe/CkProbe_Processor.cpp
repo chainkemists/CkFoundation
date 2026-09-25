@@ -505,7 +505,12 @@ namespace ck::details
             TEXT("Probe setup requires the SpatialQuery contact-filter registry context"))
         { return; }
 
-        const auto ContactSignature = ContactFilterContext->Get_OrRegisterSignature(InParams);
+        const auto ContactSignature = ContactFilterContext->Get_OrRegisterSignature(
+            ck::spatialquery::FCk_ProbeContactSignature{
+                .ProbeName = InParams.Get_ProbeName(),
+                .ResponsePolicy = InParams.Get_ResponsePolicy(),
+                .ContactParticipation = InParams.Get_ContactParticipation(),
+                .Filter = InParams.Get_Filter()});
         if (ContactSignature == JPH::CollisionGroup::cInvalidSubGroup)
         { return; }
 
