@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CkProceduralAnimation/CkProceduralAnimation_Fragment_Data.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment_Data.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment_Data.h"
 
@@ -81,16 +82,16 @@ private:
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralGait",
-              DisplayName="[Ck][ProceduralGait] Get Is Ready")
-    static bool
-    Get_IsReady(
+              DisplayName="[Ck][ProceduralGait] Get Status")
+    static ECk_ProceduralAnimation_Status
+    Get_Status(
         const FCk_Handle_ProceduralGait& InGait);
 
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralGait",
-              DisplayName="[Ck][ProceduralGait] Get Has Failed")
-    static bool
-    Get_HasFailed(
+              DisplayName="[Ck][ProceduralGait] Get Failure")
+    static ECk_ProceduralGait_Failure
+    Get_Failure(
         const FCk_Handle_ProceduralGait& InGait);
 
     UFUNCTION(BlueprintPure,

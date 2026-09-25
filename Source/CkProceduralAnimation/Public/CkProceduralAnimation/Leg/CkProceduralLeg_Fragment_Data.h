@@ -153,6 +153,26 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralLeg_Spec, IsValid_Policy_Default,
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProceduralLeg_FootPhase : uint8
+{
+    Planted,
+    Swinging
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_FootPhase);
+
+UENUM(BlueprintType)
+enum class ECk_ProceduralLeg_FootContact : uint8
+{
+    Trusted,
+    Guessed
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_FootContact);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralLeg_Foot
 {
@@ -180,19 +200,19 @@ private:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    bool _Planted = false;
+    ECk_ProceduralLeg_FootPhase _Phase = ECk_ProceduralLeg_FootPhase::Swinging;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
-    bool _ContactTrusted = false;
+    ECk_ProceduralLeg_FootContact _Contact = ECk_ProceduralLeg_FootContact::Guessed;
 
 public:
     CK_PROPERTY(_Position);
     CK_PROPERTY(_Normal);
     CK_PROPERTY(_Rotation);
     CK_PROPERTY(_SwingAlpha);
-    CK_PROPERTY(_Planted);
-    CK_PROPERTY(_ContactTrusted);
+    CK_PROPERTY(_Phase);
+    CK_PROPERTY(_Contact);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

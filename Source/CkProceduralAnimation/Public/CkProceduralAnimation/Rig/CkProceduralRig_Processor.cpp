@@ -13,6 +13,7 @@
 #include <FABRIK.h>
 #include <TwoBoneIK.h>
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralRig_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralRig_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -99,6 +100,27 @@ namespace ck_procedural_rig
 namespace ck
 {
     auto
+        FProcessor_ProceduralRig_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            const FFragment_ProceduralRig_Params& InParams,
+            FFragment_ProceduralRig& InRigComp)
+        -> void
+    {
+        // Returning before the tag removal re-arms Setup next tick: a rig stays PendingSetup until its gait is Ready.
+        auto Body = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
+        const auto Gait = UCk_Utils_ProceduralGait_UE::Cast(Body);
+        if (UCk_Utils_ProceduralGait_UE::Get_Status(Gait) != ECk_ProceduralAnimation_Status::Ready)
+        { return; }
+
+        InRigComp._Joints.SetNum(InParams.Get_Segments().Num() + 1);
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_ProceduralRig_Update::
         ForEachEntity(
             TimeType InDeltaT,
@@ -109,13 +131,9 @@ namespace ck
             const FFragment_ProceduralLeg& InLegComp)
         -> void
     {
-        InRigComp._Ready = false;
-        if (InRigComp._Failure != ECk_ProceduralRig_Failure::None)
-        { return; }
-
         auto Body = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
         const auto Gait = UCk_Utils_ProceduralGait_UE::Cast(Body);
-        if (NOT UCk_Utils_ProceduralGait_UE::Get_IsReady(Gait))
+        if (UCk_Utils_ProceduralGait_UE::Get_Status(Gait) != ECk_ProceduralAnimation_Status::Ready)
         { return; }
 
         const auto BodyTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(Body));
@@ -125,7 +143,7 @@ namespace ck
         CK_ENSURE_IF_NOT(RootScaleValid,
             TEXT("Procedural rig [{}] root changed to unsupported non-unit scale; rig has failed."), InHandle)
         {
-            InRigComp._Failure = ECk_ProceduralRig_Failure::InvalidRootScale;
+            InHandle.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::InvalidRootScale);
             return;
         }
 
@@ -139,7 +157,7 @@ namespace ck
         CK_ENSURE_IF_NOT(PartsValid,
             TEXT("Procedural rig [{}] lost an authored part; rig has failed without partially posing its chain."), InHandle)
         {
-            InRigComp._Failure = ECk_ProceduralRig_Failure::MissingPart;
+            InHandle.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::MissingPart);
             return;
         }
 
@@ -193,8 +211,7 @@ namespace ck
         if (HasFoot)
         { ck_procedural_rig::Request_Pose(InParams.Get_Foot(), Joints.Last(), Foot.Get_Rotation()); }
 
-        InRigComp._DebugGaitSequence = Gait.Get<FFragment_ProceduralGait>()._SolveSequence;
-        InRigComp._Ready = true;
+        InRigComp._PosedSolveSequence = Gait.Get<FFragment_ProceduralGait>()._SolveSequence;
     }
 }
 

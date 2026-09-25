@@ -12,6 +12,7 @@
 
 #include <Engine/World.h>
 
+CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_Setup);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_HandleRequests);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_Update);
 CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_CancelPendingRequests);
@@ -82,6 +83,26 @@ namespace ck_surface_motion
 namespace ck
 {
     auto
+        FProcessor_SurfaceMotion_Setup::
+        ForEachEntity(
+            TimeType InDeltaT,
+            HandleType InHandle,
+            FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Support& InSupportComp,
+            const FFragment_Transform& InTransform)
+        -> void
+    {
+        const auto Rotation = InTransform.Get_Transform().GetRotation();
+        InSupportComp._SupportNormal = Rotation.GetAxisZ();
+        InSupportComp._TravelTangent = Rotation.GetAxisX();
+        InMotionComp._Direction = InSupportComp._TravelTangent;
+
+        InHandle.Remove<MarkedDirtyBy>();
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProcessor_SurfaceMotion_HandleRequests::
         ForEachEntity(
             TimeType InDeltaT,
@@ -132,7 +153,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_SurfaceMotion_Params& InParams,
-            FFragment_SurfaceMotion& InMotionComp,
+            const FFragment_SurfaceMotion& InMotionComp,
+            FFragment_SurfaceMotion_Support& InSupportComp,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -142,16 +164,13 @@ namespace ck
 
         auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
         if (ck::Is_NOT_Valid(World))
-        {
-            InMotionComp._Ready = false;
-            return;
-        }
+        { return; }
 
         auto Body = InTransform.Get_Transform();
         const auto BodyFinite = NOT Body.ContainsNaN();
-        CK_ENSURE_IF_NOT(BodyFinite, TEXT("Surface motion [{}] body transform contains NaN; motion is not ready."), InHandle)
+        CK_ENSURE_IF_NOT(BodyFinite, TEXT("Surface motion [{}] body transform contains NaN; motion is failed."), InHandle)
         {
-            InMotionComp._Ready = false;
+            InHandle.Add<FFragment_SurfaceMotion_Failure>(ECk_SurfaceMotion_Failure::NanBody);
             return;
         }
 
@@ -168,21 +187,21 @@ namespace ck
             const auto OldRotation = Body.GetRotation();
             // Attachment owns the accepted surface frame. It must not use the visual body's
             // partially eased up axis: doing so alternates floor/wall hits during a corner turn.
-            const auto Up = InMotionComp._SupportNormal;
+            const auto Up = InSupportComp._SupportNormal;
             auto Forward = FVector::VectorPlaneProject(InMotionComp._Direction, Up).GetSafeNormal();
             if (Forward.IsNearlyZero())
-            { Forward = InMotionComp._TravelTangent; }
+            { Forward = InSupportComp._TravelTangent; }
             const auto Candidate = Body.GetLocation() + Forward * (InMotionComp._Speed * Step.Get_Seconds());
             const auto Moving = InMotionComp._Speed > 0.0f;
             const auto Hit = ck_surface_motion::Get_Contact(World, Candidate, Up, Forward, Contact, Moving);
-            InMotionComp._TrustedContact = Hit.Get_HasHit();
+            InSupportComp._ContactQuery = Hit.Get_HasHit() ? ECk_SurfaceMotion_ContactQuery::Trusted : ECk_SurfaceMotion_ContactQuery::Missed;
             if (Hit.Get_HasHit())
             {
                 const auto Normal = Hit.Get_Normal().GetSafeNormal();
                 const auto Transport = FQuat::FindBetweenNormals(Up, Normal);
                 const auto TargetForward = Transport.RotateVector(Forward);
-                InMotionComp._SupportNormal = Normal;
-                InMotionComp._TravelTangent = TargetForward;
+                InSupportComp._SupportNormal = Normal;
+                InSupportComp._TravelTangent = TargetForward;
                 const auto TargetRotation = FRotationMatrix::MakeFromZX(Normal, TargetForward).ToQuat();
                 const auto Angle = OldRotation.AngularDistance(TargetRotation);
                 const auto Alpha = Angle > KINDA_SMALL_NUMBER
@@ -192,44 +211,43 @@ namespace ck
                 const auto Correction = FMath::Clamp(Contact.Get_Clearance() - Height,
                     -Movement.Get_ClearanceSpeed() * Step.Get_Seconds(), Movement.Get_ClearanceSpeed() * Step.Get_Seconds());
                 Body.SetLocation(Candidate + Normal * Correction);
-                InMotionComp._MissingContact = FCk_Time{};
-                InMotionComp._Grounded = true;
-                InMotionComp._Velocity = (Body.GetLocation() - StartPosition) / (Step.Get_Seconds() * (Iteration + 1));
+                InSupportComp._MissingContact = FCk_Time{};
+                InSupportComp._Support = ECk_SurfaceMotion_Support::Grounded;
+                InSupportComp._Velocity = (Body.GetLocation() - StartPosition) / (Step.Get_Seconds() * (Iteration + 1));
                 continue;
             }
-            InMotionComp._MissingContact += Step;
-            if (InMotionComp._Grounded && InMotionComp._MissingContact <= Contact.Get_ContactGrace())
+            InSupportComp._MissingContact += Step;
+            if (InSupportComp._Support == ECk_SurfaceMotion_Support::Grounded && InSupportComp._MissingContact <= Contact.Get_ContactGrace())
             {
                 Body.SetLocation(Candidate);
-                InMotionComp._Velocity = Forward * InMotionComp._Speed;
+                InSupportComp._Velocity = Forward * InMotionComp._Speed;
                 continue;
             }
-            InMotionComp._Grounded = false;
-            InMotionComp._Velocity += Movement.Get_Gravity() * Step.Get_Seconds();
+            InSupportComp._Support = ECk_SurfaceMotion_Support::Airborne;
+            InSupportComp._Velocity += Movement.Get_Gravity() * Step.Get_Seconds();
             const auto FallStart = Body.GetLocation();
-            const auto FallEnd = FallStart + InMotionComp._Velocity * Step.Get_Seconds();
+            const auto FallEnd = FallStart + InSupportComp._Velocity * Step.Get_Seconds();
             const auto FallDirection = (FallEnd - FallStart).GetSafeNormal();
             const auto FallHit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, FallStart,
                 FallEnd + FallDirection * Contact.Get_Clearance(), Contact.Get_QueryFilter());
             if (ck_surface_motion::Get_TrustedHit(FallHit, FallDirection))
             {
-                InMotionComp._TrustedContact = true;
+                InSupportComp._ContactQuery = ECk_SurfaceMotion_ContactQuery::Trusted;
                 const auto Normal = FallHit.Get_Normal().GetSafeNormal();
                 Body.SetLocation(FallHit.Get_Position() + Normal * Contact.Get_Clearance());
                 Body.SetRotation(FRotationMatrix::MakeFromZX(Normal, Forward).ToQuat());
-                InMotionComp._Velocity = FVector::ZeroVector;
-                InMotionComp._Grounded = true;
-                InMotionComp._SupportNormal = Normal;
-                InMotionComp._TravelTangent = Body.GetRotation().GetAxisX();
-                InMotionComp._MissingContact = FCk_Time{};
+                InSupportComp._Velocity = FVector::ZeroVector;
+                InSupportComp._Support = ECk_SurfaceMotion_Support::Grounded;
+                InSupportComp._SupportNormal = Normal;
+                InSupportComp._TravelTangent = Body.GetRotation().GetAxisX();
+                InSupportComp._MissingContact = FCk_Time{};
             }
             else
             {
                 Body.SetLocation(FallEnd);
             }
         }
-        InMotionComp._Ready = true;
-        InMotionComp._DebugFrameNumber = GFrameCounter;
+        InSupportComp._EvaluatedFrame = GFrameCounter;
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
         UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, FCk_Request_Transform_SetTransform{Body}, {});
     }

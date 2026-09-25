@@ -5,6 +5,8 @@
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
+#include "CkEcs/Tag/CkTag.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_SurfaceMotion_UE;
@@ -14,9 +16,14 @@ class UCk_Utils_ProceduralAnimation_Debug_UE;
 
 namespace ck
 {
+    class FProcessor_SurfaceMotion_Setup;
     class FProcessor_SurfaceMotion_HandleRequests;
     class FProcessor_SurfaceMotion_Update;
     class FProcessor_ProceduralGait_Update;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    CK_DEFINE_ECS_TAG(FTag_SurfaceMotion_NeedsSetup);
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -24,29 +31,65 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Steering intent. The membership anchor: Has/Cast key on it.
     struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion
     {
     public:
         CK_GENERATED_BODY(FFragment_SurfaceMotion);
 
     public:
-        friend class FProcessor_SurfaceMotion_Update;
+        friend class FProcessor_SurfaceMotion_Setup;
         friend class FProcessor_SurfaceMotion_HandleRequests;
+        friend class FProcessor_SurfaceMotion_Update;
         friend class FProcessor_ProceduralGait_Update;
         friend class ::UCk_Utils_SurfaceMotion_UE;
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
 
     private:
         FVector _Direction = FVector::ForwardVector;
-        FVector _Velocity = FVector::ZeroVector;
+        float _Speed = 0.0f;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The accepted support frame and the body's integrated motion, rewritten every substep.
+    struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Support
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SurfaceMotion_Support);
+
+    public:
+        friend class FProcessor_SurfaceMotion_Setup;
+        friend class FProcessor_SurfaceMotion_Update;
+        friend class FProcessor_ProceduralGait_Update;
+        friend class ::UCk_Utils_SurfaceMotion_UE;
+        friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
+
+    private:
         FVector _SupportNormal = FVector::UpVector;
         FVector _TravelTangent = FVector::ForwardVector;
-        float _Speed = 0.0f;
-        uint64 _DebugFrameNumber = 0;
+        FVector _Velocity = FVector::ZeroVector;
         FCk_Time _MissingContact = FCk_Time::ZeroSecond();
-        bool _Grounded = false;
-        bool _TrustedContact = false;
-        bool _Ready = false;
+        uint64 _EvaluatedFrame = 0;
+        ECk_SurfaceMotion_Support _Support = ECk_SurfaceMotion_Support::Airborne;
+        ECk_SurfaceMotion_ContactQuery _ContactQuery = ECk_SurfaceMotion_ContactQuery::Missed;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Failure
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_SurfaceMotion_Failure);
+
+    private:
+        ECk_SurfaceMotion_Failure _Reason = ECk_SurfaceMotion_Failure::None;
+
+    public:
+        CK_PROPERTY_GET(_Reason);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_SurfaceMotion_Failure, _Reason);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

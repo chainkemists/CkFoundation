@@ -35,6 +35,21 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralGait_LegLossPolicy);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProceduralGait_Failure : uint8
+{
+    None,
+    NanBody,
+    DisabledPoseSync,
+    ProbeAdvance,
+    SolverReset,
+    SolverStep
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralGait_Failure);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralGait_Timing
 {
