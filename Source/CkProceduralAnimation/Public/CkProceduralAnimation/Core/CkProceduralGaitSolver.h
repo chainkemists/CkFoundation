@@ -175,8 +175,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Fractions of a leg's reach. Swing targets stay within _TargetFraction of the hip, and a planted foot beyond
-    // _ForceStepFraction is an Emergency.
+    // Fractions of a leg's reach. Swing targets stay within _TargetFraction of the hip, a planted foot beyond
+    // _ForceStepFraction is an Emergency, and one beyond _HardOverstretchFraction may step beyond the phase schedule.
     struct CKPROCEDURALANIMATION_API FProceduralGaitReachSettings
     {
         CK_GENERATED_BODY(FProceduralGaitReachSettings);
@@ -186,10 +186,12 @@ namespace ck
 
         float _TargetFraction = 0.8f;
         float _ForceStepFraction = 0.92f;
+        float _HardOverstretchFraction = 1.0f;
 
     public:
         CK_PROPERTY(_TargetFraction);
         CK_PROPERTY(_ForceStepFraction);
+        CK_PROPERTY(_HardOverstretchFraction);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -329,7 +331,8 @@ namespace ck
     // freeze, the point the freeze will produce from this frame's ideal target; from the freeze on, the actual landing point.
     // _LiftedLandingPoint is the landing target raised onto the ground reported under it, and _LandingLiftStartAlpha the
     // swing alpha the lift began at (negative while the swing is not lifted): the remaining arc rises onto the lifted point
-    // in step with the swing's own easing.
+    // in step with the swing's own easing. _BeyondSchedule marks a swing a hard-overstretched foot began outside the phase
+    // schedule; it neither holds back nor waits for the schedule's take-offs.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegSwing
     {
         CK_GENERATED_BODY(FProceduralGaitLegSwing);
@@ -349,6 +352,7 @@ namespace ck
         FVector _LandingPoint = FVector::ZeroVector;
         FVector _LiftedLandingPoint = FVector::ZeroVector;
         float _LandingLiftStartAlpha = -1.0f;
+        bool _BeyondSchedule = false;
 
     public:
         CK_PROPERTY(_StartPosition);
@@ -363,6 +367,7 @@ namespace ck
         CK_PROPERTY(_LandingPoint);
         CK_PROPERTY(_LiftedLandingPoint);
         CK_PROPERTY(_LandingLiftStartAlpha);
+        CK_PROPERTY(_BeyondSchedule);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -550,6 +555,7 @@ namespace ck
         auto DoReconcileEnabled(FProceduralGaitLegState& InOutState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoClampToReach(const FProceduralGaitLegInput& InInput, const FVector& InTarget) const -> FVector;
         auto DoGet_IsEmergency(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
+        auto DoGet_IsHardOverstretched(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;
         auto DoRedistributeOffsets() -> void;
         auto DoClearRedistribution() -> void;

@@ -354,7 +354,8 @@ auto
         .Set_ObstacleClearance(Step.Get_ObstacleClearance());
     Settings.Get_Pattern().Set_LegLossPolicy(LegLossPolicy);
     Settings.Get_Reach().Set_TargetFraction(Step.Get_TargetReachFraction())
-        .Set_ForceStepFraction(Step.Get_ForceStepReachFraction());
+        .Set_ForceStepFraction(Step.Get_ForceStepReachFraction())
+        .Set_HardOverstretchFraction(Step.Get_HardOverstretchReachFraction());
 
     return Settings;
 }

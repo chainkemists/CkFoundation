@@ -140,6 +140,12 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 1))
     float _ForceStepReachFraction = 0.92f;
 
+    // A planted foot farther than this fraction of the chain length from its hip may step while another phase group
+    // swings, so a body climbing away from its planted feet does not stretch them past their chains.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 1.5))
+    float _HardOverstretchReachFraction = 1.0f;
+
 public:
     CK_PROPERTY(_Height);
     CK_PROPERTY(_Threshold);
@@ -147,6 +153,7 @@ public:
     CK_PROPERTY(_MaxVelocityLead);
     CK_PROPERTY(_TargetReachFraction);
     CK_PROPERTY(_ForceStepReachFraction);
+    CK_PROPERTY(_HardOverstretchReachFraction);
 };
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Step, IsValid_Policy_Default,
@@ -159,7 +166,10 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Step, IsValid_Policy_Default
         && FMath::IsFinite(InStep.Get_TargetReachFraction()) && FMath::IsFinite(InStep.Get_ForceStepReachFraction())
         && InStep.Get_TargetReachFraction() > 0.0f
         && InStep.Get_TargetReachFraction() < InStep.Get_ForceStepReachFraction()
-        && InStep.Get_ForceStepReachFraction() <= 1.0f;
+        && InStep.Get_ForceStepReachFraction() <= 1.0f
+        && FMath::IsFinite(InStep.Get_HardOverstretchReachFraction())
+        && InStep.Get_HardOverstretchReachFraction() >= 1.0f && InStep.Get_HardOverstretchReachFraction() <= 1.5f
+        && InStep.Get_HardOverstretchReachFraction() > InStep.Get_ForceStepReachFraction();
 });
 
 // --------------------------------------------------------------------------------------------------------------------
