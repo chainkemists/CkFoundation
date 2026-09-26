@@ -19,7 +19,64 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    using FFragment_ProceduralBodyPose_Params = FCk_ProceduralBodyPose_Spec;
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralBodyPose_Params);
+
+    private:
+        FCk_Handle_Transform _Presentation;
+        FCk_ProceduralBodyPose_Spring _Spring;
+        FCk_ProceduralBodyPose_Support _Support;
+
+    public:
+        CK_PROPERTY_GET(_Presentation);
+        CK_PROPERTY_GET(_Spring);
+        CK_PROPERTY_GET(_Support);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose_Params, _Presentation, _Spring, _Support);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Present only while the body pose conforms to its planted feet.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose_Conform
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralBodyPose_Conform);
+
+    private:
+        float _MaxTilt = 20.0f;
+        float _HeightWeight = 0.5f;
+        float _MaxHeight = 10.0f;
+
+    public:
+        CK_PROPERTY_GET(_MaxTilt);
+        CK_PROPERTY_GET(_HeightWeight);
+        CK_PROPERTY_GET(_MaxHeight);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose_Conform, _MaxTilt, _HeightWeight, _MaxHeight);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The last fitted conform target, body-local; the update holds it while the feet cannot determine a plane.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose_ConformState
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralBodyPose_ConformState);
+
+    public:
+        friend class FProcessor_ProceduralBodyPose_Update;
+
+    private:
+        FTransform _HeldTarget = FTransform::Identity;
+
+    public:
+        CK_PROPERTY_GET(_HeldTarget);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -74,9 +131,13 @@ namespace ck
         FTransform _Offset = FTransform::Identity;
         FVectorSpringState _TranslationSpring;
         FQuaternionSpringState _RotationSpring;
+        FQuat _LastBodyRotation = FQuat::Identity;
 
     public:
         CK_PROPERTY_GET(_Offset);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose, _LastBodyRotation);
     };
 }
 

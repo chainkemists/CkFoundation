@@ -15,6 +15,41 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralBodyPose_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_procedural_body_pose_processor
+{
+    // The rotation that, applied to a body-local rotation, cancels the tilt (swing) the body took since InLastBodyRotation and
+    // keeps its turn (twist) about the body's up: with the body-local delta Swing * Twist, the drawn body then keeps its
+    // world tilt while its yaw follows the body.
+    auto
+        Get_SwingTransport(
+            const FQuat& InLastBodyRotation,
+            const FQuat& InBodyRotation)
+        -> FQuat
+    {
+        const auto LocalDelta = (InLastBodyRotation.Inverse() * InBodyRotation).GetNormalized();
+        auto Swing = FQuat::Identity;
+        auto Twist = FQuat::Identity;
+        LocalDelta.ToSwingTwist(FVector::UpVector, Swing, Twist);
+        return (Twist.Inverse() * Swing.Inverse() * Twist).GetNormalized();
+    }
+
+    // Planted feet count fully; a swinging foot fades out over the first third of its swing and back in over the last third,
+    // so the fitted plane does not step when the planted set changes.
+    auto
+        Get_ConformWeight(
+            const FCk_ProceduralLeg_Foot& InFoot)
+        -> float
+    {
+        if (InFoot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted)
+        { return 1.0f; }
+
+        const auto SwingAlpha = FMath::Clamp(InFoot.Get_SwingAlpha(), 0.0f, 1.0f);
+        return FMath::Max(0.0f, 1.0f - 3.0f * SwingAlpha) + FMath::Max(0.0f, 3.0f * SwingAlpha - 2.0f);
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -73,28 +108,86 @@ namespace ck
             .Set_CollapseDrop(Support.Get_CollapseDrop())
             .Set_MaxTiltDegrees(Support.Get_MaxTilt());
 
-        const auto Target = ComputeProceduralBodySupportPose(Legs, Settings);
-        const auto TargetValid = Target.IsSet();
-        CK_ENSURE_IF_NOT(TargetValid,
+        const auto SupportTarget = ComputeProceduralBodySupportPose(Legs, Settings);
+        const auto SupportTargetValid = SupportTarget.IsSet();
+        CK_ENSURE_IF_NOT(SupportTargetValid,
             TEXT("Procedural body pose [{}] support input was malformed; feature is failed."), InHandle)
         {
             InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedSupport);
             return;
         }
 
+        const auto& Body = InTransform.Get_Transform();
+        // The simulation body steps its tilt at every facet it crosses; carried into the offset, that step leaves the drawn
+        // body's world tilt where it was, and the spring then eases it to the target.
+        // The rotation spring's angular velocity lives in the offset's own frame (q' = q w / 2), so a rotation applied on
+        // the body side of the offset leaves it unchanged: it already turns with the offset.
+        const auto Transport = ck_procedural_body_pose_processor::Get_SwingTransport(InPoseComp._LastBodyRotation, Body.GetRotation());
+        InPoseComp._LastBodyRotation = Body.GetRotation();
+        InPoseComp._Offset.SetRotation((Transport * InPoseComp._Offset.GetRotation()).GetNormalized());
+
+        auto ConformTarget = FTransform::Identity;
+        if (InHandle.Has<FFragment_ProceduralBodyPose_ConformState>())
+        {
+            const auto& ConformParams = InHandle.Get<FFragment_ProceduralBodyPose_Conform>();
+            auto& ConformState = InHandle.Get<FFragment_ProceduralBodyPose_ConformState>();
+
+            const auto BodyInverse = Body.Inverse();
+            auto Feet = TArray<FProceduralBodyConformFoot, TInlineAllocator<16>>{};
+            Feet.Reserve(InGaitComp._Legs.Num());
+            for (const auto& Leg : InGaitComp._Legs)
+            {
+                const auto Stands = ck::IsValid(Leg)
+                    && NOT Leg.Has<FTag_DestroyEntity_Initiate>()
+                    && NOT Leg.Has<FTag_ProceduralLeg_Disabled>();
+                if (NOT Stands)
+                {
+                    Feet.Emplace(FVector::ZeroVector, FVector::ZeroVector, 0.0f);
+                    continue;
+                }
+
+                const auto& Foot = Leg.Get<FFragment_ProceduralLeg>().Get_Foot();
+                Feet.Emplace(BodyInverse.TransformPosition(Foot.Get_Position()),
+                    Leg.Get<FFragment_ProceduralLeg_Params>().Get_Placement().Get_RestFootLocal(),
+                    ck_procedural_body_pose_processor::Get_ConformWeight(Foot));
+            }
+
+            const auto ConformSettings = FProceduralBodyConformSettings{}
+                .Set_MaxTiltDegrees(ConformParams.Get_MaxTilt())
+                .Set_HeightWeight(ConformParams.Get_HeightWeight())
+                .Set_MaxHeight(ConformParams.Get_MaxHeight());
+            auto Fitted = FTransform::Identity;
+            const auto Result = ComputeProceduralBodyConformPose(Feet, ConformSettings, Fitted);
+            const auto ConformValid = Result != EProceduralBodyConformResult::Malformed;
+            CK_ENSURE_IF_NOT(ConformValid,
+                TEXT("Procedural body pose [{}] conform input was malformed; feature is failed."), InHandle)
+            {
+                InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedConform);
+                return;
+            }
+
+            if (Result == EProceduralBodyConformResult::Fitted)
+            { ConformState._HeldTarget = Fitted; }
+
+            ConformTarget = ConformState._HeldTarget;
+        }
+
+        const auto TargetRotation = ConformTarget.GetRotation() * SupportTarget->GetRotation();
+        const auto TargetLocation = SupportTarget->GetLocation() + ConformTarget.GetLocation();
+
         // The target is a pose that jumps when the supporting set changes, not a moving point: the engine would read
         // that jump as a one-frame target velocity and kick the spring past it (15% overshoot at 60 fps).
         constexpr auto TargetVelocityAmount = 0.0f;
         const auto& Spring = InParams.Get_Spring();
-        const auto Location = UKismetMathLibrary::VectorSpringInterp(InPoseComp._Offset.GetLocation(), Target->GetLocation(),
+        const auto Location = UKismetMathLibrary::VectorSpringInterp(InPoseComp._Offset.GetLocation(), TargetLocation,
             InPoseComp._TranslationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
             TargetVelocityAmount);
-        const auto Rotation = UKismetMathLibrary::QuaternionSpringInterp(InPoseComp._Offset.GetRotation(), Target->GetRotation(),
+        const auto Rotation = UKismetMathLibrary::QuaternionSpringInterp(InPoseComp._Offset.GetRotation(), TargetRotation,
             InPoseComp._RotationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
             TargetVelocityAmount);
         InPoseComp._Offset = FTransform{Rotation.GetNormalized(), Location};
 
-        const auto Posed = InPoseComp._Offset * InTransform.Get_Transform();
+        const auto Posed = InPoseComp._Offset * Body;
         UCk_Utils_Transform_UE::Request_SetTransform(Presentation, FCk_Request_Transform_SetTransform{Posed}, {});
     }
 }

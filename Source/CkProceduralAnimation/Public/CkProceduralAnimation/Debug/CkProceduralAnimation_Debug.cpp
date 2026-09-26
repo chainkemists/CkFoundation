@@ -152,7 +152,10 @@ auto
     {
         Snapshot.Get_BodyPose().Set_Composed(true)
             .Set_Status(UCk_Utils_ProceduralBodyPose_UE::Get_Status(UCk_Utils_ProceduralBodyPose_UE::CastChecked(Body)))
-            .Set_Offset(Body.Get<ck::FFragment_ProceduralBodyPose>()._Offset);
+            .Set_Offset(Body.Get<ck::FFragment_ProceduralBodyPose>()._Offset)
+            .Set_Conforms(Body.Has<ck::FFragment_ProceduralBodyPose_ConformState>());
+        if (Body.Has<ck::FFragment_ProceduralBodyPose_ConformState>())
+        { Snapshot.Get_BodyPose().Set_ConformTarget(Body.Get<ck::FFragment_ProceduralBodyPose_ConformState>().Get_HeldTarget()); }
     }
 
     auto HasRig = false;

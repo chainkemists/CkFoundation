@@ -27,7 +27,8 @@ enum class ECk_ProceduralBodyPose_Failure : uint8
 {
     None,
     MissingPresentation,
-    MalformedSupport
+    MalformedSupport,
+    MalformedConform
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralBodyPose_Failure);
@@ -106,6 +107,61 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Support, IsValid_Policy_
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProceduralBodyPose_ConformMode : uint8
+{
+    None,
+    PlantedFeet
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralBodyPose_ConformMode);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// PlantedFeet tilts the drawn body, up to MaxTilt degrees, toward a plane fitted through its feet in the body's frame, and
+// moves it along its up by HeightWeight times that plane's height under the body, up to MaxHeight centimetres.
+USTRUCT(BlueprintType)
+struct CKPROCEDURALANIMATION_API FCk_ProceduralBodyPose_Conform
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ProceduralBodyPose_Conform);
+
+private:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralBodyPose_ConformMode _Mode = ECk_ProceduralBodyPose_ConformMode::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 89))
+    float _MaxTilt = 20.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 1))
+    float _HeightWeight = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MaxHeight = 10.0f;
+
+public:
+    CK_PROPERTY(_Mode);
+    CK_PROPERTY(_MaxTilt);
+    CK_PROPERTY(_HeightWeight);
+    CK_PROPERTY(_MaxHeight);
+};
+
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Conform, IsValid_Policy_Default,
+[=](const FCk_ProceduralBodyPose_Conform& InConform)
+{
+    return FMath::IsFinite(InConform.Get_MaxTilt()) && InConform.Get_MaxTilt() >= 0.0f && InConform.Get_MaxTilt() <= 89.0f
+        && FMath::IsFinite(InConform.Get_HeightWeight()) && InConform.Get_HeightWeight() >= 0.0f && InConform.Get_HeightWeight() <= 1.0f
+        && FMath::IsFinite(InConform.Get_MaxHeight()) && InConform.Get_MaxHeight() >= 0.0f;
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralBodyPose_Spec
 {
@@ -127,10 +183,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_ProceduralBodyPose_Support _Support;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_ProceduralBodyPose_Conform _Conform;
+
 public:
     CK_PROPERTY_GET(_Presentation);
     CK_PROPERTY(_Spring);
     CK_PROPERTY(_Support);
+    CK_PROPERTY(_Conform);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ProceduralBodyPose_Spec, _Presentation);
@@ -141,7 +202,8 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Spec, IsValid_Policy_Def
 {
     return ck::IsValid(InParams.Get_Presentation())
         && ck::IsValid(InParams.Get_Spring())
-        && ck::IsValid(InParams.Get_Support());
+        && ck::IsValid(InParams.Get_Support())
+        && ck::IsValid(InParams.Get_Conform());
 });
 
 // --------------------------------------------------------------------------------------------------------------------
