@@ -41,6 +41,21 @@ enum class ECk_SurfaceMotion_ContactQuery : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactQuery);
 
+// The ray whose hit the body accepted on the last substep: forward within the clearance, down under the body, the
+// look-ahead down ray ahead of the body, the fan around a convex edge, or the swept fall. None while no ray hits.
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_ContactSource : uint8
+{
+    None,
+    Forward,
+    Down,
+    LookAhead,
+    Fan,
+    Fall
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactSource);
+
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_Failure : uint8
 {
@@ -73,6 +88,18 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Time _ContactGrace = FCk_Time{0.12};
 
+    // A contact whose normal turns more than this many degrees from the support is adopted only after it has been seen,
+    // each sighting within 15 degrees of the last, for _ConfirmTime while the support under the body still holds. The
+    // body keeps walking meanwhile, so a face it only grazes is never adopted, and a body longer than its clearance can
+    // overrun a head-on wall by up to its speed times _ConfirmTime.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 180))
+    float _ConfirmAngle = 30.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_Time _ConfirmTime = FCk_Time{0.075};
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Jolt_QueryFilter _QueryFilter;
@@ -81,6 +108,8 @@ public:
     CK_PROPERTY(_Clearance);
     CK_PROPERTY(_ProbeReach);
     CK_PROPERTY(_ContactGrace);
+    CK_PROPERTY(_ConfirmAngle);
+    CK_PROPERTY(_ConfirmTime);
     CK_PROPERTY(_QueryFilter);
 };
 
@@ -89,7 +118,9 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Contact, IsValid_Policy_Defau
 {
     return FMath::IsFinite(InContact.Get_Clearance()) && InContact.Get_Clearance() > 0.0f
         && FMath::IsFinite(InContact.Get_ProbeReach()) && InContact.Get_ProbeReach() > InContact.Get_Clearance()
-        && FMath::IsFinite(InContact.Get_ContactGrace().Get_Seconds()) && InContact.Get_ContactGrace() >= FCk_Time{};
+        && FMath::IsFinite(InContact.Get_ContactGrace().Get_Seconds()) && InContact.Get_ContactGrace() >= FCk_Time{}
+        && FMath::IsFinite(InContact.Get_ConfirmAngle()) && InContact.Get_ConfirmAngle() >= 0.0f && InContact.Get_ConfirmAngle() <= 180.0f
+        && FMath::IsFinite(InContact.Get_ConfirmTime().Get_Seconds()) && InContact.Get_ConfirmTime() >= FCk_Time{};
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -119,11 +150,19 @@ private:
               meta = (AllowPrivateAccess = true))
     FVector _Gravity = FVector{0.0, 0.0, -980.0};
 
+    // While the steering direction's projection onto the support plane is shorter than this fraction of the direction,
+    // the body keeps its travel tangent: on a face nearly perpendicular to the steering, the projection is a small vector
+    // whose direction flips with every facet.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 1))
+    float _SteerFloor = 0.4f;
+
 public:
     CK_PROPERTY(_MaxSpeed);
     CK_PROPERTY(_SurfaceTurnRate);
     CK_PROPERTY(_ClearanceSpeed);
     CK_PROPERTY(_Gravity);
+    CK_PROPERTY(_SteerFloor);
 };
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Movement, IsValid_Policy_Default,
@@ -132,7 +171,8 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Movement, IsValid_Policy_Defa
     return FMath::IsFinite(InMovement.Get_MaxSpeed()) && InMovement.Get_MaxSpeed() > 0.0f
         && FMath::IsFinite(InMovement.Get_SurfaceTurnRate()) && InMovement.Get_SurfaceTurnRate() > 0.0f
         && FMath::IsFinite(InMovement.Get_ClearanceSpeed()) && InMovement.Get_ClearanceSpeed() > 0.0f
-        && NOT InMovement.Get_Gravity().ContainsNaN();
+        && NOT InMovement.Get_Gravity().ContainsNaN()
+        && FMath::IsFinite(InMovement.Get_SteerFloor()) && InMovement.Get_SteerFloor() >= 0.0f && InMovement.Get_SteerFloor() <= 1.0f;
 });
 
 // --------------------------------------------------------------------------------------------------------------------

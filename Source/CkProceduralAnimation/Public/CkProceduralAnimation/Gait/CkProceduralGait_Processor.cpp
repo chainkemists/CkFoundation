@@ -584,14 +584,15 @@ namespace ck
             if (InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>())
             {
                 const auto& Motion = InHandle.Get<FFragment_SurfaceMotion>();
-                const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>();
-                Snapshot.Get_Motion().Set_Velocity(Support._Velocity)
+                const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>()._State;
+                Snapshot.Get_Motion().Set_Velocity(Support.Get_Velocity())
                     .Set_RequestedDirection(Motion._Direction)
                     .Set_RequestedSpeed(Motion._Speed)
-                    .Set_Grounded(Support._Support == ECk_SurfaceMotion_Support::Grounded)
-                    .Set_TrustedContact(Support._ContactQuery == ECk_SurfaceMotion_ContactQuery::Trusted)
-                    .Set_MissingContact(Support._MissingContact);
-                Snapshot.Get_Gait().Set_SupportNormal(Support._SupportNormal);
+                    .Set_Grounded(Support.Get_Grounded())
+                    .Set_TrustedContact(Support.Get_ContactTrusted())
+                    .Set_MissingContact(Support.Get_MissingContact())
+                    .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)));
+                Snapshot.Get_Gait().Set_SupportNormal(Support.Get_SupportNormal());
             }
         }
 

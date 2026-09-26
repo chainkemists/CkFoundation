@@ -15,6 +15,33 @@ CK_DEFINE_HAS_CAST_CONV_HANDLE_TYPESAFE(UCk_Utils_SurfaceMotion_UE, FCk_Handle_S
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_surface_motion_utils
+{
+    auto
+        DoGet_ContactSource(
+            ck::EProceduralSurfaceContactSource InSource)
+        -> ECk_SurfaceMotion_ContactSource
+    {
+        switch (InSource)
+        {
+            case ck::EProceduralSurfaceContactSource::Forward:
+            { return ECk_SurfaceMotion_ContactSource::Forward; }
+            case ck::EProceduralSurfaceContactSource::Down:
+            { return ECk_SurfaceMotion_ContactSource::Down; }
+            case ck::EProceduralSurfaceContactSource::LookAhead:
+            { return ECk_SurfaceMotion_ContactSource::LookAhead; }
+            case ck::EProceduralSurfaceContactSource::Fan:
+            { return ECk_SurfaceMotion_ContactSource::Fan; }
+            case ck::EProceduralSurfaceContactSource::Fall:
+            { return ECk_SurfaceMotion_ContactSource::Fall; }
+            default:
+            { return ECk_SurfaceMotion_ContactSource::None; }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 auto
     UCk_Utils_SurfaceMotion_UE::
     Add(
@@ -33,7 +60,8 @@ auto
 
     const auto ParamsValid = ck::IsValid(InParams);
     CK_ENSURE_IF_NOT(ParamsValid,
-        TEXT("Surface motion Add rejected body [{}]: invalid clearance, probe reach, contact grace, speed, turn rate or gravity."),
+        TEXT("Surface motion Add rejected body [{}]: invalid clearance, probe reach, contact grace, confirm angle, confirm time, "
+             "speed, turn rate, gravity or steer floor."),
         InBody)
     { return {}; }
 
@@ -80,7 +108,8 @@ auto
     -> ECk_SurfaceMotion_Support
 {
     return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
-        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._Support
+        && InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_Grounded()
+        ? ECk_SurfaceMotion_Support::Grounded
         : ECk_SurfaceMotion_Support::Airborne;
 }
 
@@ -91,7 +120,7 @@ auto
     -> FVector
 {
     return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
-        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._SupportNormal
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_SupportNormal()
         : FVector::UpVector;
 }
 
@@ -102,8 +131,20 @@ auto
     -> ECk_SurfaceMotion_ContactQuery
 {
     return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
-        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._ContactQuery
+        && InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_ContactTrusted()
+        ? ECk_SurfaceMotion_ContactQuery::Trusted
         : ECk_SurfaceMotion_ContactQuery::Missed;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_ContactSource(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_ContactSource
+{
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? ck_surface_motion_utils::DoGet_ContactSource(InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_ContactSource())
+        : ECk_SurfaceMotion_ContactSource::None;
 }
 
 auto
@@ -113,7 +154,7 @@ auto
     -> FVector
 {
     return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
-        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._Velocity
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_Velocity()
         : FVector::ZeroVector;
 }
 
