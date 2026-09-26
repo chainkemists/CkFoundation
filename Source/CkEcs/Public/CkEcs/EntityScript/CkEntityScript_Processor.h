@@ -118,6 +118,10 @@ namespace ck
         using MarkedDirtyBy = FRequest_EntityScript_Replicate;
         static constexpr auto LoadPolicy = ECk_ProcessorLoadPolicy::RunsDuringLoad; // load-gate kernel
         static constexpr auto HydrationQuarantinePolicy = ECk_ProcessorHydrationQuarantine::Exempt; // load-gate kernel
+        // A spawn drained by the Gameplay_Script settle pass (one made from DoBeginPlay, for example) is constructed
+        // and finished inside that pass. FinishConstruction removes the tag this view needs, so Replicate must be
+        // replayed there too or the entity never replicates. Not a trigger: it only drains what a spawn produced.
+        using LocalSettleAfter = FGroup_Gameplay_Script;
 
     public:
         using TProcessor::TProcessor;
