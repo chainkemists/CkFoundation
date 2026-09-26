@@ -137,12 +137,21 @@ namespace ck
         {
             InHandle.AddOrGet<FTag_UnrealComponent_IsScene>();
 
+            auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
+            const auto OwnerWorldTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform);
+
             if (NOT InHandle.Has<FTag_UnrealComponent_TransformPushDisabled>())
             {
-                auto OwnerTransform = UCk_Utils_Transform_UE::CastChecked(InCurrent.Get_OwningEntity());
                 ck_unreal_component_processor::PushTransformIfChanged(
-                    CastChecked<USceneComponent>(NewComponent),
-                    UCk_Utils_Transform_UE::Get_EntityCurrentTransform(OwnerTransform));
+                    CastChecked<USceneComponent>(NewComponent), OwnerWorldTransform);
+            }
+
+            // Seeded for every scene-component owner, enabled or not: the disabled tag is per-COMPONENT, and an
+            // owner without this fragment is outside PushTransform's view, so re-enabling a component could never
+            // deliver another push. Seed only when absent - resetting swallows an owner move a sibling still needs.
+            if (NOT OwnerTransform.Has<FFragment_UnrealComponent_LastPushedTransform>())
+            {
+                OwnerTransform.Add<FFragment_UnrealComponent_LastPushedTransform>(OwnerWorldTransform);
             }
         }
 
@@ -228,12 +237,24 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_RecordOfUnrealComponents&)
+            const FFragment_RecordOfUnrealComponents&,
+            FFragment_UnrealComponent_LastPushedTransform& InLastPushed)
         -> void
     {
         // PostTransform runs after root-to-ECS synchronization and transform requests. At this point the
         // fragment is the authoritative value for both root-driven and externally-driven owners.
+        const auto& CurrentTransform = InTransform.Get_Transform();
+
+        const auto OwnerSettled = InLastPushed.Get_Transform().Equals(CurrentTransform);
+
         const auto Enabled = cpu_work::Get_Enabled();
+
+        // A settled owner bails before the record walk, so steady state costs one Equals. In an enabled frame the walk still runs
+        // with the push suppressed, so entries land in their real buckets instead of vanishing from the
+        // partition the counters form.
+        if (OwnerSettled && NOT Enabled)
+        { return; }
+
         TRACE_CPUPROFILER_EVENT_SCOPE_CONDITIONAL(CkCpuWork_ComponentRecord, Enabled);
 
         auto Entries = int32{0};
@@ -246,7 +267,9 @@ namespace ck
         auto Changed = int32{0};
         auto StaticRebakes = int32{0};
 
-        const auto& CurrentTransform = InTransform.Get_Transform();
+        if (NOT OwnerSettled)
+        { InLastPushed._Transform = CurrentTransform; }
+
         RecordOfUnrealComponents_Utils::ForEach_ValidEntry(
             InHandle,
             [&](FCk_Handle_UnrealComponent InComponentHandle)
@@ -284,7 +307,7 @@ namespace ck
                     return;
                 }
 
-                const auto TransformChanged =
+                const auto TransformChanged = NOT OwnerSettled &&
                     ck_unreal_component_processor::PushTransformIfChanged(SceneComponent, CurrentTransform);
                 if (Enabled)
                 {

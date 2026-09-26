@@ -37,12 +37,16 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Change detection is the owner's fragment vs FFragment_UnrealComponent_LastPushedTransform (its
+    // own consumed state) — deliberately NOT FTag_Transform_Updated, whose lifetime misses pump-drained
+    // one-shot moves, and NOT the live component, whose external drift must survive idle owners
+    // (TransformPropagation.DirtyOwnersOnly). Rationale on the fragment's declaration.
     class CKUNREALCOMPONENT_API FProcessor_UnrealComponent_PushTransform : public ck_exp::TProcessor<
             FProcessor_UnrealComponent_PushTransform,
             FCk_Handle_Transform,
             ck::TReadOnly<FFragment_Transform>,
             ck::TReadOnly<FFragment_RecordOfUnrealComponents>,
-            FTag_Transform_Updated,
+            ck::TReadWrite<FFragment_UnrealComponent_LastPushedTransform>,
             CK_IGNORE_PENDING_KILL>
     {
     public:
@@ -58,7 +62,8 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_Transform& InTransform,
-            const FFragment_RecordOfUnrealComponents& InComponents) -> void;
+            const FFragment_RecordOfUnrealComponents& InComponents,
+            FFragment_UnrealComponent_LastPushedTransform& InLastPushed) -> void;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
