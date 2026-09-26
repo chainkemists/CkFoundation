@@ -33,6 +33,25 @@ namespace ck_procedural_body_pose_processor
         return (Twist.Inverse() * Swing.Inverse() * Twist).GetNormalized();
     }
 
+    // The knee below the max attitude lag over which the carried share of the transport ramps from all to none.
+    constexpr auto AttitudeLagKneeDegrees = 8.0f;
+
+    // The share of this frame's transport the offset takes, given how far it already trails its target without it: all of
+    // it until the knee, none at InMaxLagDegrees, linear between, so the drawn body's rate ramps up to the body's without a
+    // step. With no knee (a max lag of 0) nothing is carried.
+    auto
+        Get_TransportShare(
+            float InLagDegrees,
+            float InMaxLagDegrees)
+        -> float
+    {
+        const auto KneeDegrees = FMath::Min(AttitudeLagKneeDegrees, InMaxLagDegrees);
+        if (KneeDegrees <= 0.0f)
+        { return 0.0f; }
+
+        return FMath::Clamp((InMaxLagDegrees - InLagDegrees) / KneeDegrees, 0.0f, 1.0f);
+    }
+
     // Planted feet count fully; a swinging foot fades out over the first third of its swing and back in over the last third,
     // so the fitted plane does not step when the planted set changes.
     auto
@@ -118,13 +137,8 @@ namespace ck
         }
 
         const auto& Body = InTransform.Get_Transform();
-        // The simulation body steps its tilt at every facet it crosses; carried into the offset, that step leaves the drawn
-        // body's world tilt where it was, and the spring then eases it to the target.
-        // The rotation spring's angular velocity lives in the offset's own frame (q' = q w / 2), so a rotation applied on
-        // the body side of the offset leaves it unchanged: it already turns with the offset.
         const auto Transport = ck_procedural_body_pose_processor::Get_SwingTransport(InPoseComp._LastBodyRotation, Body.GetRotation());
         InPoseComp._LastBodyRotation = Body.GetRotation();
-        InPoseComp._Offset.SetRotation((Transport * InPoseComp._Offset.GetRotation()).GetNormalized());
 
         auto ConformTarget = FTransform::Identity;
         if (InHandle.Has<FFragment_ProceduralBodyPose_ConformState>())
@@ -174,11 +188,23 @@ namespace ck
 
         const auto TargetRotation = ConformTarget.GetRotation() * SupportTarget->GetRotation();
         const auto TargetLocation = SupportTarget->GetLocation() + ConformTarget.GetLocation();
+        InPoseComp._TargetOffset = FTransform{TargetRotation, TargetLocation};
+
+        // The simulation body steps its tilt at every facet it crosses; carried into the offset, that step leaves the drawn
+        // body's world tilt where it was, and the spring then eases it to the target. Only the carried share is limited: a
+        // sustained rotation (a wall corner) would otherwise leave the drawn body trailing by twice the rate over the
+        // spring's natural frequency, and the offset still reaches a jumping target only through the spring.
+        // The rotation spring's angular velocity lives in the offset's own frame (q' = q w / 2), so a rotation applied on
+        // the body side of the offset leaves it unchanged: it already turns with the offset.
+        const auto& Spring = InParams.Get_Spring();
+        const auto LagDegrees = FMath::RadiansToDegrees(InPoseComp._Offset.GetRotation().AngularDistance(TargetRotation));
+        const auto Carried = FQuat::Slerp(FQuat::Identity, Transport,
+            ck_procedural_body_pose_processor::Get_TransportShare(LagDegrees, Spring.Get_MaxAttitudeLag()));
+        InPoseComp._Offset.SetRotation((Carried * InPoseComp._Offset.GetRotation()).GetNormalized());
 
         // The target is a pose that jumps when the supporting set changes, not a moving point: the engine would read
         // that jump as a one-frame target velocity and kick the spring past it (15% overshoot at 60 fps).
         constexpr auto TargetVelocityAmount = 0.0f;
-        const auto& Spring = InParams.Get_Spring();
         const auto Location = UKismetMathLibrary::VectorSpringInterp(InPoseComp._Offset.GetLocation(), TargetLocation,
             InPoseComp._TranslationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
             TargetVelocityAmount);

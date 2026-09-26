@@ -129,12 +129,15 @@ namespace ck
     private:
         // Body-local; the presentation entity is posed at _Offset * Body.
         FTransform _Offset = FTransform::Identity;
+        // Body-local; the pose the springs followed on the last update.
+        FTransform _TargetOffset = FTransform::Identity;
         FVectorSpringState _TranslationSpring;
         FQuaternionSpringState _RotationSpring;
         FQuat _LastBodyRotation = FQuat::Identity;
 
     public:
         CK_PROPERTY_GET(_Offset);
+        CK_PROPERTY_GET(_TargetOffset);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose, _LastBodyRotation);
