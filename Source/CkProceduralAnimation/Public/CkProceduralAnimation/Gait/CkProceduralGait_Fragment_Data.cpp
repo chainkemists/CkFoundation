@@ -25,7 +25,8 @@ auto
     if (ck::Is_NOT_Valid(_Step))
     {
         InContext.AddError(FText::FromString(TEXT("FCk_ProceduralGait_Step is invalid: height, obstacle clearance and max velocity "
-            "lead must be finite and >= 0, and the threshold finite and > 0.")));
+            "lead must be finite and >= 0, the threshold finite and > 0, and the reach fractions finite with "
+            "0 < TargetReachFraction < ForceStepReachFraction <= 1.")));
         Result = EDataValidationResult::Invalid;
     }
 

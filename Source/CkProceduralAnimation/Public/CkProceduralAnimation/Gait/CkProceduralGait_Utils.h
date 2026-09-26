@@ -18,6 +18,7 @@
 
 namespace ck
 {
+    class FProcessor_ProceduralGait_Setup;
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
     struct FFragment_ProceduralGait_Tunables;
@@ -37,6 +38,7 @@ public:
 
 public:
     friend class UCk_Utils_Ecs_Base_UE;
+    friend class ck::FProcessor_ProceduralGait_Setup;
     friend class ck::FProcessor_ProceduralGait_HandleRequests;
     friend class ck::FProcessor_ProceduralGait_Update;
 
@@ -53,6 +55,15 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
+
+    // Gait admission requires every leg's rest foot within the step's TargetReachFraction of its chain length (the sum
+    // of its segment lengths) from its hip; otherwise the reach clamp would pull every step inward of the rest pose.
+    static auto
+    Get_IsRestWithinReach(
+        const FCk_ProceduralLeg_Placement& InPlacement,
+        const FCk_ProceduralLeg_ChainGeometry& InChain,
+        const FCk_ProceduralGait_Step& InStep)
+        -> bool;
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -160,11 +171,27 @@ public:
         const FCk_Delegate_ProceduralGait_OnLegSetChanged& InDelegate);
 
 private:
+    // Also lowers the cadence speed reference to the reach floor of the legs enabled in InEnabledMask. OutReachCadenceFloor
+    // is 0 when no enabled leg bounds it; OutReachSkippedLegs counts enabled legs too wide to stride along body X.
     static auto
     DoBuild_SolverSettings(
         const ck::FFragment_ProceduralGait_Tunables& InTunables,
-        int32 InEnabledCount)
+        const TArray<FCk_Handle_ProceduralLeg>& InLegs,
+        uint64 InEnabledMask,
+        float& OutReachCadenceFloor,
+        int32& OutReachSkippedLegs)
         -> ck::FProceduralGaitSettings;
+
+    static auto
+    DoGet_Reach(
+        const FCk_ProceduralLeg_ChainGeometry& InChain)
+        -> float;
+
+    static auto
+    DoFind_LegBeyondReach(
+        const TArray<FCk_Handle_ProceduralLeg>& InLegs,
+        const FCk_ProceduralGait_Step& InStep)
+        -> FCk_Handle_ProceduralLeg;
 };
 
 // --------------------------------------------------------------------------------------------------------------------

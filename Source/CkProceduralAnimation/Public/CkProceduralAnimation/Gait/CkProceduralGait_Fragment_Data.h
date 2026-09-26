@@ -129,11 +129,24 @@ private:
               meta = (AllowPrivateAccess = true))
     float _MaxVelocityLead = 60.0f;
 
+    // Swing targets stay within this fraction of the leg's chain length from its hip, and every leg's rest foot must
+    // lie within it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 1))
+    float _TargetReachFraction = 0.8f;
+
+    // A planted foot farther than this fraction of the chain length from its hip steps as an Emergency.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 1))
+    float _ForceStepReachFraction = 0.92f;
+
 public:
     CK_PROPERTY(_Height);
     CK_PROPERTY(_Threshold);
     CK_PROPERTY(_ObstacleClearance);
     CK_PROPERTY(_MaxVelocityLead);
+    CK_PROPERTY(_TargetReachFraction);
+    CK_PROPERTY(_ForceStepReachFraction);
 };
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Step, IsValid_Policy_Default,
@@ -142,7 +155,11 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Step, IsValid_Policy_Default
     return FMath::IsFinite(InStep.Get_Height()) && InStep.Get_Height() >= 0.0f
         && FMath::IsFinite(InStep.Get_Threshold()) && InStep.Get_Threshold() > 0.0f
         && FMath::IsFinite(InStep.Get_ObstacleClearance()) && InStep.Get_ObstacleClearance() >= 0.0f
-        && FMath::IsFinite(InStep.Get_MaxVelocityLead()) && InStep.Get_MaxVelocityLead() >= 0.0f;
+        && FMath::IsFinite(InStep.Get_MaxVelocityLead()) && InStep.Get_MaxVelocityLead() >= 0.0f
+        && FMath::IsFinite(InStep.Get_TargetReachFraction()) && FMath::IsFinite(InStep.Get_ForceStepReachFraction())
+        && InStep.Get_TargetReachFraction() > 0.0f
+        && InStep.Get_TargetReachFraction() < InStep.Get_ForceStepReachFraction()
+        && InStep.Get_ForceStepReachFraction() <= 1.0f;
 });
 
 // --------------------------------------------------------------------------------------------------------------------

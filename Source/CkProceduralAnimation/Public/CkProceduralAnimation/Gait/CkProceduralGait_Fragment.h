@@ -99,6 +99,8 @@ namespace ck
         FProceduralGaitVelocityTracker _VelocityTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
+        float _ReachCadenceFloor = 0.0f;
+        int32 _ReachSkippedLegs = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

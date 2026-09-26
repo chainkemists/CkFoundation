@@ -72,8 +72,9 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralLeg_Placement, IsValid_Policy_Def
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Rigid chain geometry consumed by the rig. Segment lengths are hip-first in centimetres; the pole is body-local
-// and bends the chain. Segment geometry must be centred on its transform origin with length along local +X.
+// Rigid chain geometry consumed by the rig; the gait reads the sum of the segment lengths as the leg's reach. Segment
+// lengths are hip-first in centimetres; the pole is body-local and bends the chain. Segment geometry must be centred on
+// its transform origin with length along local +X.
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralLeg_ChainGeometry
 {
