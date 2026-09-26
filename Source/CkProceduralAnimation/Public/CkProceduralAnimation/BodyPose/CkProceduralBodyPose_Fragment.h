@@ -40,6 +40,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Hip positions of the gait's captured legs, by captured index, taken at Add. A detached leg's entity is
+    // gone, so its hip must come from here for the support gap to keep pointing at it.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose_SupportLayout
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralBodyPose_SupportLayout);
+
+    private:
+        TArray<FVector> _HipLocals;
+
+    public:
+        CK_PROPERTY_GET(_HipLocals);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose_SupportLayout, _HipLocals);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose
     {
     public:

@@ -83,6 +83,33 @@ namespace ck_procedural_gait
     {
         return uint64{1} << InLegIndex;
     }
+
+    auto
+        DoPublish_FootPhaseChange(
+            FCk_Handle_ProceduralLeg& InLeg,
+            const ck::FFragment_ProceduralLeg& InLegComp,
+            ECk_ProceduralLeg_FootPhase InPreviousPhase,
+            const FVector& InPreviousPosition,
+            double InDeltaSeconds)
+        -> void
+    {
+        const auto& Foot = InLegComp.Get_Foot();
+        if (Foot.Get_Phase() == InPreviousPhase)
+        { return; }
+
+        if (Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted)
+        {
+            const auto LandingSpeed = InDeltaSeconds > 0.0 ? (Foot.Get_Position() - InPreviousPosition).Size() / InDeltaSeconds : 0.0;
+            const auto Footfall = FCk_ProceduralLeg_Footfall{Foot.Get_Position(), Foot.Get_Normal(), Foot.Get_Contact(),
+                static_cast<float>(LandingSpeed)};
+            ck::UUtils_Signal_OnProceduralLeg_Planted::Broadcast(InLeg, ck::MakePayload(InLeg, Footfall));
+            return;
+        }
+
+        constexpr auto LiftSpeed = 0.0f;
+        const auto Footfall = FCk_ProceduralLeg_Footfall{Foot.Get_Position(), Foot.Get_Normal(), Foot.Get_Contact(), LiftSpeed};
+        ck::UUtils_Signal_OnProceduralLeg_Lifted::Broadcast(InLeg, ck::MakePayload(InLeg, Footfall));
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -303,11 +330,18 @@ namespace ck
                 }
 
                 const auto& Frozen = Leg.Get<FFragment_ProceduralLeg_FrozenPose>();
+                const auto PreviousPhase = LegComp._Foot.Get_Phase();
+                const auto PreviousPosition = LegComp._Foot.Get_Position();
                 LegComp._Foot.Set_Position(Body.TransformPosition(Frozen.Get_FootLocal()))
                     .Set_Rotation((Basis * Frozen.Get_RotationLocal()).GetNormalized())
                     .Set_Phase(ECk_ProceduralLeg_FootPhase::Planted)
                     .Set_SwingAlpha(0.0f)
                     .Set_Contact(ECk_ProceduralLeg_FootContact::Guessed);
+
+                // A detached leg stays valid until its destruction completes, and its last pose is frozen here too;
+                // freezing a swinging foot as it goes is not a plant.
+                if (NOT Leg.Has<FTag_DestroyEntity_Initiate>())
+                { ck_procedural_gait::DoPublish_FootPhaseChange(Leg, LegComp, PreviousPhase, PreviousPosition, Dt); }
 
                 // The frozen pose is the source of truth so a re-enabled leg swings from where it is drawn.
                 // On the transition frame the solver's own reconcile freezes this same pose.
@@ -412,12 +446,18 @@ namespace ck
             { continue; }
 
             const auto& Output = Outputs[Index];
-            InGaitComp._Legs[Index].Get<FFragment_ProceduralLeg>()._Foot
+            auto& Leg = InGaitComp._Legs[Index];
+            auto& LegComp = Leg.Get<FFragment_ProceduralLeg>();
+            const auto PreviousPhase = LegComp._Foot.Get_Phase();
+            const auto PreviousPosition = LegComp._Foot.Get_Position();
+            LegComp._Foot
                 .Set_Position(Basis.RotateVector(Output.Get_Position()))
                 .Set_Normal(Basis.RotateVector(Output.Get_Normal()))
                 .Set_Rotation((Basis * Output.Get_Rotation()).GetNormalized())
                 .Set_SwingAlpha(Output.Get_SwingAlpha())
                 .Set_Phase(Output.Get_Planted() ? ECk_ProceduralLeg_FootPhase::Planted : ECk_ProceduralLeg_FootPhase::Swinging);
+
+            ck_procedural_gait::DoPublish_FootPhaseChange(Leg, LegComp, PreviousPhase, PreviousPosition, Dt);
         }
 
         if (InDeltaT > FCk_Time{})
