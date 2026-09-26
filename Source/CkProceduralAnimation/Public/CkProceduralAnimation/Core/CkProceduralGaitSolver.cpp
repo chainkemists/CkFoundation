@@ -6,6 +6,12 @@
 
 namespace ck::procedural_gait_solver
 {
+    // A swing lifts onto the ground under its landing point from the frame that ground is reported on. A report that only
+    // arrives at touchdown may still lift the plant this far, below what reads as a pop; anything more is left and counted.
+    constexpr auto MaxTouchdownLandingLift = 2.0f;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     auto
         Damp(
             const FVector& InCurrent,
@@ -105,6 +111,37 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        FProceduralGaitYawRateTracker::
+        Reset()
+        -> void
+    {
+        _YawRate = 0.0f;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitYawRateTracker::
+        Update(
+            const FQuat& InPreviousBasis,
+            const FQuat& InBasis,
+            FCk_Time InDeltaTime)
+        -> float
+    {
+        if (InPreviousBasis.ContainsNaN() || InBasis.ContainsNaN() || NOT FMath::IsFinite(InDeltaTime.Get_Seconds())
+            || InDeltaTime <= FCk_Time{})
+        { return _YawRate; }
+
+        const auto LocalDelta = (InPreviousBasis.Inverse() * InBasis).GetNormalized();
+        const auto Rate = LocalDelta.GetTwistAngle(FVector::UpVector) / InDeltaTime.Get_Seconds();
+        const auto Blend = 1.0 - FMath::Exp(-InDeltaTime.Get_Seconds() / SmoothingTime.Get_Seconds());
+        _YawRate = static_cast<float>(FMath::Lerp(static_cast<double>(_YawRate), Rate, Blend));
+        return _YawRate;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         FProceduralGaitSolver::
         Reset(
             TArrayView<const FVector> InInitialFootPositions)
@@ -127,6 +164,7 @@ namespace ck
         }
         _GaitClock = 0.0f;
         _LastCadenceScale = 1.0f;
+        _MissedLandingLifts = 0;
         _RestTime = FCk_Time{};
         _WasAirborne = false;
         _PatternBlend._CurrentIndex = INDEX_NONE;
@@ -306,6 +344,8 @@ namespace ck
             State._Plant._Normal = InDelta.RotateVector(State._Plant._Normal);
             State._Swing._StartPosition = InDelta.RotateVector(State._Swing._StartPosition);
             State._Swing._Target = InDelta.RotateVector(State._Swing._Target);
+            State._Swing._LandingPoint = InDelta.RotateVector(State._Swing._LandingPoint);
+            State._Swing._LiftedLandingPoint = InDelta.RotateVector(State._Swing._LiftedLandingPoint);
             State._Emitted._AirPosition = InDelta.RotateVector(State._Emitted._AirPosition);
             State._Emitted._Position = InDelta.RotateVector(State._Emitted._Position);
             State._Emitted._Rotation = InDelta * State._Emitted._Rotation;
@@ -550,7 +590,7 @@ namespace ck
                 || Input._FacingDirection.ContainsNaN() || NOT FMath::IsFinite(Input._PhaseOffset)
                 || Input._PhaseOffset < 0.0f || Input._PhaseOffset >= 1.0f
                 || NOT FMath::IsFinite(Input._StepThresholdScale) || Input._StepThresholdScale <= 0.0f
-                || NOT FMath::IsFinite(Input._ClearanceGroundZ)
+                || NOT FMath::IsFinite(Input._ClearanceGroundZ) || NOT FMath::IsFinite(Input._LandingGroundZ)
                 || (Input._TargetValid && NOT Input._GroundNormal.IsNormalized())
                 || Input._Hip.ContainsNaN() || NOT FMath::IsFinite(Input._Reach) || Input._Reach < 0.0f)
             { return false; }
@@ -676,6 +716,7 @@ namespace ck
                 State._Swing._StartRotation = State._Plant._Rotation;
                 State._Swing._Target = DoClampToReach(In, In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition);
                 State._Swing._TargetFrozen = false;
+                State._Swing._LandingLiftStartAlpha = -1.0f;
 
                 State._Swing._Overshoot = false;
 
@@ -792,7 +833,8 @@ namespace ck
 
         // An Emergency leg waits on inhibition while other groups keep starting swings, and on the frame they drain,
         // leg index order hands the slot to another group again. The Emergency leg whose group has nothing in flight
-        // therefore holds back every other group's non-emergency take-off until it steps.
+        // therefore holds back every other group's take-off until it steps, Emergency take-offs included: while the body
+        // turns in place every group is in Emergency at once, and index order would starve one of them.
         auto PriorityPhaseOffset = TOptional<float>{};
         auto PriorityRatio = 0.0;
         for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
@@ -829,6 +871,7 @@ namespace ck
             if (State._Swing._Active)
             {
                 const auto SwingDuration = FMath::Max(_Settings._Step._Duration * State._Swing._DurationScale / CadenceScale, FCk_Time{KINDA_SMALL_NUMBER});
+                const auto PreviousPhase = State._Swing._Phase;
                 if (Advance)
                 {
                     State._Swing._Phase = FMath::Min(State._Swing._Phase + static_cast<float>(InDeltaTime / SwingDuration), 1.0f);
@@ -836,8 +879,7 @@ namespace ck
                     if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen
                         && State._Swing._Phase >= _Settings._Step._RetargetFreezePhase && In._TargetValid)
                     {
-                        const auto RemainingTime = SwingDuration * (1.0f - State._Swing._Phase);
-                        State._Swing._Target = DoClampToReach(In, In._IdealTarget + InBodyPlanarVelocity * RemainingTime.Get_Seconds());
+                        State._Swing._Target = DoGet_FrozenTarget(In, InBodyPlanarVelocity, SwingDuration * (1.0f - State._Swing._Phase));
                         State._Swing._TargetFrozen = true;
                     }
                     else if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen)
@@ -848,21 +890,34 @@ namespace ck
                     }
                 }
 
-                auto Target = State._Swing._Target;
-                if (State._Swing._Overshoot && _Settings._Step._StrokeOvershootFraction > 0.0f)
+                auto Target = DoGet_LandingPoint(State, In, State._Swing._Target);
+                // Before the freeze the damped target trails the moving ideal and the freeze snaps it forward, so the point
+                // reported for probing is the one the freeze will produce: a swing too short to lift after the snap still
+                // learns the ground it lands on in time.
+                const auto PredictsTheFreeze = NOT State._Swing._TargetFrozen && NOT State._Swing._CatchStep && In._TargetValid;
+                State._Swing._LandingPoint = PredictsTheFreeze
+                    ? DoGet_LandingPoint(State, In,
+                        DoGet_FrozenTarget(In, InBodyPlanarVelocity, SwingDuration * (1.0f - _Settings._Step._RetargetFreezePhase)))
+                    : Target;
+
+                // The overshoot and the freeze push can carry a target probed on a lower tread past the next riser; the ground
+                // under the landing point then lies above it.
+                const auto HasLandingGround = NOT State._Swing._CatchStep && In._LandingGroundZ > -FLT_MAX * 0.5f;
+                const auto OnLandingGround = FVector{Target.X, Target.Y, In._LandingGroundZ};
+                const auto LandingGroundAbove = HasLandingGround && In._LandingGroundZ > Target.Z
+                    && (In._Reach <= 0.0f || FVector::Dist(OnLandingGround, In._Hip) <= _Settings._Reach._TargetFraction * In._Reach);
+                // A lifted swing follows the latest report, down to no lift at all: the landing point can move off the upper
+                // tread after the lift began, and a plant must not hover over the lower one.
+                if (State._Swing._LandingLiftStartAlpha >= 0.0f)
                 {
-                    const auto Stroke = State._Swing._Target - State._Swing._StartPosition;
-                    const auto StrokeLength = Stroke.Size();
-                    if (StrokeLength > KINDA_SMALL_NUMBER)
-                    {
-                        const auto Overshoot = FMath::Min(
-                            StrokeLength * _Settings._Step._StrokeOvershootFraction,
-                            FMath::Max(_Settings._Step._MaxStrokeOvershoot, 0.0f));
-                        Target += (Stroke / StrokeLength) * Overshoot;
-                    }
+                    if (HasLandingGround)
+                    { State._Swing._LiftedLandingPoint = LandingGroundAbove ? OnLandingGround : Target; }
                 }
-                // The hip moves during the swing, so the landing target is held within reach of where the hip is now.
-                Target = DoClampToReach(In, Target);
+                else if (LandingGroundAbove && State._Swing._Phase < 1.0f)
+                {
+                    State._Swing._LandingLiftStartAlpha = DoGet_SwingEase(PreviousPhase);
+                    State._Swing._LiftedLandingPoint = OnLandingGround;
+                }
 
                 const auto LandingRotation = MakeFootRotation(In._FacingDirection,
                     In._TargetValid ? In._GroundNormal : State._Plant._Normal);
@@ -882,6 +937,16 @@ namespace ck
                             Target += In._GroundNormal * BelowGround;
                         }
                     }
+                    if (State._Swing._LandingLiftStartAlpha >= 0.0f)
+                    { Target.Z = FMath::Max(Target.Z, State._Swing._LiftedLandingPoint.Z); }
+                    else if (LandingGroundAbove)
+                    {
+                        if (In._LandingGroundZ - Target.Z <= procedural_gait_solver::MaxTouchdownLandingLift)
+                        { Target.Z = In._LandingGroundZ; }
+                        else
+                        { ++_MissedLandingLifts; }
+                    }
+                    State._Swing._LandingLiftStartAlpha = -1.0f;
                     State._Swing._CatchStep = false;
 
                     State._Plant._Position = Target;
@@ -896,11 +961,17 @@ namespace ck
                 }
                 else
                 {
-                    const auto Alpha = _Settings._Swing._Profile.IsEaseValid()
-                        ? _Settings._Swing._Profile.SampleEase(State._Swing._Phase)
-                        : FMath::SmoothStep(0.0f, 1.0f, State._Swing._Phase);
+                    const auto Alpha = DoGet_SwingEase(State._Swing._Phase);
                     const auto RotationAlpha = FMath::Clamp(Alpha, 0.0f, 1.0f);
                     auto Position = FMath::Lerp(State._Swing._StartPosition, Target, Alpha);
+                    if (State._Swing._LandingLiftStartAlpha >= 0.0f)
+                    {
+                        const auto LiftStart = State._Swing._LandingLiftStartAlpha;
+                        const auto LiftShare = LiftStart < 1.0f - KINDA_SMALL_NUMBER
+                            ? FMath::Clamp((Alpha - LiftStart) / (1.0f - LiftStart), 0.0f, 1.0f)
+                            : 1.0f;
+                        Position.Z += FMath::Max(State._Swing._LiftedLandingPoint.Z - Target.Z, 0.0) * LiftShare;
+                    }
 
                     const auto ArcAlpha = _Settings._Swing._Profile.IsArcValid()
                         ? _Settings._Swing._Profile.SampleArc(State._Swing._Phase)
@@ -952,7 +1023,7 @@ namespace ck
                     && Error > Threshold * FMath::Clamp(_Settings._Settle._ThresholdFraction, 0.05f, 1.0f);
 
                 const auto CatchStep = State._PendingStep._Time > FCk_Time{};
-                const auto YieldsToPriority = PriorityPhaseOffset.IsSet() && NOT Emergency && NOT CatchStep
+                const auto YieldsToPriority = PriorityPhaseOffset.IsSet() && NOT CatchStep
                     && NOT FMath::IsNearlyEqual(PriorityPhaseOffset.GetValue(), LegPhaseOffset, 1.0e-3f);
 
                 if (Advance && NOT IsInhibited(LegPhaseOffset) && NOT YieldsToPriority &&
@@ -1091,6 +1162,61 @@ namespace ck
         InOutState._Swing._StartPosition = InStartPosition;
         InOutState._Swing._StartRotation = InStartRotation;
         InOutState._Swing._Target = InTarget;
+        InOutState._Swing._LandingLiftStartAlpha = -1.0f;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_SwingEase(
+            float InPhase) const
+        -> float
+    {
+        return _Settings._Swing._Profile.IsEaseValid()
+            ? _Settings._Swing._Profile.SampleEase(InPhase)
+            : FMath::SmoothStep(0.0f, 1.0f, InPhase);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_FrozenTarget(
+            const FProceduralGaitLegInput& InInput,
+            const FVector& InBodyPlanarVelocity,
+            FCk_Time InRemainingTime) const
+        -> FVector
+    {
+        return DoClampToReach(InInput, InInput._IdealTarget + InBodyPlanarVelocity * InRemainingTime.Get_Seconds());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The swing target carried on along its stroke by the overshoot, then held within reach of where the hip is now: the hip
+    // moves during the swing.
+    auto
+        FProceduralGaitSolver::
+        DoGet_LandingPoint(
+            const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput,
+            const FVector& InSwingTarget) const
+        -> FVector
+    {
+        auto Landing = InSwingTarget;
+        if (InState._Swing._Overshoot && _Settings._Step._StrokeOvershootFraction > 0.0f)
+        {
+            const auto Stroke = InSwingTarget - InState._Swing._StartPosition;
+            const auto StrokeLength = Stroke.Size();
+            if (StrokeLength > KINDA_SMALL_NUMBER)
+            {
+                const auto Overshoot = FMath::Min(
+                    StrokeLength * _Settings._Step._StrokeOvershootFraction,
+                    FMath::Max(_Settings._Step._MaxStrokeOvershoot, 0.0f));
+                Landing += (Stroke / StrokeLength) * Overshoot;
+            }
+        }
+        return DoClampToReach(InInput, Landing);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1114,6 +1240,25 @@ namespace ck
 
         const auto PlanarDistance = FMath::Sqrt(FMath::Square(MaxDistance) - FMath::Square(Height));
         return InHip + FVector{Offset.X, Offset.Y, 0.0}.GetSafeNormal() * PlanarDistance + FVector{0.0, 0.0, Height};
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        ComputeLeadQuery(
+            const FVector& InNeutral,
+            const FVector& InLinearLead,
+            const FVector& InPivot,
+            const FVector& InUp,
+            float InYawRate,
+            FCk_Time InLeadTime,
+            float InMaxLead)
+        -> FVector
+    {
+        const auto Turn = FQuat{InUp.GetSafeNormal(KINDA_SMALL_NUMBER, FVector::UpVector), InYawRate * InLeadTime.Get_Seconds()};
+        const auto Led = InPivot + Turn.RotateVector(InNeutral + InLinearLead - InPivot);
+        return InNeutral + (Led - InNeutral).GetClampedToMaxSize(FMath::Max(InMaxLead, 0.0f));
     }
 
     // --------------------------------------------------------------------------------------------------------------------

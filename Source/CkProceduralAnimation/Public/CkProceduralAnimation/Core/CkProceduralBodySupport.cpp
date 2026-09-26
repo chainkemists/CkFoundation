@@ -68,6 +68,17 @@ namespace ck_procedural_body_support
     }
 
     auto
+        Get_AreSlewSettingsValid(
+            const ck::FProceduralBodyConformSlewSettings& InSettings)
+        -> bool
+    {
+        return FMath::IsFinite(InSettings.Get_MaxTiltRateDegrees())
+            && InSettings.Get_MaxTiltRateDegrees() > 0.0f
+            && FMath::IsFinite(InSettings.Get_MaxHeightRate())
+            && InSettings.Get_MaxHeightRate() > 0.0f;
+    }
+
+    auto
         Get_FitPoint(
             const ck::FProceduralBodyConformFoot& InFoot)
         -> FVector
@@ -190,6 +201,37 @@ namespace ck
 
         OutTarget = FTransform{Rotation, FVector{0.0, 0.0, Height}};
         return EProceduralBodyConformResult::Fitted;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        SlewProceduralBodyConformPose(
+            const FTransform& InApplied,
+            const FTransform& InTarget,
+            const FProceduralBodyConformSlewSettings& InSettings,
+            FCk_Time InDeltaTime)
+        -> TOptional<FTransform>
+    {
+        if (NOT ck_procedural_body_support::Get_AreSlewSettingsValid(InSettings)
+            || InApplied.ContainsNaN() || InTarget.ContainsNaN()
+            || NOT FMath::IsFinite(InDeltaTime.Get_Seconds()) || InDeltaTime < FCk_Time{})
+        { return {}; }
+
+        const auto DeltaSeconds = InDeltaTime.Get_Seconds();
+        const auto MaxTurn = FMath::DegreesToRadians(static_cast<double>(InSettings.Get_MaxTiltRateDegrees())) * DeltaSeconds;
+        const auto Turn = InApplied.GetRotation().AngularDistance(InTarget.GetRotation());
+        const auto Rotation = Turn <= MaxTurn
+            ? InTarget.GetRotation()
+            : FQuat::Slerp(InApplied.GetRotation(), InTarget.GetRotation(), MaxTurn / Turn).GetNormalized();
+
+        const auto MaxMove = InSettings.Get_MaxHeightRate() * DeltaSeconds;
+        const auto Move = InTarget.GetLocation() - InApplied.GetLocation();
+        const auto Location = Move.Size() <= MaxMove
+            ? InTarget.GetLocation()
+            : InApplied.GetLocation() + Move.GetSafeNormal() * MaxMove;
+
+        return FTransform{Rotation, Location};
     }
 }
 

@@ -245,6 +245,7 @@ private:
     float _CadenceSpeedRef = 0.0f;
     float _ReachCadenceFloor = 0.0f;
     int32 _ReachSkippedLegs = 0;
+    int32 _MissedLandingLifts = 0;
 
 public:
     CK_PROPERTY(_BodyTransform);
@@ -258,6 +259,7 @@ public:
     CK_PROPERTY(_CadenceSpeedRef);
     CK_PROPERTY(_ReachCadenceFloor);
     CK_PROPERTY(_ReachSkippedLegs);
+    CK_PROPERTY(_MissedLandingLifts);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -295,6 +297,7 @@ private:
     FTransform _Offset = FTransform::Identity;
     bool _Conforms = false;
     FTransform _ConformTarget = FTransform::Identity;
+    FTransform _AppliedConformTarget = FTransform::Identity;
 
 public:
     CK_PROPERTY(_Composed);
@@ -302,6 +305,7 @@ public:
     CK_PROPERTY(_Offset);
     CK_PROPERTY(_Conforms);
     CK_PROPERTY(_ConformTarget);
+    CK_PROPERTY(_AppliedConformTarget);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
