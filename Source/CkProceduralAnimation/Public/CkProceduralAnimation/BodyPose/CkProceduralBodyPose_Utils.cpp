@@ -1,6 +1,8 @@
 #include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
 
 #include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Fragment.h"
+#include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
+#include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Utils.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Utils.h"
@@ -66,15 +68,27 @@ auto
         && NOT Has(InGait);
     const auto Valid = GaitValid
         && ck::IsValid(InParams)
-        && ck_procedural_body_pose_utils::Get_IsPresentationAdmissible(InParams.Get_Presentation(), InGait.ConvertToHandle());
+        && ck_procedural_body_pose_utils::Get_IsPresentationAdmissible(InParams.Get_Presentation(), InGait.ConvertToHandle())
+        && ck::algo::AllOf(InGait.Get<ck::FFragment_ProceduralGait>()._Legs, [](const FCk_Handle_ProceduralLeg& InLeg) -> bool
+        {
+            return ck::IsValid(InLeg) && NOT InLeg.Has<ck::FTag_DestroyEntity_Initiate>();
+        });
     CK_ENSURE_IF_NOT(Valid,
         TEXT("Procedural body pose Add rejected gait [{}]. The gait must be live with no body pose; the presentation must be a "
              "live transform entity that is a direct lifetime child of the body, not the body itself and not a rig part; spring "
-             "stiffness and mass must be positive, damping non-negative, collapse drop non-negative and max tilt within 0..89 degrees."),
+             "stiffness and mass must be positive, damping non-negative, collapse drop non-negative and max tilt within 0..89 degrees. "
+             "Every leg the gait captured must still be live."),
         InGait)
     { return {}; }
 
+    auto HipLocals = ck::algo::Transform<TArray<FVector>>(InGait.Get<ck::FFragment_ProceduralGait>()._Legs,
+        [](const FCk_Handle_ProceduralLeg& InLeg) -> FVector
+        {
+            return InLeg.Get<ck::FFragment_ProceduralLeg_Params>().Get_Placement().Get_HipLocal();
+        });
+
     InGait.Add<ck::FFragment_ProceduralBodyPose_Params>(InParams);
+    InGait.Add<ck::FFragment_ProceduralBodyPose_SupportLayout>(MoveTemp(HipLocals));
     InGait.Add<ck::FFragment_ProceduralBodyPose>();
 
     return CastChecked(InGait);

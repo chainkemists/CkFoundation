@@ -17,6 +17,7 @@ namespace ck
         FProcessor_ProceduralBodyPose_Update,
         FCk_Handle_ProceduralBodyPose,
         TReadOnly<FFragment_ProceduralBodyPose_Params>,
+        TReadOnly<FFragment_ProceduralBodyPose_SupportLayout>,
         TReadWrite<FFragment_ProceduralBodyPose>,
         TReadOnly<FFragment_ProceduralGait>,
         TReadOnly<FFragment_Transform>,
@@ -38,6 +39,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProceduralBodyPose_Params& InParams,
+            const FFragment_ProceduralBodyPose_SupportLayout& InSupportLayout,
             FFragment_ProceduralBodyPose& InPoseComp,
             const FFragment_ProceduralGait& InGaitComp,
             const FFragment_Transform& InTransform)

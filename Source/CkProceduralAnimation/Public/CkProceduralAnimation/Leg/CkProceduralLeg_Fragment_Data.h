@@ -217,6 +217,45 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// The published foot on the frame its phase changed. _LandingSpeed is the foot's speed in cm/s over the frame it
+// planted; a lift reports 0.
+USTRUCT(BlueprintType)
+struct CKPROCEDURALANIMATION_API FCk_ProceduralLeg_Footfall
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ProceduralLeg_Footfall);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FVector _Position = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FVector _Normal = FVector::UpVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralLeg_FootContact _Contact = ECk_ProceduralLeg_FootContact::Guessed;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    float _LandingSpeed = 0.0f;
+
+public:
+    CK_PROPERTY(_Position);
+    CK_PROPERTY(_Normal);
+    CK_PROPERTY(_Contact);
+    CK_PROPERTY(_LandingSpeed);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_ProceduralLeg_Footfall, _Position, _Normal, _Contact, _LandingSpeed);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_Request_ProceduralLeg_EnableDisable : public FCk_Request_Base
 {
@@ -297,5 +336,15 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(
     FCk_Delegate_ProceduralLeg_OnDetached,
     FCk_Handle_ProceduralLeg, InLeg,
     FCk_ProceduralLeg_ReleasedParts, InReleasedParts);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProceduralLeg_OnPlanted,
+    FCk_Handle_ProceduralLeg, InLeg,
+    FCk_ProceduralLeg_Footfall, InFootfall);
+
+DECLARE_DYNAMIC_DELEGATE_TwoParams(
+    FCk_Delegate_ProceduralLeg_OnLifted,
+    FCk_Handle_ProceduralLeg, InLeg,
+    FCk_ProceduralLeg_Footfall, InFootfall);
 
 // --------------------------------------------------------------------------------------------------------------------

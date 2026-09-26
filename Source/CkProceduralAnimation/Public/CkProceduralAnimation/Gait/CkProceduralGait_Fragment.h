@@ -18,6 +18,7 @@
 // --------------------------------------------------------------------------------------------------------------------
 
 class UCk_Utils_ProceduralGait_UE;
+class UCk_Utils_ProceduralBodyPose_UE;
 class UCk_Utils_ProceduralAnimation_Debug_UE;
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -87,6 +88,7 @@ namespace ck
         friend class FProcessor_ProceduralBodyPose_Update;
         friend class FProcessor_ProceduralRig_Update;
         friend class ::UCk_Utils_ProceduralGait_UE;
+        friend class ::UCk_Utils_ProceduralBodyPose_UE;
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
 
     private:
