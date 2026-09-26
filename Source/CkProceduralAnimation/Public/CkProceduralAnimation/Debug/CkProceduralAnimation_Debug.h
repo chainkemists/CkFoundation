@@ -139,7 +139,9 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Value-only diagnostic records remain readable after their source entity is destroyed.
+// Value-only diagnostic records remain readable after their source entity is destroyed. _LandingPointWorld is the point a
+// swinging foot's landing ground was probed under this solve (the swing's landing point as of the previous solve) and
+// _LandingProbe that ray; the probe is not attempted (zero attempts) while the leg is planted or on a catch step.
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLeg
 {
     CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugLeg);
@@ -151,6 +153,8 @@ private:
     FCk_ProceduralAnimation_DebugLegTargeting _Targeting;
     FCk_ProceduralAnimation_DebugFoot _Foot;
     FCk_ProceduralAnimation_DebugProbe _Probe;
+    FVector _LandingPointWorld = FVector::ZeroVector;
+    FCk_ProceduralAnimation_DebugProbe _LandingProbe;
     FCk_ProceduralAnimation_DebugLegRig _Rig;
 
 public:
@@ -160,6 +164,8 @@ public:
     CK_PROPERTY(_Targeting);
     CK_PROPERTY(_Foot);
     CK_PROPERTY(_Probe);
+    CK_PROPERTY(_LandingPointWorld);
+    CK_PROPERTY(_LandingProbe);
     CK_PROPERTY(_Rig);
 };
 
@@ -265,6 +271,8 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// _CandidateNormal and _CandidateSeen mirror the contact waiting out its confirmation: a turn beyond the confirm angle is
+// pending while _CandidateSeen is above zero, and adopted once it reaches the confirm time.
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugMotion
 {
     CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugMotion);
@@ -277,6 +285,8 @@ private:
     bool _TrustedContact = false;
     FCk_Time _MissingContact;
     ECk_SurfaceMotion_ContactSource _ContactSource = ECk_SurfaceMotion_ContactSource::None;
+    FVector _CandidateNormal = FVector::UpVector;
+    FCk_Time _CandidateSeen;
 
 public:
     CK_PROPERTY(_Velocity);
@@ -286,6 +296,8 @@ public:
     CK_PROPERTY(_TrustedContact);
     CK_PROPERTY(_MissingContact);
     CK_PROPERTY(_ContactSource);
+    CK_PROPERTY(_CandidateNormal);
+    CK_PROPERTY(_CandidateSeen);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

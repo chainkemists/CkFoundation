@@ -6,12 +6,6 @@
 
 namespace ck::procedural_gait_solver
 {
-    // A swing lifts onto the ground under its landing point from the frame that ground is reported on. A report that only
-    // arrives at touchdown may still lift the plant this far, below what reads as a pop; anything more is left and counted.
-    constexpr auto MaxTouchdownLandingLift = 2.0f;
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     auto
         Damp(
             const FVector& InCurrent,
@@ -43,18 +37,6 @@ namespace ck::procedural_gait_solver
 
 namespace ck
 {
-    auto
-        FProceduralGaitVelocityTracker::
-        Reset()
-        -> void
-    {
-        _Samples.Reset();
-        _NextSample = 0;
-        _HasPrevious = false;
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
     auto
         FProceduralGaitVelocityTracker::
         Update(
@@ -106,16 +88,6 @@ namespace ck
             Sum += Sample;
         }
         return Sum / static_cast<float>(_Samples.Num());
-    }
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    auto
-        FProceduralGaitYawRateTracker::
-        Reset()
-        -> void
-    {
-        _YawRate = 0.0f;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -517,6 +489,7 @@ namespace ck
             InSettings._Reach._TargetFraction,
             InSettings._Reach._ForceStepFraction,
             InSettings._Reach._HardOverstretchFraction,
+            InSettings._Reach._TouchdownLiftFraction,
         };
         for (const auto Value : ScalarValues)
         {
@@ -554,7 +527,8 @@ namespace ck
             || InSettings._Reach._TargetFraction <= 0.0f || InSettings._Reach._TargetFraction >= InSettings._Reach._ForceStepFraction
             || InSettings._Reach._ForceStepFraction > 1.0f
             || InSettings._Reach._HardOverstretchFraction < 1.0f || InSettings._Reach._HardOverstretchFraction > 1.5f
-            || InSettings._Reach._HardOverstretchFraction <= InSettings._Reach._ForceStepFraction)
+            || InSettings._Reach._HardOverstretchFraction < InSettings._Reach._ForceStepFraction
+            || NOT UnitInterval(InSettings._Reach._TouchdownLiftFraction))
         { return false; }
         for (const auto& Pattern : InSettings._Pattern._Patterns)
         {
@@ -719,6 +693,7 @@ namespace ck
                 State._Swing._StartPosition = State._Emitted._AirPosition;
                 State._Swing._StartRotation = State._Plant._Rotation;
                 State._Swing._Target = DoClampToReach(In, In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition);
+                State._Swing._LandingPoint = State._Swing._Target;
                 State._Swing._TargetFrozen = false;
                 State._Swing._LandingLiftStartAlpha = -1.0f;
 
@@ -915,7 +890,8 @@ namespace ck
                 const auto LandingGroundAbove = HasLandingGround && In._LandingGroundZ > Target.Z
                     && (In._Reach <= 0.0f || FVector::Dist(OnLandingGround, In._Hip) <= _Settings._Reach._TargetFraction * In._Reach);
                 // A lifted swing follows the latest report, down to no lift at all: the landing point can move off the upper
-                // tread after the lift began, and a plant must not hover over the lower one.
+                // tread after the lift began, and a plant must not hover over the lower one. No ground under the landing point
+                // (a probe miss, or ground out of reach over a gap) is no report, so the last lift holds.
                 if (State._Swing._LandingLiftStartAlpha >= 0.0f)
                 {
                     if (HasLandingGround)
@@ -950,7 +926,10 @@ namespace ck
                     { Target.Z = FMath::Max(Target.Z, State._Swing._LiftedLandingPoint.Z); }
                     else if (LandingGroundAbove)
                     {
-                        if (In._LandingGroundZ - Target.Z <= procedural_gait_solver::MaxTouchdownLandingLift)
+                        // A report that first arrives at touchdown may still lift the plant this far, below what reads as a
+                        // pop; anything more is left and counted.
+                        const auto MaxTouchdownLift = _Settings._Reach._TouchdownLiftFraction * _Settings._Swing._Height;
+                        if (In._LandingGroundZ - Target.Z <= MaxTouchdownLift)
                         { Target.Z = In._LandingGroundZ; }
                         else
                         { ++_MissedLandingLifts; }
@@ -1180,6 +1159,9 @@ namespace ck
         InOutState._Swing._StartPosition = InStartPosition;
         InOutState._Swing._StartRotation = InStartRotation;
         InOutState._Swing._Target = InTarget;
+        // The ECS probes under the landing point before the next solve; a point left from the last swing would report the
+        // ground the foot just lifted from.
+        InOutState._Swing._LandingPoint = InTarget;
         InOutState._Swing._LandingLiftStartAlpha = -1.0f;
         InOutState._Swing._BeyondSchedule = false;
     }

@@ -47,7 +47,7 @@ public:
 
 private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 0))
+              meta = (AllowPrivateAccess = true, ClampMin = 0.01))
     float _Stiffness = 40.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -55,7 +55,7 @@ private:
     float _CriticalDampingFactor = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 0))
+              meta = (AllowPrivateAccess = true, ClampMin = 0.01))
     float _Mass = 1.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
@@ -128,7 +128,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralBodyPose_ConformMode);
 // PlantedFeet tilts the drawn body, up to MaxTilt degrees, toward a plane fitted through its feet in the body's frame, and
 // moves it along its up by HeightWeight times that plane's height under the body, up to MaxHeight centimetres. The target
 // the springs chase turns toward that fit at no more than MaxTiltRate degrees per second and moves at no more than
-// MaxHeightRate centimetres per second.
+// MaxHeightRate centimetres per second. The critically damped rotation spring trails a target turning at a steady rate by
+// about twice the rate over its natural frequency sqrt(Stiffness / Mass), so keep 2 * MaxTiltRate / sqrt(Stiffness / Mass)
+// within the spring's MaxAttitudeLag: with the default spring, 60 degrees per second trails by about 19 degrees against 22.
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralBodyPose_Conform
 {
@@ -155,11 +157,11 @@ private:
     float _MaxHeight = 10.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 0))
-    float _MaxTiltRate = 80.0f;
+              meta = (AllowPrivateAccess = true, ClampMin = 0.01))
+    float _MaxTiltRate = 60.0f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
-              meta = (AllowPrivateAccess = true, ClampMin = 0))
+              meta = (AllowPrivateAccess = true, ClampMin = 0.01))
     float _MaxHeightRate = 60.0f;
 
 public:
