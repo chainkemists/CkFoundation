@@ -76,8 +76,9 @@ auto
     CK_ENSURE_IF_NOT(Valid,
         TEXT("Procedural body pose Add rejected gait [{}]. The gait must be live with no body pose; the presentation must be a "
              "live transform entity that is a direct lifetime child of the body, not the body itself and not a rig part; spring "
-             "stiffness and mass must be positive, damping non-negative, collapse drop non-negative and max tilt within 0..89 degrees; "
-             "the conform's max tilt must be within 0..89 degrees, its height weight within 0..1 and its max height non-negative. "
+             "stiffness and mass must be positive, damping and max attitude lag non-negative, collapse drop non-negative and max tilt "
+             "within 0..89 degrees; the conform's max tilt must be within 0..89 degrees, its height weight within 0..1 and its max "
+             "height non-negative. "
              "Every leg the gait captured must still be live."),
         InGait)
     { return {}; }
@@ -137,6 +138,17 @@ auto
 {
     return Get_Status(InBodyPose) == ECk_ProceduralAnimation_Status::Ready
         ? InBodyPose.Get<ck::FFragment_ProceduralBodyPose>().Get_Offset()
+        : FTransform::Identity;
+}
+
+auto
+    UCk_Utils_ProceduralBodyPose_UE::
+    Get_TargetOffset(
+        const FCk_Handle_ProceduralBodyPose& InBodyPose)
+    -> FTransform
+{
+    return Get_Status(InBodyPose) == ECk_ProceduralAnimation_Status::Ready
+        ? InBodyPose.Get<ck::FFragment_ProceduralBodyPose>().Get_TargetOffset()
         : FTransform::Identity;
 }
 
