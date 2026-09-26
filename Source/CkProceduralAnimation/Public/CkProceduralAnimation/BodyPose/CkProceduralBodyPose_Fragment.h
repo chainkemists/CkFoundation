@@ -50,19 +50,24 @@ namespace ck
         float _MaxTilt = 20.0f;
         float _HeightWeight = 0.5f;
         float _MaxHeight = 10.0f;
+        float _MaxTiltRate = 80.0f;
+        float _MaxHeightRate = 60.0f;
 
     public:
         CK_PROPERTY_GET(_MaxTilt);
         CK_PROPERTY_GET(_HeightWeight);
         CK_PROPERTY_GET(_MaxHeight);
+        CK_PROPERTY_GET(_MaxTiltRate);
+        CK_PROPERTY_GET(_MaxHeightRate);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose_Conform, _MaxTilt, _HeightWeight, _MaxHeight);
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralBodyPose_Conform, _MaxTilt, _HeightWeight, _MaxHeight, _MaxTiltRate, _MaxHeightRate);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The last fitted conform target, body-local; the update holds it while the feet cannot determine a plane.
+    // Body-local conform targets: the last fitted one, which the update holds while the feet cannot determine a plane, and
+    // the applied one the springs chase, which follows the held one at the conform's max tilt and height rates.
     struct CKPROCEDURALANIMATION_API FFragment_ProceduralBodyPose_ConformState
     {
     public:
@@ -73,9 +78,11 @@ namespace ck
 
     private:
         FTransform _HeldTarget = FTransform::Identity;
+        FTransform _AppliedTarget = FTransform::Identity;
 
     public:
         CK_PROPERTY_GET(_HeldTarget);
+        CK_PROPERTY_GET(_AppliedTarget);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
