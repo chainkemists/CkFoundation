@@ -41,8 +41,9 @@ enum class ECk_SurfaceMotion_ContactQuery : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactQuery);
 
-// The ray whose hit the body accepted on the last substep: forward within the clearance, down under the body, the
-// look-ahead down ray ahead of the body, the fan around a convex edge, or the swept fall. None while no ray hits.
+// The ray whose hit the body last accepted: forward within the clearance, down under the body, the look-ahead down ray
+// ahead of the body, the fan around a convex edge, or the swept fall. None while no ray hits. A substep that coasts while
+// a large turn waits for confirmation accepts nothing and keeps the source.
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_ContactSource : uint8
 {

@@ -119,6 +119,7 @@ namespace ck_procedural_gait
 
     // The ground under the point a swing will land on, as of the last solve. The stroke overshoot and the freeze push can
     // carry a target probed on a lower tread past the next riser; the swing lifts onto this ground when it is reachable.
+    // The debug leg records the point and the ray.
     auto
         Get_LandingGroundHit(
             UWorld* InWorld,
@@ -127,7 +128,8 @@ namespace ck_procedural_gait
             float InReach,
             const ck::FProceduralGaitLegSwing& InSwing,
             const FCk_ProceduralGait_Probe& InProbe,
-            const FCk_ProceduralGait_Step& InStep)
+            const FCk_ProceduralGait_Step& InStep,
+            FCk_ProceduralAnimation_DebugLeg& InOutDebugLeg)
         -> TOptional<FCk_Jolt_HitResult>
     {
         if (NOT InSwing.Get_Active() || InSwing.Get_CatchStep())
@@ -135,8 +137,19 @@ namespace ck_procedural_gait
 
         const auto Up = InBasis.GetAxisZ();
         const auto Landing = InBasis.RotateVector(InSwing.Get_LandingPoint());
-        const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld,
-            Landing + Up * InProbe.Get_Up(), Landing - Up * InProbe.Get_Down(), InProbe.Get_QueryFilter());
+        const auto ProbeStart = Landing + Up * InProbe.Get_Up();
+        const auto ProbeEnd = Landing - Up * InProbe.Get_Down();
+        const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld, ProbeStart, ProbeEnd, InProbe.Get_QueryFilter());
+
+        constexpr auto SingleAttempt = 1;
+        InOutDebugLeg.Set_LandingPointWorld(Landing);
+        InOutDebugLeg.Get_LandingProbe().Set_Start(ProbeStart)
+            .Set_End(ProbeEnd)
+            .Set_AttemptCount(SingleAttempt)
+            .Set_Hit(Hit.Get_HasHit())
+            .Set_HitFraction(Hit.Get_Fraction())
+            .Set_HitPosition(Hit.Get_Position())
+            .Set_HitNormal(Hit.Get_Normal());
 
         if (NOT Get_TrustedHit(Hit, -Up) || FVector::Dist(Hit.Get_Position(), InHip) > InStep.Get_ForceStepReachFraction() * InReach)
         { return {}; }
@@ -226,7 +239,7 @@ namespace ck
             const auto& Placement = Params.Get_Placement();
             const auto Neutral = Body.TransformPosition(Placement.Get_RestFootLocal());
             const auto Hit = ck_procedural_gait::Get_ReachableGroundHit(World, Basis, Body.GetLocation(),
-                Body.TransformPosition(Placement.Get_HipLocal()), Neutral, UCk_Utils_ProceduralGait_UE::DoGet_Reach(Params.Get_Chain()),
+                Body.TransformPosition(Placement.Get_HipLocal()), Neutral, ck_procedural_gait_utils::Get_Reach(Params.Get_Chain()),
                 InTunables.Get_Probe(), InTunables.Get_Step(), nullptr);
             const auto Trusted = Hit.IsSet();
             const auto Position = Trusted ? Hit->Get_Position() : Neutral;
@@ -265,6 +278,7 @@ namespace ck
             HandleType InHandle,
             FFragment_ProceduralGait_Tunables& InTunables,
             FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp,
             FFragment_ProceduralGait_Requests& InRequestsComp)
         -> void
     {
@@ -280,7 +294,7 @@ namespace ck
             if (InHandle.Has<FTag_DestroyEntity_Initiate>())
             { return; }
 
-            DoHandleRequest(InHandle, InTunables, InGaitComp, InRequest);
+            DoHandleRequest(InHandle, InTunables, InGaitComp, InDebugComp, InRequest);
             Result = ECk_Request_OperationResult::Succeeded;
         }), policy::DontResetContainer{});
 
@@ -294,13 +308,16 @@ namespace ck
             HandleType InHandle,
             FFragment_ProceduralGait_Tunables& InTunables,
             FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp,
             const FCk_Request_ProceduralGait_ApplyPreset& InRequest)
         -> void
     {
         InTunables = FFragment_ProceduralGait_Tunables{InRequest.Get_Timing(), InRequest.Get_Step(), InRequest.Get_Probe()};
 
-        InGaitComp._Solver.Set_Settings(UCk_Utils_ProceduralGait_UE::DoBuild_SolverSettings(InTunables, InGaitComp._Legs,
-            InGaitComp._EnabledMask, InGaitComp._ReachCadenceFloor, InGaitComp._ReachSkippedLegs));
+        const auto Built = UCk_Utils_ProceduralGait_UE::DoBuild_SolverSettings(InTunables, InGaitComp._Legs, InGaitComp._EnabledMask);
+        InGaitComp._Solver.Set_Settings(Built.Get_Settings());
+        InDebugComp._ReachCadenceFloor = Built.Get_ReachCadenceFloor();
+        InDebugComp._ReachSkippedLegs = Built.Get_ReachSkippedLegs();
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -342,8 +359,8 @@ namespace ck
         const auto Velocity = InGaitComp._VelocityTracker.Update(Body.GetLocation(), InDeltaT);
         const auto PlanarVelocity = InverseBasis.RotateVector(FVector::VectorPlaneProject(Velocity, Up));
         const auto YawRate = InGaitComp._YawRateTracker.Update(InGaitComp._Basis, Basis, InDeltaT);
-        const auto Lead = (FVector::VectorPlaneProject(Velocity, Up) * Timing.Get_StepDuration().Get_Seconds())
-            .GetClampedToMaxSize(Step.Get_MaxVelocityLead());
+        // ComputeLeadQuery caps the whole lead, travel and turn together, at the max velocity lead.
+        const auto Lead = FVector::VectorPlaneProject(Velocity, Up) * Timing.Get_StepDuration().Get_Seconds();
 
         InGaitComp._Solver.TransformState(InverseBasis * InGaitComp._Basis);
 
@@ -370,7 +387,9 @@ namespace ck
                 && NOT Leg.Has<FTag_ProceduralLeg_Disabled>();
 
             Input.Set_Enabled(Enabled);
-            DebugLeg.Set_Enabled(Enabled);
+            DebugLeg.Set_Enabled(Enabled)
+                .Set_LandingPointWorld(FVector::ZeroVector)
+                .Set_LandingProbe(FCk_ProceduralAnimation_DebugProbe{});
 
             if (NOT LegValid)
             {
@@ -439,7 +458,7 @@ namespace ck
             { Leg.Try_Remove<FFragment_ProceduralLeg_FrozenPose>(); }
 
             ++EnabledCount;
-            const auto Reach = UCk_Utils_ProceduralGait_UE::DoGet_Reach(Params.Get_Chain());
+            const auto Reach = ck_procedural_gait_utils::Get_Reach(Params.Get_Chain());
             const auto HipSupport = InverseBasis.RotateVector(Hip);
             const auto Query = FProceduralGaitSolver::ComputeLeadQuery(Neutral, Lead, Body.GetLocation(), Up, YawRate,
                 Timing.Get_StepDuration(), Step.Get_MaxVelocityLead());
@@ -487,7 +506,7 @@ namespace ck
             }
 
             const auto LandingGround = ck_procedural_gait::Get_LandingGroundHit(World, Basis, Hip, Reach,
-                InGaitComp._Solver.GetLegState(Index).Get_Swing(), Probe, Step);
+                InGaitComp._Solver.GetLegState(Index).Get_Swing(), Probe, Step, DebugLeg);
             if (LandingGround.IsSet())
             { Input.Set_LandingGroundZ(InverseBasis.RotateVector(LandingGround->Get_Position()).Z); }
 
@@ -502,8 +521,10 @@ namespace ck
         if (EnabledMask != InGaitComp._EnabledMask)
         {
             InGaitComp._EnabledMask = EnabledMask;
-            InGaitComp._Solver.Set_Settings(UCk_Utils_ProceduralGait_UE::DoBuild_SolverSettings(InTunables, InGaitComp._Legs,
-                InGaitComp._EnabledMask, InGaitComp._ReachCadenceFloor, InGaitComp._ReachSkippedLegs));
+            const auto Built = UCk_Utils_ProceduralGait_UE::DoBuild_SolverSettings(InTunables, InGaitComp._Legs, InGaitComp._EnabledMask);
+            InGaitComp._Solver.Set_Settings(Built.Get_Settings());
+            InDebugComp._ReachCadenceFloor = Built.Get_ReachCadenceFloor();
+            InDebugComp._ReachSkippedLegs = Built.Get_ReachSkippedLegs();
             UUtils_Signal_OnProceduralGait_LegSetChanged::Broadcast(InHandle, MakePayload(InHandle, EnabledCount, LegCount));
         }
 
@@ -576,8 +597,8 @@ namespace ck
                 .Set_RestTime(InGaitComp._Solver.GetRestTime())
                 .Set_SupportNormal(Up)
                 .Set_CadenceSpeedRef(InGaitComp._Solver.Get_Settings().Get_Cadence().Get_CadenceSpeedRef())
-                .Set_ReachCadenceFloor(InGaitComp._ReachCadenceFloor)
-                .Set_ReachSkippedLegs(InGaitComp._ReachSkippedLegs)
+                .Set_ReachCadenceFloor(InDebugComp._ReachCadenceFloor)
+                .Set_ReachSkippedLegs(InDebugComp._ReachSkippedLegs)
                 .Set_MissedLandingLifts(InGaitComp._Solver.Get_MissedLandingLifts());
             Snapshot.Set_Legs(InDebugComp._ScratchLegs);
 
@@ -591,7 +612,9 @@ namespace ck
                     .Set_Grounded(Support.Get_Grounded())
                     .Set_TrustedContact(Support.Get_ContactTrusted())
                     .Set_MissingContact(Support.Get_MissingContact())
-                    .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)));
+                    .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)))
+                    .Set_CandidateNormal(Support.Get_CandidateNormal())
+                    .Set_CandidateSeen(Support.Get_CandidateSeen());
                 Snapshot.Get_Gait().Set_SupportNormal(Support.Get_SupportNormal());
             }
         }

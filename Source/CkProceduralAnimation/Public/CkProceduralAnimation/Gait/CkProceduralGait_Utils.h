@@ -22,7 +22,28 @@ namespace ck
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
     struct FFragment_ProceduralGait_Tunables;
-    struct FProceduralGaitSettings;
+    struct FProceduralGaitBuiltSettings;
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Module-internal helpers shared by the gait's own utils, processors and the walker accelerant; not exported.
+namespace ck_procedural_gait_utils
+{
+    // A leg's reach: the sum of its chain's segment lengths.
+    auto
+        Get_Reach(
+            const FCk_ProceduralLeg_ChainGeometry& InChain)
+        -> float;
+
+    // Gait admission requires every leg's rest foot within the step's TargetReachFraction of its reach from its hip;
+    // otherwise the reach clamp would pull every step inward of the rest pose.
+    auto
+        Get_IsRestWithinReach(
+            const FCk_ProceduralLeg_Placement& InPlacement,
+            const FCk_ProceduralLeg_ChainGeometry& InChain,
+            const FCk_ProceduralGait_Step& InStep)
+        -> bool;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -55,15 +76,6 @@ public:
     static bool
     Has(
         const FCk_Handle& InHandle);
-
-    // Gait admission requires every leg's rest foot within the step's TargetReachFraction of its chain length (the sum
-    // of its segment lengths) from its hip; otherwise the reach clamp would pull every step inward of the rest pose.
-    static auto
-    Get_IsRestWithinReach(
-        const FCk_ProceduralLeg_Placement& InPlacement,
-        const FCk_ProceduralLeg_ChainGeometry& InChain,
-        const FCk_ProceduralGait_Step& InStep)
-        -> bool;
 
 private:
     UFUNCTION(BlueprintCallable,
@@ -171,21 +183,13 @@ public:
         const FCk_Delegate_ProceduralGait_OnLegSetChanged& InDelegate);
 
 private:
-    // Also lowers the cadence speed reference to the reach floor of the legs enabled in InEnabledMask. OutReachCadenceFloor
-    // is 0 when no enabled leg bounds it; OutReachSkippedLegs counts enabled legs too wide to stride along body X.
+    // Also lowers the cadence speed reference to the reach floor of the legs enabled in InEnabledMask.
     static auto
     DoBuild_SolverSettings(
         const ck::FFragment_ProceduralGait_Tunables& InTunables,
         const TArray<FCk_Handle_ProceduralLeg>& InLegs,
-        uint64 InEnabledMask,
-        float& OutReachCadenceFloor,
-        int32& OutReachSkippedLegs)
-        -> ck::FProceduralGaitSettings;
-
-    static auto
-    DoGet_Reach(
-        const FCk_ProceduralLeg_ChainGeometry& InChain)
-        -> float;
+        uint64 InEnabledMask)
+        -> ck::FProceduralGaitBuiltSettings;
 
     static auto
     DoFind_LegBeyondReach(

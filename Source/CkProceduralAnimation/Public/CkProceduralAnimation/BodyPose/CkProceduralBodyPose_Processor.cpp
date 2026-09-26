@@ -147,11 +147,14 @@ namespace ck
             auto& ConformState = InHandle.Get<FFragment_ProceduralBodyPose_ConformState>();
 
             const auto BodyInverse = Body.Inverse();
+            // Airborne feet are tucked under the body, not standing on anything, so they fit no plane.
+            const auto Airborne = InGaitComp._Solver.IsAirborne();
             auto Feet = TArray<FProceduralBodyConformFoot, TInlineAllocator<16>>{};
             Feet.Reserve(InGaitComp._Legs.Num());
             for (const auto& Leg : InGaitComp._Legs)
             {
-                const auto Stands = ck::IsValid(Leg)
+                const auto Stands = NOT Airborne
+                    && ck::IsValid(Leg)
                     && NOT Leg.Has<FTag_DestroyEntity_Initiate>()
                     && NOT Leg.Has<FTag_ProceduralLeg_Disabled>();
                 if (NOT Stands)

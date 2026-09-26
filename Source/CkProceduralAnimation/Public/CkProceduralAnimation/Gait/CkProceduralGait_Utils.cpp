@@ -14,11 +14,12 @@
 
 namespace ck_procedural_gait_utils
 {
-    // Stance travel per cycle is kept within this share of the shortest stride any enabled leg can reach.
+    // Stance travel per cycle is kept within this share of the shortest chord any enabled leg can stride.
     constexpr auto StanceTravelShareOfStride = 0.85;
 
     // The chord a leg can stride along body X at its rest pose's lateral offset: from where the target clamp lets it land
     // ahead to where the reach Emergency forces it up behind. Unset when the lateral offset alone reaches the target radius.
+    // It ignores the velocity lead, which may land a swing short of the chord's forward end.
     auto
         Get_Stride(
             const FCk_ProceduralLeg_Placement& InPlacement,
@@ -38,6 +39,30 @@ namespace ck_procedural_gait_utils
 
         return FMath::Sqrt(FMath::Square(TargetRadius) - FMath::Square(Lateral))
             + FMath::Sqrt(FMath::Square(ForceRadius) - FMath::Square(Lateral));
+    }
+
+    auto
+        Get_Reach(
+            const FCk_ProceduralLeg_ChainGeometry& InChain)
+        -> float
+    {
+        auto Reach = 0.0f;
+        for (const auto Length : InChain.Get_SegmentLengths())
+        {
+            Reach += Length;
+        }
+        return Reach;
+    }
+
+    auto
+        Get_IsRestWithinReach(
+            const FCk_ProceduralLeg_Placement& InPlacement,
+            const FCk_ProceduralLeg_ChainGeometry& InChain,
+            const FCk_ProceduralGait_Step& InStep)
+        -> bool
+    {
+        return FVector::Dist(InPlacement.Get_RestFootLocal(), InPlacement.Get_HipLocal())
+            <= static_cast<double>(InStep.Get_TargetReachFraction()) * Get_Reach(InChain);
     }
 }
 
@@ -90,11 +115,13 @@ auto
     auto Tunables = ck::FFragment_ProceduralGait_Tunables{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe()};
     auto GaitComp = ck::FFragment_ProceduralGait{};
     GaitComp._Legs = Legs;
-    GaitComp._Solver.Set_Settings(DoBuild_SolverSettings(Tunables, GaitComp._Legs, GaitComp._EnabledMask,
-        GaitComp._ReachCadenceFloor, GaitComp._ReachSkippedLegs));
+    const auto Built = DoBuild_SolverSettings(Tunables, GaitComp._Legs, GaitComp._EnabledMask);
+    GaitComp._Solver.Set_Settings(Built.Get_Settings());
     GaitComp._Probes.SetNum(Legs.Num());
 
     auto DebugComp = ck::FFragment_ProceduralGait_Debug{};
+    DebugComp._ReachCadenceFloor = Built.Get_ReachCadenceFloor();
+    DebugComp._ReachSkippedLegs = Built.Get_ReachSkippedLegs();
     DebugComp._ScratchLegs.SetNum(Legs.Num());
     DebugComp._Snapshot.Get_Legs().Reserve(Legs.Num());
 
@@ -280,34 +307,18 @@ auto
 
 auto
     UCk_Utils_ProceduralGait_UE::
-    Get_IsRestWithinReach(
-        const FCk_ProceduralLeg_Placement& InPlacement,
-        const FCk_ProceduralLeg_ChainGeometry& InChain,
-        const FCk_ProceduralGait_Step& InStep)
-    -> bool
-{
-    return FVector::Dist(InPlacement.Get_RestFootLocal(), InPlacement.Get_HipLocal())
-        <= static_cast<double>(InStep.Get_TargetReachFraction()) * DoGet_Reach(InChain);
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_ProceduralGait_UE::
     DoBuild_SolverSettings(
         const ck::FFragment_ProceduralGait_Tunables& InTunables,
         const TArray<FCk_Handle_ProceduralLeg>& InLegs,
-        uint64 InEnabledMask,
-        float& OutReachCadenceFloor,
-        int32& OutReachSkippedLegs)
-    -> ck::FProceduralGaitSettings
+        uint64 InEnabledMask)
+    -> ck::FProceduralGaitBuiltSettings
 {
     const auto& Timing = InTunables.Get_Timing();
     const auto& Step = InTunables.Get_Step();
 
     auto EnabledCount = 0;
     auto ShortestStride = TOptional<double>{};
-    OutReachSkippedLegs = 0;
+    auto ReachSkippedLegs = 0;
     for (auto Index = 0; Index < InLegs.Num(); ++Index)
     {
         const auto& Leg = InLegs[Index];
@@ -317,10 +328,11 @@ auto
 
         ++EnabledCount;
         const auto& Params = Leg.Get<ck::FFragment_ProceduralLeg_Params>();
-        const auto Stride = ck_procedural_gait_utils::Get_Stride(Params.Get_Placement(), DoGet_Reach(Params.Get_Chain()), Step);
+        const auto Stride = ck_procedural_gait_utils::Get_Stride(Params.Get_Placement(),
+            ck_procedural_gait_utils::Get_Reach(Params.Get_Chain()), Step);
         if (NOT Stride.IsSet())
         {
-            ++OutReachSkippedLegs;
+            ++ReachSkippedLegs;
             continue;
         }
 
@@ -328,11 +340,11 @@ auto
     }
 
     const auto StanceTime = Timing.Get_CycleDuration() - Timing.Get_StepDuration();
-    OutReachCadenceFloor = ShortestStride.IsSet() && StanceTime > FCk_Time{}
+    const auto ReachCadenceFloor = ShortestStride.IsSet() && StanceTime > FCk_Time{}
         ? static_cast<float>(ck_procedural_gait_utils::StanceTravelShareOfStride * ShortestStride.GetValue() / StanceTime.Get_Seconds())
         : 0.0f;
-    const auto CadenceSpeedRef = OutReachCadenceFloor > 0.0f
-        ? FMath::Min(Timing.Get_CadenceSpeedRef(), OutReachCadenceFloor)
+    const auto CadenceSpeedRef = ReachCadenceFloor > 0.0f
+        ? FMath::Min(Timing.Get_CadenceSpeedRef(), ReachCadenceFloor)
         : Timing.Get_CadenceSpeedRef();
 
     const auto MaxSimultaneousSwings = Timing.Get_MaxSimultaneousSwings() == 0
@@ -357,23 +369,7 @@ auto
         .Set_ForceStepFraction(Step.Get_ForceStepReachFraction())
         .Set_HardOverstretchFraction(Step.Get_HardOverstretchReachFraction());
 
-    return Settings;
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
-auto
-    UCk_Utils_ProceduralGait_UE::
-    DoGet_Reach(
-        const FCk_ProceduralLeg_ChainGeometry& InChain)
-    -> float
-{
-    auto Reach = 0.0f;
-    for (const auto Length : InChain.Get_SegmentLengths())
-    {
-        Reach += Length;
-    }
-    return Reach;
+    return ck::FProceduralGaitBuiltSettings{Settings, ReachCadenceFloor, ReachSkippedLegs};
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -391,7 +387,7 @@ auto
         { continue; }
 
         const auto& Params = Leg.Get<ck::FFragment_ProceduralLeg_Params>();
-        if (NOT Get_IsRestWithinReach(Params.Get_Placement(), Params.Get_Chain(), InStep))
+        if (NOT ck_procedural_gait_utils::Get_IsRestWithinReach(Params.Get_Placement(), Params.Get_Chain(), InStep))
         { return Leg; }
     }
     return {};

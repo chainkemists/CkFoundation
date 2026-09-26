@@ -10,7 +10,8 @@
 
 namespace ck
 {
-    // The ray whose hit the body accepted on the last substep. None: no ray hit (contact grace or airborne).
+    // The ray whose hit the body last accepted. None: no ray hit (contact grace or airborne). A substep that only coasts while
+    // a large turn waits for confirmation accepts nothing and keeps the source.
     enum class EProceduralSurfaceContactSource : uint8
     {
         None,
@@ -118,14 +119,15 @@ namespace ck
     //   down ray from 1.5 clearances ahead, which counts only on a surface within 15 degrees of the support normal; and,
     //   around a convex edge, a fan back and down from one clearance ahead. The forward hit wins, then the down hit. The
     //   look-ahead replaces a down hit below the clearance when its hit lies more than a quarter clearance higher (the
-    //   top the body just climbed onto, with a lower floor under it), and follows a down miss before the fan.
+    //   top the body just climbed onto, with a lower floor under it), and follows a down miss before the fan. The forward
+    //   ray and the fan are cast only while InSpeed is positive; the down ray and the look-ahead at any speed.
     // - Confirmation: a contact whose normal turns more than ConfirmAngle from the support while the down ray still hits
     //   is adopted only once it has been seen for ConfirmTime, each sighting within 15 degrees of the last. Until then
     //   the body keeps the support under it, or coasts along its plane when the down ray proposed the turn, so a face
-    //   the rays only graze is never adopted. A body longer than its clearance can overrun a head-on wall by up to
-    //   InSpeed times ConfirmTime. A down ray that hits nothing, or starts on or inside a solid, adopts any contact at
-    //   once; a face it meets along its length but does not trust (grazed along the seam two solids share) still counts
-    //   as support for the confirmation.
+    //   the rays only graze is never adopted; a coast leaves the contact source unchanged. A body longer than its
+    //   clearance can overrun a head-on wall by up to InSpeed times ConfirmTime. A down ray that hits nothing, or starts
+    //   on or inside a solid, adopts any contact at once; a face it meets along its length but does not trust (grazed
+    //   along the seam two solids share) still counts as support for the confirmation.
     // - Without a trusted hit the body coasts for the contact grace, then falls under gravity along a swept ray until it
     //   lands. The landing keeps the travel tangent laid onto the landing plane (then the steering, then the body's
     //   forward).
