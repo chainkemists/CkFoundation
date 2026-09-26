@@ -87,6 +87,15 @@ public:
     Get_Offset(
         const FCk_Handle_ProceduralBodyPose& InBodyPose);
 
+    /** Body-local; the pose the offset's springs followed on the last update: the conform fit times the support-loss
+        pose. The offset reaches it only through the springs. Identity unless the body pose is Ready. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralBodyPose",
+              DisplayName="[Ck][ProceduralBodyPose] Get Target Offset")
+    static FTransform
+    Get_TargetOffset(
+        const FCk_Handle_ProceduralBodyPose& InBodyPose);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralBodyPose",
               DisplayName="[Ck][ProceduralBodyPose] Get Presentation")

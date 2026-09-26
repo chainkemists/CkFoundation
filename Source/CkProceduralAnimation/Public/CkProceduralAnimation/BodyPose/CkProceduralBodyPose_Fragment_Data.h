@@ -35,7 +35,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralBodyPose_Failure);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Engine spring-interpolator parameters (VectorSpringInterp / QuaternionSpringInterp).
+// Engine spring-interpolator parameters (VectorSpringInterp / QuaternionSpringInterp). MaxAttitudeLag, in degrees, limits
+// how far carrying the body's tilt steps may hold the drawn body behind the rotation its spring follows; 0 carries none.
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralBodyPose_Spring
 {
@@ -57,10 +58,15 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0))
     float _Mass = 1.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MaxAttitudeLag = 22.0f;
+
 public:
     CK_PROPERTY(_Stiffness);
     CK_PROPERTY(_CriticalDampingFactor);
     CK_PROPERTY(_Mass);
+    CK_PROPERTY(_MaxAttitudeLag);
 };
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Spring, IsValid_Policy_Default,
@@ -68,7 +74,8 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Spring, IsValid_Policy_D
 {
     return FMath::IsFinite(InSpring.Get_Stiffness()) && InSpring.Get_Stiffness() > 0.0f
         && FMath::IsFinite(InSpring.Get_CriticalDampingFactor()) && InSpring.Get_CriticalDampingFactor() >= 0.0f
-        && FMath::IsFinite(InSpring.Get_Mass()) && InSpring.Get_Mass() > 0.0f;
+        && FMath::IsFinite(InSpring.Get_Mass()) && InSpring.Get_Mass() > 0.0f
+        && FMath::IsFinite(InSpring.Get_MaxAttitudeLag()) && InSpring.Get_MaxAttitudeLag() >= 0.0f;
 });
 
 // --------------------------------------------------------------------------------------------------------------------
