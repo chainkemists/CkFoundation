@@ -141,6 +141,42 @@ public:
         UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
         const FCk_Delegate_ProceduralLeg_OnDetached& InDelegate);
 
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProceduralLeg",
+              DisplayName="[Ck][ProceduralLeg] Bind To OnPlanted")
+    static FCk_Handle_ProceduralLeg
+    BindTo_OnPlanted(
+        UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnPlanted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProceduralLeg",
+              DisplayName="[Ck][ProceduralLeg] Unbind From OnPlanted")
+    static FCk_Handle_ProceduralLeg
+    UnbindFrom_OnPlanted(
+        UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnPlanted& InDelegate);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProceduralLeg",
+              DisplayName="[Ck][ProceduralLeg] Bind To OnLifted")
+    static FCk_Handle_ProceduralLeg
+    BindTo_OnLifted(
+        UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnLifted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy = ECk_Signal_BindingPolicy::FireIfPayloadInFlightThisFrame,
+        ECk_Signal_PostFireBehavior InPostFireBehavior = ECk_Signal_PostFireBehavior::DoNothing);
+
+    UFUNCTION(BlueprintCallable,
+              Category = "Ck|Utils|ProceduralLeg",
+              DisplayName="[Ck][ProceduralLeg] Unbind From OnLifted")
+    static FCk_Handle_ProceduralLeg
+    UnbindFrom_OnLifted(
+        UPARAM(ref) FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnLifted& InDelegate);
+
 public:
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralLeg",

@@ -3,7 +3,6 @@
 #include "CkProceduralAnimation/Core/CkProceduralBodySupport.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 
-#include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
@@ -16,29 +15,6 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralBodyPose_Update);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-namespace ck_procedural_body_pose
-{
-    // A leg that is gone or going keeps its captured slot at weight zero; its placement is unreadable once destroyed,
-    // so it sits at the body origin.
-    auto
-        Get_SupportLeg(
-            const FCk_Handle_ProceduralLeg& InLeg)
-        -> ck::FProceduralBodySupportLeg
-    {
-        constexpr auto Unsupported = 0.0f;
-        constexpr auto Supporting = 1.0f;
-
-        if (ck::Is_NOT_Valid(InLeg) || InLeg.Has<ck::FTag_DestroyEntity_Initiate>())
-        { return ck::FProceduralBodySupportLeg{FVector::ZeroVector, Unsupported}; }
-
-        const auto& HipLocal = InLeg.Get<ck::FFragment_ProceduralLeg_Params>().Get_Placement().Get_HipLocal();
-        const auto Weight = InLeg.Has<ck::FTag_ProceduralLeg_Disabled>() ? Unsupported : Supporting;
-        return ck::FProceduralBodySupportLeg{HipLocal, Weight};
-    }
-}
-
-// --------------------------------------------------------------------------------------------------------------------
-
 namespace ck
 {
     auto
@@ -47,6 +23,7 @@ namespace ck
             TimeType InDeltaT,
             HandleType InHandle,
             const FFragment_ProceduralBodyPose_Params& InParams,
+            const FFragment_ProceduralBodyPose_SupportLayout& InSupportLayout,
             FFragment_ProceduralBodyPose& InPoseComp,
             const FFragment_ProceduralGait& InGaitComp,
             const FFragment_Transform& InTransform)
@@ -67,8 +44,30 @@ namespace ck
             return;
         }
 
-        const auto Legs = algo::Transform<TArray<FProceduralBodySupportLeg, TInlineAllocator<8>>>(
-            InGaitComp._Legs, &ck_procedural_body_pose::Get_SupportLeg);
+        const auto& HipLocals = InSupportLayout.Get_HipLocals();
+        const auto LayoutValid = HipLocals.Num() == InGaitComp._Legs.Num();
+        CK_ENSURE_IF_NOT(LayoutValid,
+            TEXT("Procedural body pose [{}] captured [{}] hips for [{}] gait legs; feature is failed."),
+            InHandle, HipLocals.Num(), InGaitComp._Legs.Num())
+        {
+            InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedSupport);
+            return;
+        }
+
+        constexpr auto Unsupported = 0.0f;
+        constexpr auto Supporting = 1.0f;
+
+        auto Legs = TArray<FProceduralBodySupportLeg, TInlineAllocator<8>>{};
+        Legs.Reserve(HipLocals.Num());
+        for (auto Index = 0; Index < HipLocals.Num(); ++Index)
+        {
+            const auto& Leg = InGaitComp._Legs[Index];
+            const auto Supports = ck::IsValid(Leg)
+                && NOT Leg.Has<FTag_DestroyEntity_Initiate>()
+                && NOT Leg.Has<FTag_ProceduralLeg_Disabled>();
+            Legs.Emplace(HipLocals[Index], Supports ? Supporting : Unsupported);
+        }
+
         const auto& Support = InParams.Get_Support();
         const auto Settings = FProceduralBodySupportSettings{}
             .Set_CollapseDrop(Support.Get_CollapseDrop())

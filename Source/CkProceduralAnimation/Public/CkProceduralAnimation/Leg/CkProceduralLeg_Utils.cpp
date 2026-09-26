@@ -191,6 +191,54 @@ auto
     return InLeg;
 }
 
+auto
+    UCk_Utils_ProceduralLeg_UE::
+    BindTo_OnPlanted(
+        FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnPlanted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ProceduralLeg
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProceduralLeg_Planted, InLeg, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InLeg;
+}
+
+auto
+    UCk_Utils_ProceduralLeg_UE::
+    UnbindFrom_OnPlanted(
+        FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnPlanted& InDelegate)
+    -> FCk_Handle_ProceduralLeg
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProceduralLeg_Planted, InLeg, InDelegate);
+    return InLeg;
+}
+
+auto
+    UCk_Utils_ProceduralLeg_UE::
+    BindTo_OnLifted(
+        FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnLifted& InDelegate,
+        ECk_Signal_BindingPolicy InBindingPolicy,
+        ECk_Signal_PostFireBehavior InPostFireBehavior)
+    -> FCk_Handle_ProceduralLeg
+{
+    CK_SIGNAL_BIND(ck::UUtils_Signal_OnProceduralLeg_Lifted, InLeg, InDelegate, InBindingPolicy, InPostFireBehavior);
+    return InLeg;
+}
+
+auto
+    UCk_Utils_ProceduralLeg_UE::
+    UnbindFrom_OnLifted(
+        FCk_Handle_ProceduralLeg& InLeg,
+        const FCk_Delegate_ProceduralLeg_OnLifted& InDelegate)
+    -> FCk_Handle_ProceduralLeg
+{
+    CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnProceduralLeg_Lifted, InLeg, InDelegate);
+    return InLeg;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

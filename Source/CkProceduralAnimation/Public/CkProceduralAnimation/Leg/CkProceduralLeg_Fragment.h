@@ -105,6 +105,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKPROCEDURALANIMATION_API, OnProceduralLeg_Detached, FCk_Delegate_ProceduralLeg_OnDetached, FCk_Handle_ProceduralLeg, FCk_ProceduralLeg_ReleasedParts);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKPROCEDURALANIMATION_API, OnProceduralLeg_Planted, FCk_Delegate_ProceduralLeg_OnPlanted, FCk_Handle_ProceduralLeg, FCk_ProceduralLeg_Footfall);
+    CK_DEFINE_SIGNAL_AND_UTILS_WITH_DELEGATE(CKPROCEDURALANIMATION_API, OnProceduralLeg_Lifted, FCk_Delegate_ProceduralLeg_OnLifted, FCk_Handle_ProceduralLeg, FCk_ProceduralLeg_Footfall);
 }
 
 // --------------------------------------------------------------------------------------------------------------------

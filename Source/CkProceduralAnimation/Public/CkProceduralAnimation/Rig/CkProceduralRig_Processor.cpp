@@ -1,6 +1,5 @@
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Processor.h"
 
-#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Fragment.h"
 #include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 
@@ -150,9 +149,7 @@ namespace ck
         }
 
         // The body pose update ran earlier this frame; the presentation entity's own transform is still a pending request.
-        const auto Posed = UCk_Utils_ProceduralBodyPose_UE::Has(Body)
-            ? Body.Get<FFragment_ProceduralBodyPose>().Get_Offset() * BodyTransform
-            : BodyTransform;
+        const auto Posed = UCk_Utils_ProceduralBodyPose_UE::Get_Offset(UCk_Utils_ProceduralBodyPose_UE::Cast(Body)) * BodyTransform;
 
         const auto& Segments = InParams.Get_Segments();
         const auto HasFoot = InParams.Get_Foot() != FCk_Handle_Transform{};
