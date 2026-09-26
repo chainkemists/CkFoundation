@@ -893,11 +893,12 @@ namespace ck
                 auto Target = DoGet_LandingPoint(State, In, State._Swing._Target);
                 // Before the freeze the damped target trails the moving ideal and the freeze snaps it forward, so the point
                 // reported for probing is the one the freeze will produce: a swing too short to lift after the snap still
-                // learns the ground it lands on in time.
+                // learns the ground it lands on in time. The report reaches the solver a frame later, when the ideal has moved
+                // on by a frame of travel, so the prediction starts from there.
                 const auto PredictsTheFreeze = NOT State._Swing._TargetFrozen && NOT State._Swing._CatchStep && In._TargetValid;
                 State._Swing._LandingPoint = PredictsTheFreeze
-                    ? DoGet_LandingPoint(State, In,
-                        DoGet_FrozenTarget(In, InBodyPlanarVelocity, SwingDuration * (1.0f - _Settings._Step._RetargetFreezePhase)))
+                    ? DoGet_LandingPoint(State, In, DoGet_FrozenTarget(In, InBodyPlanarVelocity,
+                        SwingDuration * (1.0f - _Settings._Step._RetargetFreezePhase) + InDeltaTime))
                     : Target;
 
                 // The overshoot and the freeze push can carry a target probed on a lower tread past the next riser; the ground

@@ -108,6 +108,13 @@ public:
     Get_ContactQuery(
         const FCk_Handle_SurfaceMotion& InHandle);
 
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Contact Source")
+    static ECk_SurfaceMotion_ContactSource
+    Get_ContactSource(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SurfaceMotion",

@@ -4,6 +4,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment_Data.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
+#include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
 
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
@@ -275,6 +276,7 @@ private:
     bool _Grounded = false;
     bool _TrustedContact = false;
     FCk_Time _MissingContact;
+    ECk_SurfaceMotion_ContactSource _ContactSource = ECk_SurfaceMotion_ContactSource::None;
 
 public:
     CK_PROPERTY(_Velocity);
@@ -283,6 +285,7 @@ public:
     CK_PROPERTY(_Grounded);
     CK_PROPERTY(_TrustedContact);
     CK_PROPERTY(_MissingContact);
+    CK_PROPERTY(_ContactSource);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
