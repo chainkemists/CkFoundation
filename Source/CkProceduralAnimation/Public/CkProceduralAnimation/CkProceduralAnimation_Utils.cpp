@@ -52,7 +52,11 @@ namespace ck_procedural_animation_utils
             && ck::IsValid(InGait->Get_Timing())
             && ck::IsValid(InGait->Get_Step())
             && ck::IsValid(InGait->Get_Probe())
-            && InGait->Get_Timing().Get_MaxSimultaneousSwings() <= Legs.Num();
+            && InGait->Get_Timing().Get_MaxSimultaneousSwings() <= Legs.Num()
+            && ck::algo::AllOf(Legs, [&](const FCk_ProceduralLeg_Spec& InLeg) -> bool
+            {
+                return UCk_Utils_ProceduralGait_UE::Get_IsRestWithinReach(InLeg.Get_Placement(), InLeg.Get_Chain(), InGait->Get_Step());
+            });
     }
 
     auto
@@ -122,7 +126,8 @@ auto
     CK_ENSURE_IF_NOT(Valid,
         TEXT("Procedural animation Add_Walker rejected body [{}]. It needs a live transform body that can own children with "
              "no gait and no legs; a rig layout of 2..64 valid legs with unique Ids; a valid gait preset whose "
-             "MaxSimultaneousSwings fits the leg count; and chains that each name a distinct rig leg, match its segment "
+             "MaxSimultaneousSwings fits the leg count and whose TargetReachFraction of each leg's chain length reaches its "
+             "rest foot; and chains that each name a distinct rig leg, match its segment "
              "count and bind unique live transform parts that are direct lifetime children of the body."),
         InBody)
     { return {}; }
