@@ -175,6 +175,25 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Fractions of a leg's reach. Swing targets stay within _TargetFraction of the hip, and a planted foot beyond
+    // _ForceStepFraction is an Emergency.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitReachSettings
+    {
+        CK_GENERATED_BODY(FProceduralGaitReachSettings);
+
+    private:
+        friend class FProceduralGaitSolver;
+
+        float _TargetFraction = 0.8f;
+        float _ForceStepFraction = 0.92f;
+
+    public:
+        CK_PROPERTY(_TargetFraction);
+        CK_PROPERTY(_ForceStepFraction);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FProceduralGaitPatternSettings
     {
         CK_GENERATED_BODY(FProceduralGaitPatternSettings);
@@ -210,6 +229,7 @@ namespace ck
         FProceduralGaitSettleSettings _Settle;
         FProceduralGaitAirborneSettings _Airborne;
         FProceduralGaitPatternSettings _Pattern;
+        FProceduralGaitReachSettings _Reach;
 
     public:
         CK_PROPERTY(_Cadence);
@@ -219,10 +239,13 @@ namespace ck
         CK_PROPERTY(_Settle);
         CK_PROPERTY(_Airborne);
         CK_PROPERTY(_Pattern);
+        CK_PROPERTY(_Reach);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // _Hip is in the support frame like every other position. _Reach is the leg's chain length in centimetres; zero
+    // disables the reach clamp and the reach Emergency for that leg.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
         CK_GENERATED_BODY(FProceduralGaitLegInput);
@@ -238,6 +261,8 @@ namespace ck
         bool _TargetValid = true;
         float _ClearanceGroundZ = -FLT_MAX;
         bool _Enabled = true;
+        FVector _Hip = FVector::ZeroVector;
+        float _Reach = 0.0f;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -248,6 +273,8 @@ namespace ck
         CK_PROPERTY(_TargetValid);
         CK_PROPERTY(_ClearanceGroundZ);
         CK_PROPERTY(_Enabled);
+        CK_PROPERTY(_Hip);
+        CK_PROPERTY(_Reach);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -468,6 +495,9 @@ namespace ck
         static auto MakeFootRotation(const FVector& InFacingDirection, const FVector& InGroundNormal) -> FQuat;
         static auto ComputeTraceAxis(const FVector& InBodyUp, const FVector& InRadialDirection, float InOutwardLean) -> FVector;
         static auto ValidateSettings(const FProceduralGaitSettings& InSettings) -> bool;
+        // Keeps InTarget within InMaxDistance of InHip: the planar (X, Y) offset shrinks and the height is kept; a height
+        // alone beyond the limit clamps in 3D. A non-positive limit leaves the target unchanged.
+        static auto ClampToReach(const FVector& InHip, const FVector& InTarget, float InMaxDistance) -> FVector;
 
     private:
         auto DoStep(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
@@ -476,7 +506,10 @@ namespace ck
         auto UpdatePatternSelection(FCk_Time InDeltaTime, float InBodyPlanarSpeed,
             TArrayView<const FProceduralGaitLegInput> InInputs, bool InAdvance) -> void;
         auto DoSelectPattern(float InBodyPlanarSpeed, bool InAdvance) -> void;
-        static auto DoReconcileEnabled(FProceduralGaitLegState& InOutState, const FProceduralGaitLegInput& InInput) -> bool;
+        auto DoReconcileEnabled(FProceduralGaitLegState& InOutState, const FProceduralGaitLegInput& InInput) const -> bool;
+        auto DoClampToReach(const FProceduralGaitLegInput& InInput, const FVector& InTarget) const -> FVector;
+        auto DoGet_IsEmergency(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
+        auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;
         auto DoRedistributeOffsets() -> void;
         auto DoClearRedistribution() -> void;
         static auto DoBeginSwing(FProceduralGaitLegState& InOutState, const FVector& InStartPosition,

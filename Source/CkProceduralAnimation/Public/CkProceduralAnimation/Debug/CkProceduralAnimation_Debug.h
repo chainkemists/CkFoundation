@@ -240,6 +240,11 @@ private:
     FCk_Time _RestTime;
     FVector _Velocity = FVector::ZeroVector;
     FVector _SupportNormal = FVector::UpVector;
+    // The cadence speed reference the solver runs with: the authored one, lowered to the reach floor when that is
+    // smaller. The floor is 0 when no enabled leg bounds it; skipped legs are enabled legs too wide to stride along X.
+    float _CadenceSpeedRef = 0.0f;
+    float _ReachCadenceFloor = 0.0f;
+    int32 _ReachSkippedLegs = 0;
 
 public:
     CK_PROPERTY(_BodyTransform);
@@ -250,6 +255,9 @@ public:
     CK_PROPERTY(_RestTime);
     CK_PROPERTY(_Velocity);
     CK_PROPERTY(_SupportNormal);
+    CK_PROPERTY(_CadenceSpeedRef);
+    CK_PROPERTY(_ReachCadenceFloor);
+    CK_PROPERTY(_ReachSkippedLegs);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -474,6 +474,8 @@ namespace ck
             InSettings._Airborne._LandingStepDurationScale,
             InSettings._Pattern._SwitchHysteresis,
             InSettings._Swing._ToePitchDegrees,
+            InSettings._Reach._TargetFraction,
+            InSettings._Reach._ForceStepFraction,
         };
         for (const auto Value : ScalarValues)
         {
@@ -507,7 +509,9 @@ namespace ck
             || NOT UnitInterval(InSettings._Schedule._AdvanceFraction) || InSettings._Schedule._AdvanceRate < 0.0f
             || NOT PositiveUnitInterval(InSettings._Settle._ThresholdFraction) || InSettings._Airborne._TuckLift < 0.0f
             || InSettings._Airborne._FollowSpeed < 0.0f || NOT PositiveUnitInterval(InSettings._Airborne._LandingStepDurationScale)
-            || NOT PositiveUnitInterval(InSettings._Pattern._SwitchHysteresis))
+            || NOT PositiveUnitInterval(InSettings._Pattern._SwitchHysteresis)
+            || InSettings._Reach._TargetFraction <= 0.0f || InSettings._Reach._TargetFraction >= InSettings._Reach._ForceStepFraction
+            || InSettings._Reach._ForceStepFraction > 1.0f)
         { return false; }
         for (const auto& Pattern : InSettings._Pattern._Patterns)
         {
@@ -547,7 +551,8 @@ namespace ck
                 || Input._PhaseOffset < 0.0f || Input._PhaseOffset >= 1.0f
                 || NOT FMath::IsFinite(Input._StepThresholdScale) || Input._StepThresholdScale <= 0.0f
                 || NOT FMath::IsFinite(Input._ClearanceGroundZ)
-                || (Input._TargetValid && NOT Input._GroundNormal.IsNormalized()))
+                || (Input._TargetValid && NOT Input._GroundNormal.IsNormalized())
+                || Input._Hip.ContainsNaN() || NOT FMath::IsFinite(Input._Reach) || Input._Reach < 0.0f)
             { return false; }
         }
 
@@ -669,7 +674,7 @@ namespace ck
                 State._Swing._Phase = 0.0f;
                 State._Swing._StartPosition = State._Emitted._AirPosition;
                 State._Swing._StartRotation = State._Plant._Rotation;
-                State._Swing._Target = In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition;
+                State._Swing._Target = DoClampToReach(In, In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition);
                 State._Swing._TargetFrozen = false;
 
                 State._Swing._Overshoot = false;
@@ -773,6 +778,41 @@ namespace ck
             }
         }
 
+        const auto HasSwingInGroup = [&SwingingOffsets](float InPhaseOffset) -> bool
+        {
+            for (const auto Offset : SwingingOffsets)
+            {
+                if (FMath::IsNearlyEqual(Offset, InPhaseOffset, 1.0e-3f))
+                {
+                    return true;
+                }
+            }
+            return false;
+        };
+
+        // An Emergency leg waits on inhibition while other groups keep starting swings, and on the frame they drain,
+        // leg index order hands the slot to another group again. The Emergency leg whose group has nothing in flight
+        // therefore holds back every other group's non-emergency take-off until it steps.
+        auto PriorityPhaseOffset = TOptional<float>{};
+        auto PriorityRatio = 0.0;
+        for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
+        {
+            const auto& In = InInputs[LegIndex];
+            const auto& State = _LegStates[LegIndex];
+            const auto Offset = _PatternBlend._EffectiveOffsets[LegIndex];
+
+            if (NOT State._Enabled || State._Swing._Active || NOT In._TargetValid || HasSwingInGroup(Offset)
+                || NOT DoGet_IsEmergency(State, In))
+            { continue; }
+
+            const auto Ratio = DoGet_EmergencyRatio(State, In);
+            if (NOT PriorityPhaseOffset.IsSet() || Ratio > PriorityRatio)
+            {
+                PriorityPhaseOffset = Offset;
+                PriorityRatio = Ratio;
+            }
+        }
+
         for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
         {
             const auto& In = InInputs[LegIndex];
@@ -797,13 +837,14 @@ namespace ck
                         && State._Swing._Phase >= _Settings._Step._RetargetFreezePhase && In._TargetValid)
                     {
                         const auto RemainingTime = SwingDuration * (1.0f - State._Swing._Phase);
-                        State._Swing._Target = In._IdealTarget + InBodyPlanarVelocity * RemainingTime.Get_Seconds();
+                        State._Swing._Target = DoClampToReach(In, In._IdealTarget + InBodyPlanarVelocity * RemainingTime.Get_Seconds());
                         State._Swing._TargetFrozen = true;
                     }
                     else if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen)
                     {
                         const auto DesiredTarget = In._TargetValid ? In._IdealTarget : State._Plant._Position;
-                        State._Swing._Target = procedural_gait_solver::Damp(State._Swing._Target, DesiredTarget, FMath::Max(_Settings._Step._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime);
+                        State._Swing._Target = DoClampToReach(In, procedural_gait_solver::Damp(State._Swing._Target, DesiredTarget,
+                            FMath::Max(_Settings._Step._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime));
                     }
                 }
 
@@ -820,6 +861,8 @@ namespace ck
                         Target += (Stroke / StrokeLength) * Overshoot;
                     }
                 }
+                // The hip moves during the swing, so the landing target is held within reach of where the hip is now.
+                Target = DoClampToReach(In, Target);
 
                 const auto LandingRotation = MakeFootRotation(In._FacingDirection,
                     In._TargetValid ? In._GroundNormal : State._Plant._Normal);
@@ -902,20 +945,22 @@ namespace ck
                 const auto Error = FVector::Dist(State._Plant._Position, In._IdealTarget);
 
                 const auto Wants = In._TargetValid && Error > Threshold;
-                const auto Emergency = In._TargetValid && Error > Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f);
+                const auto Emergency = In._TargetValid && DoGet_IsEmergency(State, In);
                 const auto Budget = _Settings._Cadence._MaxSimultaneousSwings <= 0 || NumSwinging < _Settings._Cadence._MaxSimultaneousSwings;
 
                 const auto SettleWants = SettleActive && In._TargetValid
                     && Error > Threshold * FMath::Clamp(_Settings._Settle._ThresholdFraction, 0.05f, 1.0f);
 
                 const auto CatchStep = State._PendingStep._Time > FCk_Time{};
+                const auto YieldsToPriority = PriorityPhaseOffset.IsSet() && NOT Emergency && NOT CatchStep
+                    && NOT FMath::IsNearlyEqual(PriorityPhaseOffset.GetValue(), LegPhaseOffset, 1.0e-3f);
 
-                if (Advance && NOT IsInhibited(LegPhaseOffset) &&
+                if (Advance && NOT IsInhibited(LegPhaseOffset) && NOT YieldsToPriority &&
                     (CatchStep || Emergency || (Wants && IsWindowOpen(LegPhaseOffset) && Budget) || (SettleWants && Budget)))
                 {
-                    const auto SwingTarget = CatchStep
+                    const auto SwingTarget = DoClampToReach(In, CatchStep
                         ? State._PendingStep._Target
-                        : (In._TargetValid ? In._IdealTarget : State._Plant._Position);
+                        : (In._TargetValid ? In._IdealTarget : State._Plant._Position));
                     DoBeginSwing(State, State._Plant._Position, State._Plant._Rotation, SwingTarget);
                     State._Swing._TargetFrozen = false;
 
@@ -951,7 +996,7 @@ namespace ck
         FProceduralGaitSolver::
         DoReconcileEnabled(
             FProceduralGaitLegState& InOutState,
-            const FProceduralGaitLegInput& InInput)
+            const FProceduralGaitLegInput& InInput) const
         -> bool
     {
         if (InOutState._Enabled == InInput._Enabled)
@@ -974,12 +1019,13 @@ namespace ck
         // Take-off skips disabled legs, so a leg re-enabled mid-air would otherwise tuck from a stale air pose.
         InOutState._Emitted._AirPosition = InOutState._Emitted._Position;
 
+        const auto Target = DoClampToReach(InInput, InInput._IdealTarget);
         const auto TargetIsAway = InInput._TargetValid
-            && FVector::DistSquared(InOutState._Emitted._Position, InInput._IdealTarget) > KINDA_SMALL_NUMBER;
+            && FVector::DistSquared(InOutState._Emitted._Position, Target) > KINDA_SMALL_NUMBER;
 
         if (TargetIsAway)
         {
-            DoBeginSwing(InOutState, InOutState._Emitted._Position, InOutState._Emitted._Rotation, InInput._IdealTarget);
+            DoBeginSwing(InOutState, InOutState._Emitted._Position, InOutState._Emitted._Rotation, Target);
             return true;
         }
 
@@ -1045,6 +1091,81 @@ namespace ck
         InOutState._Swing._StartPosition = InStartPosition;
         InOutState._Swing._StartRotation = InStartRotation;
         InOutState._Swing._Target = InTarget;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        ClampToReach(
+            const FVector& InHip,
+            const FVector& InTarget,
+            float InMaxDistance)
+        -> FVector
+    {
+        const auto Offset = InTarget - InHip;
+        const auto MaxDistance = static_cast<double>(InMaxDistance);
+        if (MaxDistance <= 0.0 || Offset.SizeSquared() <= FMath::Square(MaxDistance))
+        { return InTarget; }
+
+        const auto Height = Offset.Z;
+        if (FMath::Abs(Height) >= MaxDistance)
+        { return InHip + Offset.GetSafeNormal() * MaxDistance; }
+
+        const auto PlanarDistance = FMath::Sqrt(FMath::Square(MaxDistance) - FMath::Square(Height));
+        return InHip + FVector{Offset.X, Offset.Y, 0.0}.GetSafeNormal() * PlanarDistance + FVector{0.0, 0.0, Height};
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoClampToReach(
+            const FProceduralGaitLegInput& InInput,
+            const FVector& InTarget) const
+        -> FVector
+    {
+        if (InInput._Reach <= 0.0f)
+        { return InTarget; }
+
+        return ClampToReach(InInput._Hip, InTarget, _Settings._Reach._TargetFraction * InInput._Reach);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_IsEmergency(
+            const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput) const
+        -> bool
+    {
+        const auto Threshold = _Settings._Step._Threshold * FMath::Max(InInput._StepThresholdScale, KINDA_SMALL_NUMBER);
+        const auto Error = FVector::Dist(InState._Plant._Position, InInput._IdealTarget);
+        if (Error > Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f))
+        { return true; }
+
+        return InInput._Reach > 0.0f
+            && FVector::Dist(InState._Plant._Position, InInput._Hip) > _Settings._Reach._ForceStepFraction * InInput._Reach;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_EmergencyRatio(
+            const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput) const
+        -> double
+    {
+        const auto Threshold = _Settings._Step._Threshold * FMath::Max(InInput._StepThresholdScale, KINDA_SMALL_NUMBER);
+        const auto ErrorRatio = FVector::Dist(InState._Plant._Position, InInput._IdealTarget)
+            / (Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f));
+        if (InInput._Reach <= 0.0f)
+        { return ErrorRatio; }
+
+        return FMath::Max(ErrorRatio,
+            FVector::Dist(InState._Plant._Position, InInput._Hip) / (_Settings._Reach._ForceStepFraction * InInput._Reach));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
