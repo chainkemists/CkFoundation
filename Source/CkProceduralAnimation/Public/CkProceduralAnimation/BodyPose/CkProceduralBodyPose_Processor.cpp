@@ -82,11 +82,16 @@ namespace ck
             return;
         }
 
+        // The target is a pose that jumps when the supporting set changes, not a moving point: the engine would read
+        // that jump as a one-frame target velocity and kick the spring past it (15% overshoot at 60 fps).
+        constexpr auto TargetVelocityAmount = 0.0f;
         const auto& Spring = InParams.Get_Spring();
         const auto Location = UKismetMathLibrary::VectorSpringInterp(InPoseComp._Offset.GetLocation(), Target->GetLocation(),
-            InPoseComp._TranslationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass());
+            InPoseComp._TranslationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
+            TargetVelocityAmount);
         const auto Rotation = UKismetMathLibrary::QuaternionSpringInterp(InPoseComp._Offset.GetRotation(), Target->GetRotation(),
-            InPoseComp._RotationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass());
+            InPoseComp._RotationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
+            TargetVelocityAmount);
         InPoseComp._Offset = FTransform{Rotation.GetNormalized(), Location};
 
         const auto Posed = InPoseComp._Offset * InTransform.Get_Transform();
