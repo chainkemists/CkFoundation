@@ -516,6 +516,7 @@ namespace ck
             InSettings._Swing._ToePitchDegrees,
             InSettings._Reach._TargetFraction,
             InSettings._Reach._ForceStepFraction,
+            InSettings._Reach._HardOverstretchFraction,
         };
         for (const auto Value : ScalarValues)
         {
@@ -551,7 +552,9 @@ namespace ck
             || InSettings._Airborne._FollowSpeed < 0.0f || NOT PositiveUnitInterval(InSettings._Airborne._LandingStepDurationScale)
             || NOT PositiveUnitInterval(InSettings._Pattern._SwitchHysteresis)
             || InSettings._Reach._TargetFraction <= 0.0f || InSettings._Reach._TargetFraction >= InSettings._Reach._ForceStepFraction
-            || InSettings._Reach._ForceStepFraction > 1.0f)
+            || InSettings._Reach._ForceStepFraction > 1.0f
+            || InSettings._Reach._HardOverstretchFraction < 1.0f || InSettings._Reach._HardOverstretchFraction > 1.5f
+            || InSettings._Reach._HardOverstretchFraction <= InSettings._Reach._ForceStepFraction)
         { return false; }
         for (const auto& Pattern : InSettings._Pattern._Patterns)
         {
@@ -698,6 +701,7 @@ namespace ck
                 State._Swing._TargetFrozen = false;
                 State._Swing._Overshoot = false;
                 State._Swing._CatchStep = false;
+                State._Swing._BeyondSchedule = false;
                 State._Swing._DurationScale = 1.0f;
             }
         }
@@ -721,6 +725,7 @@ namespace ck
                 State._Swing._Overshoot = false;
 
                 State._Swing._CatchStep = false;
+                State._Swing._BeyondSchedule = false;
                 State._Swing._DurationScale = FMath::Clamp(_Settings._Airborne._LandingStepDurationScale, 0.1f, 1.0f);
             }
         }
@@ -761,27 +766,35 @@ namespace ck
             return true;
         }
 
+        // The phase schedule swings one group at a time. Beside it, the group of a hard-overstretched foot may swing beyond the
+        // schedule; those swings neither inhibit the schedule's take-offs nor wait for them, and only one group swings there.
         auto NumSwinging = 0;
-        auto SwingingOffsets = TArray<float, TInlineAllocator<8>>{};
+        auto ScheduledOffsets = TArray<float, TInlineAllocator<8>>{};
+        auto BeyondScheduleOffsets = TArray<float, TInlineAllocator<8>>{};
         for (auto LegIndex = 0; LegIndex < _LegStates.Num(); ++LegIndex)
         {
-            if (_LegStates[LegIndex]._Swing._Active)
-            {
-                ++NumSwinging;
-                SwingingOffsets.Add(_PatternBlend._EffectiveOffsets[LegIndex]);
-            }
+            const auto& Swing = _LegStates[LegIndex]._Swing;
+            if (NOT Swing._Active)
+            { continue; }
+
+            ++NumSwinging;
+            (Swing._BeyondSchedule ? BeyondScheduleOffsets : ScheduledOffsets).Add(_PatternBlend._EffectiveOffsets[LegIndex]);
         }
 
-        const auto IsInhibited = [&SwingingOffsets](float InPhaseOffset) -> bool
+        const auto ContainsGroup = [](TArrayView<const float> InOffsets, float InPhaseOffset) -> bool
         {
-            for (const auto Offset : SwingingOffsets)
+            return algo::AnyOf(InOffsets, [InPhaseOffset](float InOffset)
             {
-                if (NOT FMath::IsNearlyEqual(Offset, InPhaseOffset, 1.0e-3f))
-                {
-                    return true;
-                }
-            }
-            return false;
+                return FMath::IsNearlyEqual(InOffset, InPhaseOffset, 1.0e-3f);
+            });
+        };
+
+        const auto IsInhibited = [&ScheduledOffsets](float InPhaseOffset) -> bool
+        {
+            return algo::AnyOf(ScheduledOffsets, [InPhaseOffset](float InOffset)
+            {
+                return NOT FMath::IsNearlyEqual(InOffset, InPhaseOffset, 1.0e-3f);
+            });
         };
 
         if (Advance && _Settings._Schedule._AdvanceFraction > 0.0f && _Settings._Schedule._AdvanceRate > 0.0f)
@@ -819,22 +832,16 @@ namespace ck
             }
         }
 
-        const auto HasSwingInGroup = [&SwingingOffsets](float InPhaseOffset) -> bool
+        const auto HasSwingInGroup = [&](float InPhaseOffset) -> bool
         {
-            for (const auto Offset : SwingingOffsets)
-            {
-                if (FMath::IsNearlyEqual(Offset, InPhaseOffset, 1.0e-3f))
-                {
-                    return true;
-                }
-            }
-            return false;
+            return ContainsGroup(ScheduledOffsets, InPhaseOffset) || ContainsGroup(BeyondScheduleOffsets, InPhaseOffset);
         };
 
         // An Emergency leg waits on inhibition while other groups keep starting swings, and on the frame they drain,
         // leg index order hands the slot to another group again. The Emergency leg whose group has nothing in flight
         // therefore holds back every other group's take-off until it steps, Emergency take-offs included: while the body
-        // turns in place every group is in Emergency at once, and index order would starve one of them.
+        // turns in place every group is in Emergency at once, and index order would starve one of them. Only a
+        // hard-overstretched foot steps past it, beyond the schedule.
         auto PriorityPhaseOffset = TOptional<float>{};
         auto PriorityRatio = 0.0;
         for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
@@ -929,6 +936,7 @@ namespace ck
                     State._Swing._Phase = 0.0f;
                     State._Swing._DurationScale = 1.0f;
                     State._Swing._Overshoot = false;
+                    State._Swing._BeyondSchedule = false;
 
                     if (In._TargetValid && NOT State._Swing._CatchStep)
                     {
@@ -1027,8 +1035,15 @@ namespace ck
                 const auto YieldsToPriority = PriorityPhaseOffset.IsSet() && NOT CatchStep
                     && NOT FMath::IsNearlyEqual(PriorityPhaseOffset.GetValue(), LegPhaseOffset, 1.0e-3f);
 
-                if (Advance && NOT IsInhibited(LegPhaseOffset) && NOT YieldsToPriority &&
-                    (CatchStep || Emergency || (Wants && IsWindowOpen(LegPhaseOffset) && Budget) || (SettleWants && Budget)))
+                const auto Triggered = CatchStep || Emergency || (Wants && IsWindowOpen(LegPhaseOffset) && Budget) || (SettleWants && Budget);
+                const auto OnSchedule = NOT IsInhibited(LegPhaseOffset) && NOT YieldsToPriority && Triggered;
+                // A body climbing away from its planted feet stretches every group's floor feet at once, and the schedule
+                // steps them one group after another. A foot past its chain steps now, inhibited or yielding, as long as no
+                // other group swings beyond the schedule and the budget allows.
+                const auto BeyondSchedule = NOT OnSchedule && NOT CatchStep && Budget && DoGet_IsHardOverstretched(State, In)
+                    && (BeyondScheduleOffsets.IsEmpty() || ContainsGroup(BeyondScheduleOffsets, LegPhaseOffset));
+
+                if (Advance && (OnSchedule || BeyondSchedule))
                 {
                     const auto SwingTarget = DoClampToReach(In, CatchStep
                         ? State._PendingStep._Target
@@ -1039,9 +1054,10 @@ namespace ck
                     State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency);
 
                     State._Swing._CatchStep = CatchStep;
+                    State._Swing._BeyondSchedule = NOT OnSchedule;
                     State._PendingStep._Time = FCk_Time{};
                     ++NumSwinging;
-                    SwingingOffsets.Add(LegPhaseOffset);
+                    (OnSchedule ? ScheduledOffsets : BeyondScheduleOffsets).Add(LegPhaseOffset);
 
                     Out._Position = State._Plant._Position;
                     Out._Normal = State._Plant._Normal;
@@ -1080,6 +1096,7 @@ namespace ck
             InOutState._Swing._TargetFrozen = false;
             InOutState._Swing._Overshoot = false;
             InOutState._Swing._CatchStep = false;
+            InOutState._Swing._BeyondSchedule = false;
             InOutState._PendingStep._Time = FCk_Time{};
             InOutState._Plant._Position = InOutState._Emitted._Position;
             InOutState._Plant._Rotation = InOutState._Emitted._Rotation;
@@ -1164,6 +1181,7 @@ namespace ck
         InOutState._Swing._StartRotation = InStartRotation;
         InOutState._Swing._Target = InTarget;
         InOutState._Swing._LandingLiftStartAlpha = -1.0f;
+        InOutState._Swing._BeyondSchedule = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1293,6 +1311,19 @@ namespace ck
 
         return InInput._Reach > 0.0f
             && FVector::Dist(InState._Plant._Position, InInput._Hip) > _Settings._Reach._ForceStepFraction * InInput._Reach;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_IsHardOverstretched(
+            const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput) const
+        -> bool
+    {
+        return InInput._TargetValid && InInput._Reach > 0.0f
+            && FVector::Dist(InState._Plant._Position, InInput._Hip) > _Settings._Reach._HardOverstretchFraction * InInput._Reach;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
