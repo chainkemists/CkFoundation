@@ -36,6 +36,20 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_Failure);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// How the rig poses its chain. Auto aims a single segment, uses two-bone IK for two segments and the curve for three or
+// more; an explicit Fabrik or Curve applies to any chain of two or more and cannot pose a single segment.
+UENUM(BlueprintType)
+enum class ECk_ProceduralRig_ChainSolver : uint8
+{
+    Auto,
+    Fabrik,
+    Curve
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_ChainSolver);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralRig_Spec
 {
@@ -53,9 +67,14 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Handle_Transform _Foot;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralRig_ChainSolver _Solver = ECk_ProceduralRig_ChainSolver::Auto;
+
 public:
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_Foot);
+    CK_PROPERTY(_Solver);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ProceduralRig_Spec, _Segments);
@@ -66,6 +85,9 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralRig_Spec, IsValid_Policy_Default,
 {
     const auto& Segments = InParams.Get_Segments();
     if (Segments.Num() < 1 || Segments.Num() > 8)
+    { return false; }
+
+    if (Segments.Num() == 1 && InParams.Get_Solver() != ECk_ProceduralRig_ChainSolver::Auto)
     { return false; }
 
     auto Parts = TSet<FCk_Handle>{};

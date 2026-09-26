@@ -76,7 +76,8 @@ auto
     CK_ENSURE_IF_NOT(Valid,
         TEXT("Procedural body pose Add rejected gait [{}]. The gait must be live with no body pose; the presentation must be a "
              "live transform entity that is a direct lifetime child of the body, not the body itself and not a rig part; spring "
-             "stiffness and mass must be positive, damping non-negative, collapse drop non-negative and max tilt within 0..89 degrees. "
+             "stiffness and mass must be positive, damping non-negative, collapse drop non-negative and max tilt within 0..89 degrees; "
+             "the conform's max tilt must be within 0..89 degrees, its height weight within 0..1 and its max height non-negative. "
              "Every leg the gait captured must still be live."),
         InGait)
     { return {}; }
@@ -87,9 +88,18 @@ auto
             return InLeg.Get<ck::FFragment_ProceduralLeg_Params>().Get_Placement().Get_HipLocal();
         });
 
-    InGait.Add<ck::FFragment_ProceduralBodyPose_Params>(InParams);
+    const auto BodyRotation = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(InGait)).GetRotation();
+
+    InGait.Add<ck::FFragment_ProceduralBodyPose_Params>(InParams.Get_Presentation(), InParams.Get_Spring(), InParams.Get_Support());
     InGait.Add<ck::FFragment_ProceduralBodyPose_SupportLayout>(MoveTemp(HipLocals));
-    InGait.Add<ck::FFragment_ProceduralBodyPose>();
+    InGait.Add<ck::FFragment_ProceduralBodyPose>(BodyRotation);
+
+    const auto& Conform = InParams.Get_Conform();
+    if (Conform.Get_Mode() == ECk_ProceduralBodyPose_ConformMode::PlantedFeet)
+    {
+        InGait.Add<ck::FFragment_ProceduralBodyPose_Conform>(Conform.Get_MaxTilt(), Conform.Get_HeightWeight(), Conform.Get_MaxHeight());
+        InGait.Add<ck::FFragment_ProceduralBodyPose_ConformState>();
+    }
 
     return CastChecked(InGait);
 }

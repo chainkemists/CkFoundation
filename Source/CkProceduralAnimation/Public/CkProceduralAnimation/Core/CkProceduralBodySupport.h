@@ -49,6 +49,65 @@ namespace ck
             TArrayView<const FProceduralBodySupportLeg> InLegs,
             const FProceduralBodySupportSettings& InSettings)
         -> TOptional<FTransform>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // One foot in the body's frame: where it is, where it rests, and how much it counts toward the fitted plane.
+    struct CKPROCEDURALANIMATION_API FProceduralBodyConformFoot
+    {
+        CK_GENERATED_BODY(FProceduralBodyConformFoot);
+
+    private:
+        FVector _PositionLocal = FVector::ZeroVector;
+        FVector _RestLocal = FVector::ZeroVector;
+        float _Weight = 0.0f;
+
+    public:
+        CK_PROPERTY(_PositionLocal);
+        CK_PROPERTY(_RestLocal);
+        CK_PROPERTY(_Weight);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralBodyConformFoot, _PositionLocal, _RestLocal, _Weight);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralBodyConformSettings
+    {
+        CK_GENERATED_BODY(FProceduralBodyConformSettings);
+
+    private:
+        float _MaxTiltDegrees = 20.0f;
+        float _HeightWeight = 0.5f;
+        float _MaxHeight = 10.0f;
+
+    public:
+        CK_PROPERTY(_MaxTiltDegrees);
+        CK_PROPERTY(_HeightWeight);
+        CK_PROPERTY(_MaxHeight);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    enum class EProceduralBodyConformResult : uint8
+    {
+        Fitted,
+        Underdetermined,
+        Malformed
+    };
+
+    // Body-local tilt and height toward the weighted least-squares plane h = a x + b y + c through each foot's height above
+    // its rest height, at the foot's body-local x and y. The tilt turns the body's up onto the plane's normal, clamped to
+    // MaxTilt; the height is c times HeightWeight, clamped to MaxHeight. Only Fitted writes OutTarget. Underdetermined: fewer
+    // than three weighted feet, or weighted feet along one line. Malformed: a non-finite foot, a negative or non-finite
+    // weight, a tilt outside [0, 89] degrees, a height weight outside [0, 1], or a negative or non-finite height.
+    CKPROCEDURALANIMATION_API auto
+        ComputeProceduralBodyConformPose(
+            TArrayView<const FProceduralBodyConformFoot> InFeet,
+            const FProceduralBodyConformSettings& InSettings,
+            FTransform& OutTarget)
+        -> EProceduralBodyConformResult;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
