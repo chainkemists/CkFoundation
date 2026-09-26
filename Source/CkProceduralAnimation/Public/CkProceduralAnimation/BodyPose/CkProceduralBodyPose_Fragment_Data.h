@@ -126,7 +126,9 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralBodyPose_ConformMode);
 // --------------------------------------------------------------------------------------------------------------------
 
 // PlantedFeet tilts the drawn body, up to MaxTilt degrees, toward a plane fitted through its feet in the body's frame, and
-// moves it along its up by HeightWeight times that plane's height under the body, up to MaxHeight centimetres.
+// moves it along its up by HeightWeight times that plane's height under the body, up to MaxHeight centimetres. The target
+// the springs chase turns toward that fit at no more than MaxTiltRate degrees per second and moves at no more than
+// MaxHeightRate centimetres per second.
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralBodyPose_Conform
 {
@@ -152,11 +154,21 @@ private:
               meta = (AllowPrivateAccess = true, ClampMin = 0))
     float _MaxHeight = 10.0f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MaxTiltRate = 80.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MaxHeightRate = 60.0f;
+
 public:
     CK_PROPERTY(_Mode);
     CK_PROPERTY(_MaxTilt);
     CK_PROPERTY(_HeightWeight);
     CK_PROPERTY(_MaxHeight);
+    CK_PROPERTY(_MaxTiltRate);
+    CK_PROPERTY(_MaxHeightRate);
 };
 
 CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Conform, IsValid_Policy_Default,
@@ -164,7 +176,9 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralBodyPose_Conform, IsValid_Policy_
 {
     return FMath::IsFinite(InConform.Get_MaxTilt()) && InConform.Get_MaxTilt() >= 0.0f && InConform.Get_MaxTilt() <= 89.0f
         && FMath::IsFinite(InConform.Get_HeightWeight()) && InConform.Get_HeightWeight() >= 0.0f && InConform.Get_HeightWeight() <= 1.0f
-        && FMath::IsFinite(InConform.Get_MaxHeight()) && InConform.Get_MaxHeight() >= 0.0f;
+        && FMath::IsFinite(InConform.Get_MaxHeight()) && InConform.Get_MaxHeight() >= 0.0f
+        && FMath::IsFinite(InConform.Get_MaxTiltRate()) && InConform.Get_MaxTiltRate() > 0.0f
+        && FMath::IsFinite(InConform.Get_MaxHeightRate()) && InConform.Get_MaxHeightRate() > 0.0f;
 });
 
 // --------------------------------------------------------------------------------------------------------------------

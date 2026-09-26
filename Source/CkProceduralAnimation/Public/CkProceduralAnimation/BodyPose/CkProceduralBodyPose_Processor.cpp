@@ -183,7 +183,20 @@ namespace ck
             if (Result == EProceduralBodyConformResult::Fitted)
             { ConformState._HeldTarget = Fitted; }
 
-            ConformTarget = ConformState._HeldTarget;
+            const auto SlewSettings = FProceduralBodyConformSlewSettings{}
+                .Set_MaxTiltRateDegrees(ConformParams.Get_MaxTiltRate())
+                .Set_MaxHeightRate(ConformParams.Get_MaxHeightRate());
+            const auto Applied = SlewProceduralBodyConformPose(ConformState._AppliedTarget, ConformState._HeldTarget, SlewSettings, InDeltaT);
+            const auto AppliedValid = Applied.IsSet();
+            CK_ENSURE_IF_NOT(AppliedValid,
+                TEXT("Procedural body pose [{}] could not slew its conform target; feature is failed."), InHandle)
+            {
+                InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedConform);
+                return;
+            }
+
+            ConformState._AppliedTarget = *Applied;
+            ConformTarget = ConformState._AppliedTarget;
         }
 
         const auto TargetRotation = ConformTarget.GetRotation() * SupportTarget->GetRotation();

@@ -97,6 +97,7 @@ namespace ck
         uint64 _EnabledMask = ~uint64{0};
         TArray<FProceduralFootProbeState> _Probes;
         FProceduralGaitVelocityTracker _VelocityTracker;
+        FProceduralGaitYawRateTracker _YawRateTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
         float _ReachCadenceFloor = 0.0f;

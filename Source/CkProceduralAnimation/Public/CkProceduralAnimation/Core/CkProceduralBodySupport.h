@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkCore/Macros/CkMacros.h"
+#include "CkCore/Time/CkTime.h"
 
 #include "CoreMinimal.h"
 #include "Containers/ArrayView.h"
@@ -108,6 +109,34 @@ namespace ck
             const FProceduralBodyConformSettings& InSettings,
             FTransform& OutTarget)
         -> EProceduralBodyConformResult;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // How fast the applied conform target may turn, in degrees per second, and move, in centimetres per second.
+    struct CKPROCEDURALANIMATION_API FProceduralBodyConformSlewSettings
+    {
+        CK_GENERATED_BODY(FProceduralBodyConformSlewSettings);
+
+    private:
+        float _MaxTiltRateDegrees = 80.0f;
+        float _MaxHeightRate = 60.0f;
+
+    public:
+        CK_PROPERTY(_MaxTiltRateDegrees);
+        CK_PROPERTY(_MaxHeightRate);
+    };
+
+    // InApplied moved toward InTarget by at most MaxTiltRate times InDeltaTime of rotation (along the shortest arc) and
+    // MaxHeightRate times InDeltaTime of translation. A conform fit swaps its target in one frame when its feet cross a
+    // crease; slewed, the target the springs chase turns at a bounded rate instead. Unset on malformed input: a non-finite
+    // transform, a non-finite or non-positive rate, or a non-finite or negative delta time.
+    CKPROCEDURALANIMATION_API auto
+        SlewProceduralBodyConformPose(
+            const FTransform& InApplied,
+            const FTransform& InTarget,
+            const FProceduralBodyConformSlewSettings& InSettings,
+            FCk_Time InDeltaTime)
+        -> TOptional<FTransform>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

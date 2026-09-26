@@ -245,7 +245,9 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // _Hip is in the support frame like every other position. _Reach is the leg's chain length in centimetres; zero
-    // disables the reach clamp and the reach Emergency for that leg.
+    // disables the reach clamp and the reach Emergency for that leg. _LandingGroundZ is the support-frame height of the
+    // ground under the swing's landing point (FProceduralGaitLegSwing::_LandingPoint), -FLT_MAX when there is none; a
+    // swing whose landing ground lies above its target, within reach, lifts the rest of its arc onto it.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
         CK_GENERATED_BODY(FProceduralGaitLegInput);
@@ -263,6 +265,7 @@ namespace ck
         bool _Enabled = true;
         FVector _Hip = FVector::ZeroVector;
         float _Reach = 0.0f;
+        float _LandingGroundZ = -FLT_MAX;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -275,6 +278,7 @@ namespace ck
         CK_PROPERTY(_Enabled);
         CK_PROPERTY(_Hip);
         CK_PROPERTY(_Reach);
+        CK_PROPERTY(_LandingGroundZ);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -321,6 +325,11 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // _LandingPoint is where the swing will touch down, after the stroke overshoot and the reach clamp: before the retarget
+    // freeze, the point the freeze will produce from this frame's ideal target; from the freeze on, the actual landing point.
+    // _LiftedLandingPoint is the landing target raised onto the ground reported under it, and _LandingLiftStartAlpha the
+    // swing alpha the lift began at (negative while the swing is not lifted): the remaining arc rises onto the lifted point
+    // in step with the swing's own easing.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegSwing
     {
         CK_GENERATED_BODY(FProceduralGaitLegSwing);
@@ -337,6 +346,9 @@ namespace ck
         bool _TargetFrozen = false;
         bool _Overshoot = false;
         bool _CatchStep = false;
+        FVector _LandingPoint = FVector::ZeroVector;
+        FVector _LiftedLandingPoint = FVector::ZeroVector;
+        float _LandingLiftStartAlpha = -1.0f;
 
     public:
         CK_PROPERTY(_StartPosition);
@@ -348,6 +360,9 @@ namespace ck
         CK_PROPERTY(_TargetFrozen);
         CK_PROPERTY(_Overshoot);
         CK_PROPERTY(_CatchStep);
+        CK_PROPERTY(_LandingPoint);
+        CK_PROPERTY(_LiftedLandingPoint);
+        CK_PROPERTY(_LandingLiftStartAlpha);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -431,6 +446,27 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The body's turn rate about its up, in radians per second, signed right-handed about the previous basis's +Z. Only the
+    // twist part of the basis's frame-to-frame rotation counts, so a tilt step (a facet, a wall corner) reads as no turn;
+    // the rate is low-passed with a time constant of SmoothingTime.
+    class CKPROCEDURALANIMATION_API FProceduralGaitYawRateTracker
+    {
+        CK_GENERATED_BODY(FProceduralGaitYawRateTracker);
+
+    public:
+        static constexpr auto SmoothingTime = FCk_Time{0.1};
+
+    public:
+        auto Reset() -> void;
+        auto Update(const FQuat& InPreviousBasis, const FQuat& InBasis, FCk_Time InDeltaTime) -> float;
+        auto GetYawRate() const -> float { return _YawRate; }
+
+    private:
+        float _YawRate = 0.0f;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FProceduralGaitPatternBlendState
     {
         CK_GENERATED_BODY(FProceduralGaitPatternBlendState);
@@ -498,6 +534,11 @@ namespace ck
         // Keeps InTarget within InMaxDistance of InHip: the planar (X, Y) offset shrinks and the height is kept; a height
         // alone beyond the limit clamps in 3D. A non-positive limit leaves the target unchanged.
         static auto ClampToReach(const FVector& InHip, const FVector& InTarget, float InMaxDistance) -> FVector;
+        // Raibert placement: InNeutral moved by InLinearLead, then turned about InPivot, around InUp, through the angle a body
+        // turning at InYawRate (radians per second) covers in InLeadTime, so a moving, turning body's feet land ahead of it.
+        // The result leads InNeutral by at most InMaxLead, whatever the mix of travel and turn.
+        static auto ComputeLeadQuery(const FVector& InNeutral, const FVector& InLinearLead, const FVector& InPivot,
+            const FVector& InUp, float InYawRate, FCk_Time InLeadTime, float InMaxLead) -> FVector;
 
     private:
         auto DoStep(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
@@ -512,6 +553,11 @@ namespace ck
         auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;
         auto DoRedistributeOffsets() -> void;
         auto DoClearRedistribution() -> void;
+        auto DoGet_SwingEase(float InPhase) const -> float;
+        auto DoGet_FrozenTarget(const FProceduralGaitLegInput& InInput, const FVector& InBodyPlanarVelocity,
+            FCk_Time InRemainingTime) const -> FVector;
+        auto DoGet_LandingPoint(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput,
+            const FVector& InSwingTarget) const -> FVector;
         static auto DoBeginSwing(FProceduralGaitLegState& InOutState, const FVector& InStartPosition,
             const FQuat& InStartRotation, const FVector& InTarget) -> void;
         static auto DoWriteDisabledOutput(const FProceduralGaitLegState& InState, FProceduralGaitLegOutput& OutOutput) -> void;
@@ -524,10 +570,14 @@ namespace ck
         FCk_Time _RestTime;
         bool _WasAirborne = false;
         FProceduralGaitPatternBlendState _PatternBlend;
+        // Touchdowns whose landing ground lay more than the touchdown safety net above the target and whose swing was never
+        // lifted onto it (the ground report arrived too late); each planted below that ground.
+        int32 _MissedLandingLifts = 0;
 
     public:
         CK_PROPERTY(_Settings);
         CK_PROPERTY_GET(_LastCadenceScale);
+        CK_PROPERTY_GET(_MissedLandingLifts);
     };
 }
 

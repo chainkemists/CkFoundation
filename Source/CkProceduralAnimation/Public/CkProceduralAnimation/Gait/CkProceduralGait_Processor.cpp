@@ -117,6 +117,33 @@ namespace ck_procedural_gait
         return Hit;
     }
 
+    // The ground under the point a swing will land on, as of the last solve. The stroke overshoot and the freeze push can
+    // carry a target probed on a lower tread past the next riser; the swing lifts onto this ground when it is reachable.
+    auto
+        Get_LandingGroundHit(
+            UWorld* InWorld,
+            const FQuat& InBasis,
+            const FVector& InHip,
+            float InReach,
+            const ck::FProceduralGaitLegSwing& InSwing,
+            const FCk_ProceduralGait_Probe& InProbe,
+            const FCk_ProceduralGait_Step& InStep)
+        -> TOptional<FCk_Jolt_HitResult>
+    {
+        if (NOT InSwing.Get_Active() || InSwing.Get_CatchStep())
+        { return {}; }
+
+        const auto Up = InBasis.GetAxisZ();
+        const auto Landing = InBasis.RotateVector(InSwing.Get_LandingPoint());
+        const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld,
+            Landing + Up * InProbe.Get_Up(), Landing - Up * InProbe.Get_Down(), InProbe.Get_QueryFilter());
+
+        if (NOT Get_TrustedHit(Hit, -Up) || FVector::Dist(Hit.Get_Position(), InHip) > InStep.Get_ForceStepReachFraction() * InReach)
+        { return {}; }
+
+        return Hit;
+    }
+
     auto
         Get_LegBit(
             int32 InLegIndex)
@@ -314,9 +341,7 @@ namespace ck
         const auto Up = Basis.GetAxisZ();
         const auto Velocity = InGaitComp._VelocityTracker.Update(Body.GetLocation(), InDeltaT);
         const auto PlanarVelocity = InverseBasis.RotateVector(FVector::VectorPlaneProject(Velocity, Up));
-        const auto YawDelta = FMath::Atan2(FVector::DotProduct(FVector::CrossProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()), Up),
-            FVector::DotProduct(InGaitComp._Basis.GetAxisX(), Basis.GetAxisX()));
-        const auto YawRate = Dt > 0.0 ? FMath::Abs(YawDelta) / Dt : 0.0;
+        const auto YawRate = InGaitComp._YawRateTracker.Update(InGaitComp._Basis, Basis, InDeltaT);
         const auto Lead = (FVector::VectorPlaneProject(Velocity, Up) * Timing.Get_StepDuration().Get_Seconds())
             .GetClampedToMaxSize(Step.Get_MaxVelocityLead());
 
@@ -416,8 +441,10 @@ namespace ck
             ++EnabledCount;
             const auto Reach = UCk_Utils_ProceduralGait_UE::DoGet_Reach(Params.Get_Chain());
             const auto HipSupport = InverseBasis.RotateVector(Hip);
+            const auto Query = FProceduralGaitSolver::ComputeLeadQuery(Neutral, Lead, Body.GetLocation(), Up, YawRate,
+                Timing.Get_StepDuration(), Step.Get_MaxVelocityLead());
             const auto Ideal = Basis.RotateVector(FProceduralGaitSolver::ClampToReach(HipSupport,
-                InverseBasis.RotateVector(Neutral + Lead), Step.Get_TargetReachFraction() * Reach));
+                InverseBasis.RotateVector(Query), Step.Get_TargetReachFraction() * Reach));
             DebugLeg.Get_Targeting().Set_QueryTarget(Ideal);
             MeanFootRadius += FVector::VectorPlaneProject(Placement.Get_RestFootLocal(), FVector::UpVector).Size();
 
@@ -459,6 +486,11 @@ namespace ck
                 { Input.Set_ClearanceGroundZ(InverseBasis.RotateVector(ClearanceHit.Get_Position()).Z); }
             }
 
+            const auto LandingGround = ck_procedural_gait::Get_LandingGroundHit(World, Basis, Hip, Reach,
+                InGaitComp._Solver.GetLegState(Index).Get_Swing(), Probe, Step);
+            if (LandingGround.IsSet())
+            { Input.Set_LandingGroundZ(InverseBasis.RotateVector(LandingGround->Get_Position()).Z); }
+
             LegComp._Foot.Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed);
             DebugLeg.Get_Targeting().Set_IdealTarget(Position)
                 .Set_TargetValid(TargetValid);
@@ -482,7 +514,7 @@ namespace ck
                 == ECk_SurfaceMotion_Support::Airborne;
         }
 
-        const auto CadenceSpeed = PlanarVelocity.Size() + YawRate * MeanFootRadius / FMath::Max(EnabledCount, 1);
+        const auto CadenceSpeed = PlanarVelocity.Size() + FMath::Abs(YawRate) * MeanFootRadius / FMath::Max(EnabledCount, 1);
         const auto Solved = InGaitComp._Solver.Step(InDeltaT, CadenceSpeed, PlanarVelocity, Inputs, Outputs, Airborne);
         CK_ENSURE_IF_NOT(Solved, TEXT("Procedural gait [{}] solver rejected runtime inputs; feature is failed, planted state retained."), InHandle)
         {
@@ -545,7 +577,8 @@ namespace ck
                 .Set_SupportNormal(Up)
                 .Set_CadenceSpeedRef(InGaitComp._Solver.Get_Settings().Get_Cadence().Get_CadenceSpeedRef())
                 .Set_ReachCadenceFloor(InGaitComp._ReachCadenceFloor)
-                .Set_ReachSkippedLegs(InGaitComp._ReachSkippedLegs);
+                .Set_ReachSkippedLegs(InGaitComp._ReachSkippedLegs)
+                .Set_MissedLandingLifts(InGaitComp._Solver.Get_MissedLandingLifts());
             Snapshot.Set_Legs(InDebugComp._ScratchLegs);
 
             if (InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>())
