@@ -177,6 +177,9 @@ namespace ck
 
     // Fractions of a leg's reach. Swing targets stay within _TargetFraction of the hip, a planted foot beyond
     // _ForceStepFraction is an Emergency, and one beyond _HardOverstretchFraction may step beyond the phase schedule.
+    // _TouchdownLiftFraction is a fraction of the swing height instead: a report of higher ground under the landing point
+    // that first arrives at touchdown lifts the plant at most this share of the step height (2 cm at a 25 cm step); a
+    // larger rise would read as a pop, so it is left and counted.
     struct CKPROCEDURALANIMATION_API FProceduralGaitReachSettings
     {
         CK_GENERATED_BODY(FProceduralGaitReachSettings);
@@ -187,11 +190,13 @@ namespace ck
         float _TargetFraction = 0.8f;
         float _ForceStepFraction = 0.92f;
         float _HardOverstretchFraction = 1.0f;
+        float _TouchdownLiftFraction = 0.08f;
 
     public:
         CK_PROPERTY(_TargetFraction);
         CK_PROPERTY(_ForceStepFraction);
         CK_PROPERTY(_HardOverstretchFraction);
+        CK_PROPERTY(_TouchdownLiftFraction);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -327,8 +332,9 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // _LandingPoint is where the swing will touch down, after the stroke overshoot and the reach clamp: before the retarget
-    // freeze, the point the freeze will produce from this frame's ideal target; from the freeze on, the actual landing point.
+    // _LandingPoint is where the swing will touch down, after the stroke overshoot and the reach clamp: on the take-off frame,
+    // the swing target; before the retarget freeze, the point the freeze will produce from this frame's ideal target; from the
+    // freeze on, the actual landing point.
     // _LiftedLandingPoint is the landing target raised onto the ground reported under it, and _LandingLiftStartAlpha the
     // swing alpha the lift began at (negative while the swing is not lifted): the remaining arc rises onto the lifted point
     // in step with the swing's own easing. _BeyondSchedule marks a swing a hard-overstretched foot began outside the phase
@@ -437,7 +443,6 @@ namespace ck
         CK_GENERATED_BODY(FProceduralGaitVelocityTracker);
 
     public:
-        auto Reset() -> void;
         auto Update(const FVector& InWorldPosition, FCk_Time InDeltaTime) -> FVector;
         auto GetVelocity() const -> FVector;
 
@@ -462,7 +467,6 @@ namespace ck
         static constexpr auto SmoothingTime = FCk_Time{0.1};
 
     public:
-        auto Reset() -> void;
         auto Update(const FQuat& InPreviousBasis, const FQuat& InBasis, FCk_Time InDeltaTime) -> float;
         auto GetYawRate() const -> float { return _YawRate; }
 

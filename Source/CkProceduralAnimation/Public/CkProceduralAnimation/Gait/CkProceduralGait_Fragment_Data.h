@@ -141,7 +141,8 @@ private:
     float _ForceStepReachFraction = 0.92f;
 
     // A planted foot farther than this fraction of the chain length from its hip may step while another phase group
-    // swings, so a body climbing away from its planted feet does not stretch them past their chains.
+    // swings, so a body climbing away from its planted feet does not stretch them past their chains. It may equal the
+    // force-step fraction; then every reach Emergency also steps beyond the schedule.
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true, ClampMin = 1, ClampMax = 1.5))
     float _HardOverstretchReachFraction = 1.0f;
@@ -169,7 +170,7 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Step, IsValid_Policy_Default
         && InStep.Get_ForceStepReachFraction() <= 1.0f
         && FMath::IsFinite(InStep.Get_HardOverstretchReachFraction())
         && InStep.Get_HardOverstretchReachFraction() >= 1.0f && InStep.Get_HardOverstretchReachFraction() <= 1.5f
-        && InStep.Get_HardOverstretchReachFraction() > InStep.Get_ForceStepReachFraction();
+        && InStep.Get_HardOverstretchReachFraction() >= InStep.Get_ForceStepReachFraction();
 });
 
 // --------------------------------------------------------------------------------------------------------------------

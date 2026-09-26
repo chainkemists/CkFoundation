@@ -26,7 +26,7 @@ auto
     {
         InContext.AddError(FText::FromString(TEXT("FCk_ProceduralGait_Step is invalid: height, obstacle clearance and max velocity "
             "lead must be finite and >= 0, the threshold finite and > 0, and the reach fractions finite with "
-            "0 < TargetReachFraction < ForceStepReachFraction <= 1 and ForceStepReachFraction < HardOverstretchReachFraction, "
+            "0 < TargetReachFraction < ForceStepReachFraction <= 1 and ForceStepReachFraction <= HardOverstretchReachFraction, "
             "which lies in [1, 1.5].")));
         Result = EDataValidationResult::Invalid;
     }

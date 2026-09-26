@@ -55,7 +55,7 @@ namespace ck_procedural_animation_utils
             && InGait->Get_Timing().Get_MaxSimultaneousSwings() <= Legs.Num()
             && ck::algo::AllOf(Legs, [&](const FCk_ProceduralLeg_Spec& InLeg) -> bool
             {
-                return UCk_Utils_ProceduralGait_UE::Get_IsRestWithinReach(InLeg.Get_Placement(), InLeg.Get_Chain(), InGait->Get_Step());
+                return ck_procedural_gait_utils::Get_IsRestWithinReach(InLeg.Get_Placement(), InLeg.Get_Chain(), InGait->Get_Step());
             });
     }
 

@@ -76,6 +76,30 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The solver settings built from a gait's tunables and its enabled legs, with the reach cadence floor the build applied
+    // (0 when no enabled leg bounds it) and the count of enabled legs too wide to stride along body X. The floor and the
+    // count are diagnostics: only the debug fragment keeps them.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitBuiltSettings
+    {
+    public:
+        CK_GENERATED_BODY(FProceduralGaitBuiltSettings);
+
+    private:
+        FProceduralGaitSettings _Settings;
+        float _ReachCadenceFloor = 0.0f;
+        int32 _ReachSkippedLegs = 0;
+
+    public:
+        CK_PROPERTY_GET(_Settings);
+        CK_PROPERTY_GET(_ReachCadenceFloor);
+        CK_PROPERTY_GET(_ReachSkippedLegs);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralGaitBuiltSettings, _Settings, _ReachCadenceFloor, _ReachSkippedLegs);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait
     {
     public:
@@ -100,8 +124,6 @@ namespace ck
         FProceduralGaitYawRateTracker _YawRateTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
-        float _ReachCadenceFloor = 0.0f;
-        int32 _ReachSkippedLegs = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -112,6 +134,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ProceduralGait_Debug);
 
     public:
+        friend class FProcessor_ProceduralGait_HandleRequests;
         friend class FProcessor_ProceduralGait_Update;
         friend class ::UCk_Utils_ProceduralGait_UE;
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
@@ -119,6 +142,8 @@ namespace ck
     private:
         FCk_ProceduralAnimation_DebugSnapshot _Snapshot;
         TArray<FCk_ProceduralAnimation_DebugLeg> _ScratchLegs;
+        float _ReachCadenceFloor = 0.0f;
+        int32 _ReachSkippedLegs = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

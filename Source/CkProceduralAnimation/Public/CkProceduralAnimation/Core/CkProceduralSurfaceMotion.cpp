@@ -88,7 +88,9 @@ namespace ck_procedural_surface_motion
     }
 
     // Forward contact is used only within the body's clearance, so a distant wall cannot pull a creature off its floor.
-    // Every candidate is a current query; held feet never masquerade as newly observed support normals.
+    // Every candidate is a current query; held feet never masquerade as newly observed support normals. The forward ray and
+    // the fan look where the body is going, so they are cast only while it moves; the down ray and the look-ahead hold the
+    // surface it stands at, so a body stopped just past a crest keeps the top.
     auto
         DoFind_Contacts(
             const ck::FProceduralSurfaceMotionSettings& InSettings,
@@ -111,12 +113,8 @@ namespace ck_procedural_surface_motion
         { Contacts.Down = FContact{DownHit, ESource::Down}; }
         if (InMoving)
         { Contacts.Proposal = DoCast(InRayCast, InPosition, InPosition + InForward * Clearance, ESource::Forward); }
-        if (Contacts.Proposal.IsSet() || NOT InMoving)
-        {
-            if (NOT Contacts.Proposal.IsSet())
-            { Contacts.Proposal = Contacts.Down; }
-            return Contacts;
-        }
+        if (Contacts.Proposal.IsSet())
+        { return Contacts; }
 
         if (Contacts.Down.IsSet())
         {
@@ -134,7 +132,7 @@ namespace ck_procedural_surface_motion
         }
 
         Contacts.Proposal = DoCast_LookAhead(InSettings, InRayCast, InPosition, InUp, InForward);
-        if (Contacts.Proposal.IsSet())
+        if (Contacts.Proposal.IsSet() || NOT InMoving)
         { return Contacts; }
 
         // Recover around a convex edge from a bounded fan rather than extending a ray forever.
@@ -292,7 +290,7 @@ namespace ck
             // While a large turn waits for confirmation the body keeps the support under it, or coasts along its plane
             // when the down ray proposed the turn or found nothing it trusts. A face the rays only graze for a few
             // substeps is never adopted; a body longer than its clearance can overrun a head-on wall by up to its speed
-            // times the confirm time.
+            // times the confirm time. A coast adopts no contact, so the source stays the one last accepted.
             const auto SupportUnder = Pending && Contacts.Down.IsSet()
                 && ck_procedural_surface_motion::Get_AngleDegrees(Up, Contacts.Down->Hit.Get_Normal()) <= InSettings.Get_ConfirmAngleDegrees();
             if (Pending && NOT SupportUnder)
@@ -300,7 +298,6 @@ namespace ck
                 ck_procedural_surface_motion::DoTurn(InSettings, Up, Forward, Step, InOutBody);
                 InOutBody.SetLocation(Candidate);
                 InOutState.Set_TravelTangent(Forward);
-                InOutState.Set_ContactSource(EProceduralSurfaceContactSource::Down);
             }
             else
             {
