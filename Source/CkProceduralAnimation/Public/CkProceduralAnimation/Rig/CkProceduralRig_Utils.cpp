@@ -80,8 +80,9 @@ auto
         && ck_procedural_rig_utils::Get_ArePartsAdmissible(InLeg, InParams);
     CK_ENSURE_IF_NOT(Valid,
         TEXT("Procedural rig Add rejected leg [{}]. The leg must be live with no rig; the chain needs 1..8 unique live segments, "
-             "as many as the leg's segment lengths; every segment and the optional foot must carry a transform, must not be the "
-             "leg or its body, must be a direct lifetime child of the leg's body and must not be bound by another leg's rig."),
+             "as many as the leg's segment lengths, and a single segment only takes the Auto solver; every segment and the optional "
+             "foot must carry a transform, must not be the leg or its body, must be a direct lifetime child of the leg's body and "
+             "must not be bound by another leg's rig."),
         InLeg)
     { return {}; }
 

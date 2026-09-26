@@ -293,11 +293,15 @@ private:
     bool _Composed = false;
     ECk_ProceduralAnimation_Status _Status = ECk_ProceduralAnimation_Status::PendingSetup;
     FTransform _Offset = FTransform::Identity;
+    bool _Conforms = false;
+    FTransform _ConformTarget = FTransform::Identity;
 
 public:
     CK_PROPERTY(_Composed);
     CK_PROPERTY(_Status);
     CK_PROPERTY(_Offset);
+    CK_PROPERTY(_Conforms);
+    CK_PROPERTY(_ConformTarget);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

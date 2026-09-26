@@ -1,6 +1,7 @@
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Processor.h"
 
 #include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
+#include "CkProceduralAnimation/Core/CkProceduralLegCurve.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
@@ -21,6 +22,34 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_ProceduralRig_Update);
 
 namespace ck_procedural_rig
 {
+    enum class EChainPose : uint8
+    {
+        Aim,
+        TwoBone,
+        Fabrik,
+        Curve
+    };
+
+    auto
+        Get_ChainPose(
+            int32 InSegmentCount,
+            ECk_ProceduralRig_ChainSolver InSolver)
+        -> EChainPose
+    {
+        if (InSegmentCount == 1)
+        { return EChainPose::Aim; }
+
+        switch (InSolver)
+        {
+            case ECk_ProceduralRig_ChainSolver::Fabrik:
+            { return EChainPose::Fabrik; }
+            case ECk_ProceduralRig_ChainSolver::Curve:
+            { return EChainPose::Curve; }
+            default:
+            { return InSegmentCount == 2 ? EChainPose::TwoBone : EChainPose::Curve; }
+        }
+    }
+
     auto
         Get_SegmentRotation(
             const FVector& InFrom,
@@ -93,6 +122,40 @@ namespace ck_procedural_rig
 
         for (auto LinkIndex = 0; LinkIndex < Chain.Num(); ++LinkIndex)
         { InOutJoints[LinkIndex] = Chain[LinkIndex].Position; }
+    }
+
+    auto
+        DoSolve_Aim(
+            TArray<FVector>& InOutJoints,
+            float InLength,
+            const FVector& InTarget,
+            const FVector& InBodyDown)
+        -> void
+    {
+        auto Direction = (InTarget - InOutJoints[0]).GetSafeNormal();
+        if (Direction.IsNearlyZero())
+        { Direction = InBodyDown; }
+
+        InOutJoints[1] = InOutJoints[0] + Direction * InLength;
+    }
+
+    // The core rejects a bend along hip->foot rather than picking a side; the rig supplies the fallbacks, in order.
+    auto
+        DoSolve_Curve(
+            TArray<FVector>& InOutJoints,
+            const TArray<float>& InLengths,
+            const FVector& InHip,
+            const FVector& InTarget,
+            const FVector& InPoleBend,
+            const FQuat& InBodyRotation)
+        -> bool
+    {
+        for (const auto& Bend : {InPoleBend, InBodyRotation.GetAxisZ(), InBodyRotation.GetAxisY()})
+        {
+            if (ck::SolveProceduralLegCurve(InHip, InTarget, Bend, InLengths, InOutJoints))
+            { return true; }
+        }
+        return false;
     }
 }
 
@@ -178,14 +241,15 @@ namespace ck
         auto& Joints = InRigComp._Joints;
         Joints[0] = Hip;
 
-        switch (Segments.Num())
+        const auto BodyRotation = BodyTransform.GetRotation();
+        switch (ck_procedural_rig::Get_ChainPose(Segments.Num(), InParams.Get_Solver()))
         {
-            case 1:
+            case ck_procedural_rig::EChainPose::Aim:
             {
-                Joints[1] = Target;
+                ck_procedural_rig::DoSolve_Aim(Joints, Lengths[0], Target, -BodyRotation.GetAxisZ());
                 break;
             }
-            case 2:
+            case ck_procedural_rig::EChainPose::TwoBone:
             {
                 constexpr auto AllowStretching = false;
                 const auto SeedJoint = Hip + PoleDirection * Lengths[0];
@@ -197,9 +261,18 @@ namespace ck
                 Joints[2] = End;
                 break;
             }
-            default:
+            case ck_procedural_rig::EChainPose::Fabrik:
             {
                 ck_procedural_rig::DoSolve_Fabrik(Joints, Lengths, PoleDirection, Target);
+                break;
+            }
+            case ck_procedural_rig::EChainPose::Curve:
+            {
+                const auto CurvePosed = ck_procedural_rig::DoSolve_Curve(Joints, Lengths, Hip, Target, Pole - Hip, BodyRotation);
+                CK_ENSURE_IF_NOT(CurvePosed,
+                    TEXT("Procedural rig [{}] could not pose its curve chain from hip [{}] to foot [{}]; the chain keeps its last pose this frame."),
+                    InHandle, Hip, Target)
+                { return; }
                 break;
             }
         }
