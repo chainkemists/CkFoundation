@@ -2,6 +2,8 @@
 
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
 
+#include "CkProceduralAnimation/Core/CkProceduralSurfaceMotion.h"
+
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
@@ -52,7 +54,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // The accepted support frame and the body's integrated motion, rewritten every substep.
+    // The accepted support frame, the pending contact that would replace it and the body's integrated motion, rewritten
+    // every substep.
     struct CKPROCEDURALANIMATION_API FFragment_SurfaceMotion_Support
     {
     public:
@@ -66,13 +69,8 @@ namespace ck
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
 
     private:
-        FVector _SupportNormal = FVector::UpVector;
-        FVector _TravelTangent = FVector::ForwardVector;
-        FVector _Velocity = FVector::ZeroVector;
-        FCk_Time _MissingContact = FCk_Time::ZeroSecond();
+        FProceduralSurfaceMotionState _State;
         uint64 _EvaluatedFrame = 0;
-        ECk_SurfaceMotion_Support _Support = ECk_SurfaceMotion_Support::Airborne;
-        ECk_SurfaceMotion_ContactQuery _ContactQuery = ECk_SurfaceMotion_ContactQuery::Missed;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
