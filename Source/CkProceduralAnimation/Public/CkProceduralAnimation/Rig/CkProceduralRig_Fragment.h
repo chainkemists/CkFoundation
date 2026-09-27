@@ -59,6 +59,10 @@ namespace ck
     private:
         TArray<FVector> _Joints;
         uint64 _PosedSolveSequence = 0;
+        // The fan angle of the last fully clear pose, tried first on the next solve; 0 once no angle was clear.
+        float _SwivelDegrees = 0.0f;
+        ECk_ProceduralRig_ChainState _ChainState = ECk_ProceduralRig_ChainState::Clear;
+        int32 _CrossingLinks = 0;
     };
 }
 

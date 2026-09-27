@@ -132,4 +132,37 @@ auto
         : FCk_ProceduralRig_Spec{};
 }
 
+auto
+    UCk_Utils_ProceduralRig_UE::
+    Get_Clearance(
+        const FCk_Handle_ProceduralRig& InRig)
+    -> ECk_ProceduralRig_Clearance
+{
+    return ck::IsValid(InRig) && Has(InRig)
+        ? InRig.Get<ck::FFragment_ProceduralRig_Params>().Get_Clearance()
+        : ECk_ProceduralRig_Clearance::None;
+}
+
+auto
+    UCk_Utils_ProceduralRig_UE::
+    Get_ChainState(
+        const FCk_Handle_ProceduralRig& InRig)
+    -> ECk_ProceduralRig_ChainState
+{
+    return ck::IsValid(InRig) && Has(InRig)
+        ? InRig.Get<ck::FFragment_ProceduralRig>()._ChainState
+        : ECk_ProceduralRig_ChainState::Clear;
+}
+
+auto
+    UCk_Utils_ProceduralRig_UE::
+    Get_SwivelDegrees(
+        const FCk_Handle_ProceduralRig& InRig)
+    -> float
+{
+    return ck::IsValid(InRig) && Has(InRig)
+        ? InRig.Get<ck::FFragment_ProceduralRig>()._SwivelDegrees
+        : 0.0f;
+}
+
 // --------------------------------------------------------------------------------------------------------------------

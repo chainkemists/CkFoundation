@@ -106,6 +106,15 @@ auto
 
 auto
     UCk_Utils_ProceduralLeg_UE::
+    Get_IdealVerdict(
+        const FCk_Handle_ProceduralLeg& InLeg)
+    -> ECk_ProceduralLeg_FootholdVerdict
+{
+    return InLeg.Get<ck::FFragment_ProceduralLeg>().Get_IdealVerdict();
+}
+
+auto
+    UCk_Utils_ProceduralLeg_UE::
     Get_EnableDisable(
         const FCk_Handle_ProceduralLeg& InLeg)
     -> ECk_EnableDisable

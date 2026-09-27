@@ -50,9 +50,11 @@ namespace ck
 
     private:
         FCk_ProceduralLeg_Foot _Foot;
+        ECk_ProceduralLeg_FootholdVerdict _IdealVerdict = ECk_ProceduralLeg_FootholdVerdict::Miss;
 
     public:
         CK_PROPERTY_GET(_Foot);
+        CK_PROPERTY_GET(_IdealVerdict);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
