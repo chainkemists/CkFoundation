@@ -249,3 +249,17 @@ auto
 }
 
 // --------------------------------------------------------------------------------------------------------------------
+
+auto
+    UCk_Utils_ProceduralAnimation_Debug_UE::
+    Get_RaysLastSolve(
+        const FCk_Handle_ProceduralGait& InGait)
+    -> int32
+{
+    if (ck::Is_NOT_Valid(InGait) || NOT InGait.Has<ck::FFragment_ProceduralGait_Debug>())
+    { return 0; }
+
+    return InGait.Get<ck::FFragment_ProceduralGait_Debug>()._RaysLastSolve;
+}
+
+// --------------------------------------------------------------------------------------------------------------------

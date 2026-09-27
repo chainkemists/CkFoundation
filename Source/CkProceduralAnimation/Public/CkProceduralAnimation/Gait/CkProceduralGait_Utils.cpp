@@ -90,9 +90,10 @@ auto
     const auto DataValid = ck::IsValid(InData)
         && ck::IsValid(InData->Get_Timing())
         && ck::IsValid(InData->Get_Step())
-        && ck::IsValid(InData->Get_Probe());
+        && ck::IsValid(InData->Get_Probe())
+        && ck::IsValid(InData->Get_Foothold());
     CK_ENSURE_IF_NOT(DataValid,
-        TEXT("Procedural gait Add rejected body [{}]: the gait data asset is missing or its timing, step or probe settings are malformed."),
+        TEXT("Procedural gait Add rejected body [{}]: the gait data asset is missing or its timing, step, probe or foothold settings are malformed."),
         InBody)
     { return {}; }
 
@@ -112,12 +113,14 @@ auto
     { return {}; }
 
     // Admission is atomic: nothing attaches until every authored field has been checked.
-    auto Tunables = ck::FFragment_ProceduralGait_Tunables{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe()};
+    auto Tunables = ck::FFragment_ProceduralGait_Tunables{InData->Get_Timing(), InData->Get_Step(), InData->Get_Probe(),
+        InData->Get_Foothold()};
     auto GaitComp = ck::FFragment_ProceduralGait{};
     GaitComp._Legs = Legs;
     const auto Built = DoBuild_SolverSettings(Tunables, GaitComp._Legs, GaitComp._EnabledMask);
     GaitComp._Solver.Set_Settings(Built.Get_Settings());
     GaitComp._Probes.SetNum(Legs.Num());
+    GaitComp._Footholds.SetNum(Legs.Num());
 
     auto DebugComp = ck::FFragment_ProceduralGait_Debug{};
     DebugComp._ReachCadenceFloor = Built.Get_ReachCadenceFloor();
@@ -253,6 +256,7 @@ auto
         && ck::IsValid(InRequest.Get_Timing())
         && ck::IsValid(InRequest.Get_Step())
         && ck::IsValid(InRequest.Get_Probe())
+        && ck::IsValid(InRequest.Get_Foothold())
         && InRequest.Get_Timing().Get_MaxSimultaneousSwings() <= InGait.Get<ck::FFragment_ProceduralGait>()._Legs.Num();
     CK_ENSURE_IF_NOT(RequestValid,
         TEXT("Procedural gait Request_ApplyPreset rejected gait [{}]: the gait must be live and the preset well-formed and within the leg count."),

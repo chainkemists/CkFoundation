@@ -3,6 +3,7 @@
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment_Data.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment_Data.h"
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
+#include "CkProceduralAnimation/Core/CkProceduralFoothold.h"
 #include "CkProceduralAnimation/Core/CkProceduralGaitSolver.h"
 #include "CkProceduralAnimation/Debug/CkProceduralAnimation_Debug.h"
 
@@ -64,38 +65,16 @@ namespace ck
         FCk_ProceduralGait_Timing _Timing;
         FCk_ProceduralGait_Step _Step;
         FCk_ProceduralGait_Probe _Probe;
+        FCk_ProceduralGait_Foothold _Foothold;
 
     public:
         CK_PROPERTY_GET(_Timing);
         CK_PROPERTY_GET(_Step);
         CK_PROPERTY_GET(_Probe);
+        CK_PROPERTY_GET(_Foothold);
 
     public:
-        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralGait_Tunables, _Timing, _Step, _Probe);
-    };
-
-    // --------------------------------------------------------------------------------------------------------------------
-
-    // The solver settings built from a gait's tunables and its enabled legs, with the reach cadence floor the build applied
-    // (0 when no enabled leg bounds it) and the count of enabled legs too wide to stride along body X. The floor and the
-    // count are diagnostics: only the debug fragment keeps them.
-    struct CKPROCEDURALANIMATION_API FProceduralGaitBuiltSettings
-    {
-    public:
-        CK_GENERATED_BODY(FProceduralGaitBuiltSettings);
-
-    private:
-        FProceduralGaitSettings _Settings;
-        float _ReachCadenceFloor = 0.0f;
-        int32 _ReachSkippedLegs = 0;
-
-    public:
-        CK_PROPERTY_GET(_Settings);
-        CK_PROPERTY_GET(_ReachCadenceFloor);
-        CK_PROPERTY_GET(_ReachSkippedLegs);
-
-    public:
-        CK_DEFINE_CONSTRUCTORS(FProceduralGaitBuiltSettings, _Settings, _ReachCadenceFloor, _ReachSkippedLegs);
+        CK_DEFINE_CONSTRUCTORS(FFragment_ProceduralGait_Tunables, _Timing, _Step, _Probe, _Foothold);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -120,6 +99,8 @@ namespace ck
         TArray<FCk_Handle_ProceduralLeg> _Legs;
         uint64 _EnabledMask = ~uint64{0};
         TArray<FProceduralFootProbeState> _Probes;
+        TArray<FProceduralFootholdState> _Footholds;
+        int32 _NextSearchLeg = 0;
         FProceduralGaitVelocityTracker _VelocityTracker;
         FProceduralGaitYawRateTracker _YawRateTracker;
         FQuat _Basis = FQuat::Identity;
@@ -134,6 +115,7 @@ namespace ck
         CK_GENERATED_BODY(FFragment_ProceduralGait_Debug);
 
     public:
+        friend class FProcessor_ProceduralGait_Setup;
         friend class FProcessor_ProceduralGait_HandleRequests;
         friend class FProcessor_ProceduralGait_Update;
         friend class ::UCk_Utils_ProceduralGait_UE;
@@ -144,6 +126,7 @@ namespace ck
         TArray<FCk_ProceduralAnimation_DebugLeg> _ScratchLegs;
         float _ReachCadenceFloor = 0.0f;
         int32 _ReachSkippedLegs = 0;
+        int32 _RaysLastSolve = 0;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

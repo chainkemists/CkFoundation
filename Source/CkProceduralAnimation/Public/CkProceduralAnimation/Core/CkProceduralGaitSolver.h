@@ -254,7 +254,10 @@ namespace ck
     // _Hip is in the support frame like every other position. _Reach is the leg's chain length in centimetres; zero
     // disables the reach clamp and the reach Emergency for that leg. _LandingGroundZ is the support-frame height of the
     // ground under the swing's landing point (FProceduralGaitLegSwing::_LandingPoint), -FLT_MAX when there is none; a
-    // swing whose landing ground lies above its target, within reach, lifts the rest of its arc onto it.
+    // swing whose landing ground lies above its target, within reach, lifts the rest of its arc onto it. _PlantOccluded
+    // marks a planted foot whose hip-to-foot line passes through a solid: with a valid target it is an Emergency of
+    // ratio 1 that steps beyond the schedule. _TargetIsFoothold marks a target the caller chose and validated as a spot to
+    // stand on: a swing aimed at it gets neither the stroke overshoot nor the freeze push, so it lands on that spot.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
         CK_GENERATED_BODY(FProceduralGaitLegInput);
@@ -273,6 +276,8 @@ namespace ck
         FVector _Hip = FVector::ZeroVector;
         float _Reach = 0.0f;
         float _LandingGroundZ = -FLT_MAX;
+        bool _PlantOccluded = false;
+        bool _TargetIsFoothold = false;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -286,6 +291,8 @@ namespace ck
         CK_PROPERTY(_Hip);
         CK_PROPERTY(_Reach);
         CK_PROPERTY(_LandingGroundZ);
+        CK_PROPERTY(_PlantOccluded);
+        CK_PROPERTY(_TargetIsFoothold);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -337,8 +344,9 @@ namespace ck
     // freeze on, the actual landing point.
     // _LiftedLandingPoint is the landing target raised onto the ground reported under it, and _LandingLiftStartAlpha the
     // swing alpha the lift began at (negative while the swing is not lifted): the remaining arc rises onto the lifted point
-    // in step with the swing's own easing. _BeyondSchedule marks a swing a hard-overstretched foot began outside the phase
-    // schedule; it neither holds back nor waits for the schedule's take-offs.
+    // in step with the swing's own easing. _BeyondSchedule marks a swing a hard-overstretched or occluded foot began outside
+    // the phase schedule; it neither holds back nor waits for the schedule's take-offs. _Overshoot is cleared for good once
+    // the swing is aimed at a foothold before its freeze, so the landing point cannot flip back and forth with the input.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegSwing
     {
         CK_GENERATED_BODY(FProceduralGaitLegSwing);
