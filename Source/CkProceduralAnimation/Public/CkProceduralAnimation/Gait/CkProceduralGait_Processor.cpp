@@ -214,6 +214,24 @@ namespace ck_procedural_gait
         return ECk_ProceduralLeg_Foothold::None;
     }
 
+    auto
+        Get_LegFootholdVerdict(
+            ck::EProceduralFootholdVerdict InVerdict)
+        -> ECk_ProceduralLeg_FootholdVerdict
+    {
+        switch (InVerdict)
+        {
+            case ck::EProceduralFootholdVerdict::Usable: return ECk_ProceduralLeg_FootholdVerdict::Usable;
+            case ck::EProceduralFootholdVerdict::Miss: return ECk_ProceduralLeg_FootholdVerdict::Miss;
+            case ck::EProceduralFootholdVerdict::Unreachable: return ECk_ProceduralLeg_FootholdVerdict::Unreachable;
+            case ck::EProceduralFootholdVerdict::TooSteep: return ECk_ProceduralLeg_FootholdVerdict::TooSteep;
+            case ck::EProceduralFootholdVerdict::Occluded: return ECk_ProceduralLeg_FootholdVerdict::Occluded;
+            case ck::EProceduralFootholdVerdict::Inboard: return ECk_ProceduralLeg_FootholdVerdict::Inboard;
+            case ck::EProceduralFootholdVerdict::UnderBody: return ECk_ProceduralLeg_FootholdVerdict::UnderBody;
+        }
+        return ECk_ProceduralLeg_FootholdVerdict::Miss;
+    }
+
     // The trace from the hip to InPoint: the solid it meets farther than the occlusion tolerance from InPoint. A trace that
     // starts inside a solid (fraction 0, a hip inside the body's own collider) tells nothing, so it finds no occluder.
     auto
@@ -813,14 +831,16 @@ namespace ck
             const auto Position = Trusted ? Foothold.Position : Neutral;
             const auto Normal = Trusted ? Foothold.Normal : Up;
 
+            auto& LegComp = Leg.Get<FFragment_ProceduralLeg>();
             // Update freezes a leg disabled before Add from this published foot, so it must already hold the probed pose.
-            Leg.Get<FFragment_ProceduralLeg>()._Foot.Set_Position(Position)
+            LegComp._Foot.Set_Position(Position)
                 .Set_Normal(Normal)
                 .Set_Rotation(Basis)
                 .Set_SwingAlpha(0.0f)
                 .Set_Phase(ECk_ProceduralLeg_FootPhase::Planted)
                 .Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed)
                 .Set_Foothold(ck_procedural_gait::Get_LegFoothold(Foothold.Source));
+            LegComp._IdealVerdict = ck_procedural_gait::Get_LegFootholdVerdict(Foothold.IdealVerdict);
 
             InitialFeet.Add(InverseBasis.RotateVector(Position));
         }
@@ -1121,6 +1141,7 @@ namespace ck
 
             LegComp._Foot.Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed)
                 .Set_Foothold(ck_procedural_gait::Get_LegFoothold(Foothold.Source));
+            LegComp._IdealVerdict = ck_procedural_gait::Get_LegFootholdVerdict(Foothold.IdealVerdict);
             DebugLeg.Set_PlantOccluded(PlantOccluded);
             DebugLeg.Get_Targeting().Set_IdealTarget(Position)
                 .Set_TargetValid(TargetValid);

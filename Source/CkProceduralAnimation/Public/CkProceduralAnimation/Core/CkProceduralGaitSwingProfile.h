@@ -51,6 +51,24 @@ namespace ck
             return FMath::Pow(FMath::Max(FMath::Sin(WarpedPhase * PI), 0.0f), FMath::Max(InSharpness, 0.1f));
         }
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct FProceduralGaitSwingSettings;
+
+    // The point the solver's swing from InStart to InTarget passes at swing phase InAlpha, lifted along InUp by InHeight at
+    // the arc's apex: InSwing's authored ease and arc where valid, else the solver's smooth-step ease and its parametric arc
+    // at InSwing's apex phase and sharpness. The solver's sprint height scale, obstacle clearance and landing lift are not
+    // modelled.
+    CKPROCEDURALANIMATION_API auto
+        ComputeProceduralSwingPoint(
+            const FVector& InStart,
+            const FVector& InTarget,
+            const FVector& InUp,
+            const FProceduralGaitSwingSettings& InSwing,
+            float InHeight,
+            float InAlpha)
+        -> FVector;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -118,6 +118,7 @@ namespace ck
         friend class FProcessor_ProceduralGait_Setup;
         friend class FProcessor_ProceduralGait_HandleRequests;
         friend class FProcessor_ProceduralGait_Update;
+        friend class FProcessor_ProceduralRig_Update;
         friend class ::UCk_Utils_ProceduralGait_UE;
         friend class ::UCk_Utils_ProceduralAnimation_Debug_UE;
 

@@ -200,8 +200,13 @@ auto
             .Set_Status(LegRigStatus)
             .Set_Failure(LegRigFailure)
             .Set_Segments(Segments)
-            .Set_Foot(ck_procedural_animation_debug::Get_Part(Chain.Get_Foot(), Pending));
+            .Set_Foot(ck_procedural_animation_debug::Get_Part(Chain.Get_Foot(), Pending))
+            .Set_Clearance(Chain.Get_Clearance())
+            .Set_ChainState(Rig._ChainState)
+            .Set_SwivelDegrees(Rig._SwivelDegrees)
+            .Set_CrossingLinks(Rig._CrossingLinks);
     }
+    Snapshot.Get_Gait().Set_RaysLastSolve(Body.Get<ck::FFragment_ProceduralGait_Debug>()._RaysLastSolve);
 
     Snapshot.Get_Status().Set_HasRig(HasRig)
         .Set_RigStatus(HasRig ? RigStatus : ECk_ProceduralAnimation_Status::PendingSetup)

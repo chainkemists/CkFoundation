@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralGaitSwingProfile.h"
 
+#include "CkProceduralAnimation/Core/CkProceduralGaitSolver.h"
+
 #include <limits>
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -104,6 +106,26 @@ namespace ck
         if (NOT FMath::IsFinite(InPhase))
         { return std::numeric_limits<float>::quiet_NaN(); }
         return _ArcValid ? Read(_ArcTable, InPhase) : 0.0f;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        ComputeProceduralSwingPoint(
+            const FVector& InStart,
+            const FVector& InTarget,
+            const FVector& InUp,
+            const FProceduralGaitSwingSettings& InSwing,
+            float InHeight,
+            float InAlpha)
+        -> FVector
+    {
+        const auto& Profile = InSwing.Get_Profile();
+        const auto Ease = Profile.IsEaseValid() ? Profile.SampleEase(InAlpha) : FMath::SmoothStep(0.0f, 1.0f, InAlpha);
+        const auto Arc = Profile.IsArcValid()
+            ? Profile.SampleArc(InAlpha)
+            : procedural_gait_swing::ParametricArc(InAlpha, InSwing.Get_ApexPhase(), InSwing.Get_ApexSharpness());
+        return FMath::Lerp(InStart, InTarget, Ease) + InUp * (Arc * InHeight);
     }
 }
 

@@ -84,6 +84,31 @@ public:
     static FCk_ProceduralRig_Spec
     Get_Chain(
         const FCk_Handle_ProceduralRig& InRig);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralRig",
+              DisplayName="[Ck][ProceduralRig] Get Clearance")
+    static ECk_ProceduralRig_Clearance
+    Get_Clearance(
+        const FCk_Handle_ProceduralRig& InRig);
+
+    // Crossing when the last pose kept a link through a solid, or a joint between hip and foot inside the body slab, because no
+    // fan angle cleared them all. Always Clear for a rig without a clearance policy, which never tests its links.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralRig",
+              DisplayName="[Ck][ProceduralRig] Get Chain State")
+    static ECk_ProceduralRig_ChainState
+    Get_ChainState(
+        const FCk_Handle_ProceduralRig& InRig);
+
+    // The swivel of the last fully clear pose about the hip-foot line, in degrees; 0 when the authored pole is clear, when
+    // no angle was, or without a clearance policy.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralRig",
+              DisplayName="[Ck][ProceduralRig] Get Swivel Degrees")
+    static float
+    Get_SwivelDegrees(
+        const FCk_Handle_ProceduralRig& InRig);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
