@@ -1,5 +1,6 @@
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Processor.h"
 
+#include "CkProceduralAnimation/Core/CkProceduralFeetPlane.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment.h"
@@ -108,6 +109,8 @@ namespace ck_procedural_gait
         FVector Ideal = FVector::ZeroVector;
         FVector Plant = FVector::ZeroVector;
         bool Planted = false;
+        // The body's velocity in the support plane; zero at rest and at setup.
+        FVector Travel = FVector::ZeroVector;
         float Reach = 0.0f;
         float RestDrop = 0.0f;
         const FCk_ProceduralGait_Probe* Probe = nullptr;
@@ -186,7 +189,9 @@ namespace ck_procedural_gait
     constexpr auto InwardFarDepthInRestDrops = 4.0f;
     constexpr auto OutwardHeightInRestDrops = 2.0f;
     constexpr auto RingPoints = 8;
-    constexpr auto LandingLiftMaxDegrees = 45.0f;
+    // While too few feet support the body the last fitted plane is held this many step durations: long enough to bridge the
+    // swing of a phase group between two stances, short enough that a body that leaves its feet behind soon rides its rays.
+    constexpr auto FeetPlaneHoldStepDurations = 1.5;
 
     auto
         Get_RestDrop(
@@ -324,9 +329,13 @@ namespace ck_procedural_gait
             : ck::EProceduralFootholdVerdict::Usable;
     }
 
-    // A down ray under InPoint. With ClampTowardHip, ground farther than the target reach from the hip is clamped toward the
-    // hip like the query point and probed once more there: the solver's own clamp keeps a target's support-frame height,
-    // which across a convex bend lies inside the ground. Ground the second probe misses stays Unreachable, as out of reach.
+    // A down ray under InPoint. When its first, leaned attempt meets a face, one straight ray is cast under the same point,
+    // and level ground it meets within the force-step reach of the hip is the candidate instead: the lean reaches out past the
+    // point and can meet the face of a pillar or a riser beside the floor or the tread under it. Over a gap the straight ray
+    // finds nothing in reach and the face stands. With ClampTowardHip, ground farther than the target reach from the hip is
+    // clamped toward the hip like the query point and probed once more there, straight down: the solver's own clamp keeps a
+    // target's support-frame height, which across a convex bend lies inside the ground, and a second probe leaning out like
+    // the first could clip the same edge again. Ground the second probe misses stays Unreachable, as out of reach.
     auto
         DoProbe_Down(
             const FFootholdQuery& InQuery,
@@ -340,16 +349,28 @@ namespace ck_procedural_gait
         -> FFootholdCandidate
     {
         const auto Up = InQuery.Basis.GetAxisZ();
-        const auto ProbeAt = [&](const FVector& InProbePoint) -> TOptional<FCk_Jolt_HitResult>
+        const auto ProbeAt = [&](const FVector& InProbePoint, const FCk_ProceduralGait_Probe& InProbe) -> TOptional<FCk_Jolt_HitResult>
         {
             const auto Radial = FVector::VectorPlaneProject(InProbePoint - InQuery.BodyLocation, Up).GetSafeNormal();
-            return Get_GroundHit(InQuery.World, InProbePoint, Up, Radial, *InQuery.Probe, InAttempts, InOutRayCount, InDebugProbe);
+            return Get_GroundHit(InQuery.World, InProbePoint, Up, Radial, InProbe, InAttempts, InOutRayCount, InDebugProbe);
         };
 
         auto Candidate = FFootholdCandidate{InPoint, Up, InSource, ck::EProceduralFootholdVerdict::Miss, ck::EProceduralFootholdCast::Down};
-        auto Hit = ProbeAt(InPoint);
+        auto Hit = ProbeAt(InPoint, *InQuery.Probe);
         if (NOT Hit.IsSet())
         { return Candidate; }
+
+        if (InQuery.Probe->Get_OutwardLean() > 0.0f && ck::FProceduralGaitSolver::Get_IsFaceNormal(Hit->Get_Normal(), Up))
+        {
+            const auto StraightHit = UCk_Utils_JoltQuery_UE::Get_RayCast(InQuery.World, InPoint + Up * InQuery.Probe->Get_Up(),
+                InPoint - Up * InQuery.Probe->Get_Down(), InQuery.Probe->Get_QueryFilter());
+            ++InOutRayCount;
+            const auto LevelInReach = Get_TrustedHit(StraightHit, -Up)
+                && NOT ck::FProceduralGaitSolver::Get_IsFaceNormal(StraightHit.Get_Normal(), Up)
+                && FVector::Dist(StraightHit.Get_Position(), InQuery.Hip) <= InQuery.Step->Get_ForceStepReachFraction() * InQuery.Reach;
+            if (LevelInReach)
+            { Hit = StraightHit; }
+        }
 
         Candidate.Position = Hit->Get_Position();
         Candidate.Normal = Hit->Get_Normal().GetSafeNormal();
@@ -358,8 +379,10 @@ namespace ck_procedural_gait
         if (InReprobe == EFootholdReprobe::ClampTowardHip && FVector::Dist(Candidate.Position, InQuery.Hip) > TargetLimit)
         {
             const auto InverseBasis = InQuery.Basis.Inverse();
+            auto StraightDown = *InQuery.Probe;
+            StraightDown.Set_OutwardLean(0.0f);
             const auto Reprobed = ProbeAt(InQuery.Basis.RotateVector(ck::FProceduralGaitSolver::ClampToReach(
-                InverseBasis.RotateVector(InQuery.Hip), InverseBasis.RotateVector(Candidate.Position), TargetLimit)));
+                InverseBasis.RotateVector(InQuery.Hip), InverseBasis.RotateVector(Candidate.Position), TargetLimit)), StraightDown);
             if (NOT Reprobed.IsSet())
             {
                 Candidate.Verdict = ck::EProceduralFootholdVerdict::Unreachable;
@@ -459,14 +482,21 @@ namespace ck_procedural_gait
     }
 
     // The held foothold is re-validated at its own point and the ideal target probed as the gait always probed it. A
-    // usable ideal is the target, unless a usable hold lies within the keep radius of it: then the hold stays, so the
-    // foot does not hop between two spots that agree. An unusable ideal leaves a usable hold as the target while the
-    // two lie within the leg's force-step reach of each other, because an ideal hanging beside a beam or over a gap
-    // would otherwise drop the hold its own search found; farther apart, the body has walked away from the hold (up a
-    // log, over a crest) and a leg kept on it re-plants behind its rest point, so the hold is dropped. Only when
-    // neither is usable, the budget has a search left and the leg is not backing off a search that found nothing, does
-    // the search run; the least-cost usable candidate of its own becomes the held foothold. Every ray increments
-    // InOutRayCount; the debug leg, when given, receives every candidate.
+    // swinging leg keeps a usable hold. Otherwise a usable hold within the keep radius of the ideal target stays the
+    // target, whatever the ideal says, so the foot does not hop between two spots that agree; beyond it a usable ideal is
+    // the target and clears the hold. An unusable ideal, or one on a face (its normal farther than
+    // ProceduralGaitFaceAngleDegrees from the support up), runs the search when the budget has one left and the leg is not
+    // backing off a search that found nothing. A usable hold within the leg's force-step reach of the ideal serves while it
+    // lies ahead of the hip along the travel, or the body is at rest: an ideal hanging beside a beam or over a gap would
+    // otherwise drop the hold its own search found, and a pick beside a moving ideal would be searched again every frame.
+    // A hold beyond the keep radius and behind the hip along the travel, one the leg has walked on past, competes in the
+    // search as one more candidate, at its own distance from the ideal: a spot beside the ideal beats it, and a hold near
+    // the ideal keeps winning. Farther than the force-step reach, the body has walked away from the hold (up a log, over a
+    // crest) and a leg kept on it re-plants behind its rest point, so the hold is cleared. A face ideal competes too, with
+    // the costs measured from it: a top within half the reach beats a vertical face. The least-cost candidate is the target
+    // and, when the search found it, the new hold; when the search finds nothing better, or the leg is past its budget or
+    // backing off, the hold stays the target, so the planted foot keeps standing on it, else the face ideal. Every ray
+    // increments InOutRayCount; the debug leg, when given, receives every candidate.
     auto
         Get_Foothold(
             const FFootholdQuery& InQuery,
@@ -508,23 +538,39 @@ namespace ck_procedural_gait
         DoRecord_Candidate(Ideal, Candidates, InOutDebugLeg);
         const auto IdealIndex = Candidates.Num() - 1;
 
-        if (Ideal.Verdict == ck::EProceduralFootholdVerdict::Usable)
+        // A swinging leg keeps the hold it swings to while the hold stays usable: switching to the ideal in flight would move
+        // a foot already on its way, and at the freeze the swing would take the new target for the ground it validated.
+        if (HoldIsUsable && NOT InQuery.Planted)
+        { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
+
+        const auto KeepRadius = FootholdTuning.Get_KeepRadius() > 0.0f
+            ? FootholdTuning.Get_KeepRadius()
+            : DerivedKeepRadiusInStepThresholds * InQuery.Step->Get_Threshold();
+        const auto HoldToIdeal = HoldIsUsable ? FVector::Dist(InOutState.Get_Position(), InQuery.Ideal) : 0.0;
+        const auto HoldAgrees = HoldIsUsable && HoldToIdeal <= KeepRadius;
+
+        const auto IdealIsUsable = Ideal.Verdict == ck::EProceduralFootholdVerdict::Usable;
+        const auto IdealOnAFace = IdealIsUsable && ck::FProceduralGaitSolver::Get_IsFaceNormal(Ideal.Normal, InQuery.Basis.GetAxisZ());
+        if (IdealIsUsable && NOT IdealOnAFace)
         {
-            const auto KeepRadius = FootholdTuning.Get_KeepRadius() > 0.0f
-                ? FootholdTuning.Get_KeepRadius()
-                : DerivedKeepRadiusInStepThresholds * InQuery.Step->Get_Threshold();
-            if (HoldIsUsable && FVector::Dist(InOutState.Get_Position(), InQuery.Ideal) <= KeepRadius)
+            if (HoldAgrees)
             { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
 
             InOutState = ck::FProceduralFootholdState{};
             return DoFinish(Ideal, IdealIndex, Ideal.Verdict, InOutDebugLeg);
         }
 
-        const auto TrailLimit = InQuery.Step->Get_ForceStepReachFraction() * InQuery.Reach;
-        if (HoldIsUsable && FVector::Dist(InOutState.Get_Position(), InQuery.Ideal) <= TrailLimit)
+        if (HoldAgrees)
         { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
 
-        if (HoldIsUsable)
+        const auto TrailLimit = InQuery.Step->Get_ForceStepReachFraction() * InQuery.Reach;
+        const auto HoldWithinReach = HoldIsUsable && HoldToIdeal <= TrailLimit;
+        const auto HoldCompetes = HoldWithinReach
+            && FVector::DotProduct(InOutState.Get_Position() - InQuery.Hip, InQuery.Travel.GetSafeNormal()) < 0.0;
+        if (HoldWithinReach && NOT HoldCompetes)
+        { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
+
+        if (HoldIsUsable && NOT HoldWithinReach)
         { InOutState = ck::FProceduralFootholdState{}; }
 
         const auto Up = InQuery.Basis.GetAxisZ();
@@ -532,7 +578,11 @@ namespace ck_procedural_gait
         const auto& SearchedSolve = InOutState.Get_SearchedSolve();
         const auto BackingOff = SearchedSolve.IsSet() && InOutBudget.Solve - SearchedSolve.GetValue() <= SearchBackoffSolves;
         if (BackingOff || InOutBudget.RemainingLegs <= 0)
-        { return NothingUsable; }
+        {
+            if (HoldCompetes)
+            { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
+            return IdealOnAFace ? DoFinish(Ideal, IdealIndex, Ideal.Verdict, InOutDebugLeg) : NothingUsable;
+        }
 
         --InOutBudget.RemainingLegs;
         const auto SearchRadius = FootholdTuning.Get_SearchRadius() > 0.0f
@@ -577,12 +627,13 @@ namespace ck_procedural_gait
                 nullptr), Candidates, InOutDebugLeg);
         }
 
-        // The search picks among its own candidates only: a usable hold that reaches it is one the force-step bound just
-        // dropped, and picking it again would hold it forever.
-        const auto FirstSearchIndex = IdealIndex + 1;
-        const auto SearchCandidates = TArrayView<const FFootholdCandidate>{Candidates}.RightChop(FirstSearchIndex);
+        // A hold the force-step bound dropped is not among the picks, and picking it again would hold it forever. A hold
+        // behind the hip and beyond the keep radius competes first, so it wins a tie, then a face ideal, and the costs are
+        // measured from the ideal, so a face ideal stands at distance 0 and the hold at its own distance from it.
+        const auto FirstPickIndex = HoldCompetes ? HeldIndex : (IdealOnAFace ? IdealIndex : IdealIndex + 1);
+        const auto PickCandidates = TArrayView<const FFootholdCandidate>{Candidates}.RightChop(FirstPickIndex);
         const auto InverseBasis = InQuery.Basis.Inverse();
-        const auto SupportCandidates = ck::algo::Transform<TArray<ck::FProceduralFootholdCandidate, TInlineAllocator<16>>>(SearchCandidates,
+        const auto SupportCandidates = ck::algo::Transform<TArray<ck::FProceduralFootholdCandidate, TInlineAllocator<16>>>(PickCandidates,
         [&](const FFootholdCandidate& InCandidate)
         {
             return ck::FProceduralFootholdCandidate{InverseBasis.RotateVector(InCandidate.Position),
@@ -592,16 +643,31 @@ namespace ck_procedural_gait
             .Set_SlopeWeight(FootholdTuning.Get_SlopeWeight())
             .Set_ContinuityWeight(FootholdTuning.Get_ContinuityWeight())
             .Set_MaxAngleDegrees(FootholdTuning.Get_MaxAngle());
-        const auto SearchPick = ck::SelectProceduralFoothold(SupportCandidates, InverseBasis.RotateVector(InQuery.Ideal),
+        const auto CostOrigin = IdealOnAFace ? Ideal.Position : InQuery.Ideal;
+        const auto SearchPick = ck::SelectProceduralFoothold(SupportCandidates, InverseBasis.RotateVector(CostOrigin),
             InverseBasis.RotateVector(InQuery.Plant), InQuery.Planted, InQuery.Reach, Settings);
 
         if (SearchPick == INDEX_NONE)
         {
             InOutState.Set_SearchedSolve(InOutBudget.Solve);
-            return NothingUsable;
+            return HoldCompetes ? DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg) : NothingUsable;
         }
 
-        const auto Chosen = FirstSearchIndex + SearchPick;
+        const auto Chosen = FirstPickIndex + SearchPick;
+        // The hold stays the target; a search that found nothing better backs off like one that found nothing.
+        if (Chosen == HeldIndex)
+        {
+            InOutState.Set_SearchedSolve(InOutBudget.Solve);
+            return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg);
+        }
+
+        // The face ideal stays the target; a search that found nothing better backs off like one that found nothing.
+        if (Chosen == IdealIndex)
+        {
+            InOutState = ck::FProceduralFootholdState{}.Set_SearchedSolve(InOutBudget.Solve);
+            return DoFinish(Ideal, IdealIndex, Ideal.Verdict, InOutDebugLeg);
+        }
+
         const auto& Pick = Candidates[Chosen];
         InOutState = ck::FProceduralFootholdState{}
             .Set_Position(Pick.Position)
@@ -621,29 +687,34 @@ namespace ck_procedural_gait
         return Get_Occluder(InQuery, InQuery.Plant, InOutRayCount).IsSet();
     }
 
+    struct FLandingGround
+    {
+        ck::EProceduralGaitLandingGround Report = ck::EProceduralGaitLandingGround::Unknown;
+        FVector Position = FVector::ZeroVector;
+    };
+
     // The ground under the point a swing will land on, as of the last solve. The stroke overshoot and the freeze push can
-    // carry a target probed on a lower tread past the next riser; the swing lifts onto this ground when it is reachable.
-    // A target on a face has no tread to lift onto, so its swing is not probed. The debug leg records the point and the ray.
+    // carry a target probed on a lower tread past the next riser, where the swing lifts onto the ground found, or past a
+    // top's edge into the air, where nothing is found and the swing lands on the target the gait validated instead. A
+    // swing whose target was on a face when it accepted it has no tread to lift onto, so it is not probed. The debug leg
+    // records the point and the ray.
     auto
-        Get_LandingGroundHit(
+        Get_LandingGround(
             UWorld* InWorld,
             const FQuat& InBasis,
             const FVector& InHip,
             float InReach,
             const ck::FProceduralGaitLegSwing& InSwing,
-            const FVector& InTargetNormal,
             const FCk_ProceduralGait_Probe& InProbe,
             const FCk_ProceduralGait_Step& InStep,
             int32& InOutRayCount,
             FCk_ProceduralAnimation_DebugLeg& InOutDebugLeg)
-        -> TOptional<FCk_Jolt_HitResult>
+        -> FLandingGround
     {
-        if (NOT InSwing.Get_Active() || InSwing.Get_CatchStep())
+        if (NOT InSwing.Get_Active() || InSwing.Get_CatchStep() || InSwing.Get_TargetOnAFace())
         { return {}; }
 
         const auto Up = InBasis.GetAxisZ();
-        if (FVector::DotProduct(InTargetNormal.GetSafeNormal(), Up) < FMath::Cos(FMath::DegreesToRadians(LandingLiftMaxDegrees)))
-        { return {}; }
 
         const auto Landing = InBasis.RotateVector(InSwing.Get_LandingPoint());
         const auto ProbeStart = Landing + Up * InProbe.Get_Up();
@@ -662,9 +733,9 @@ namespace ck_procedural_gait
             .Set_HitNormal(Hit.Get_Normal());
 
         if (NOT Get_TrustedHit(Hit, -Up) || FVector::Dist(Hit.Get_Position(), InHip) > InStep.Get_ForceStepReachFraction() * InReach)
-        { return {}; }
+        { return FLandingGround{ck::EProceduralGaitLandingGround::None}; }
 
-        return Hit;
+        return FLandingGround{ck::EProceduralGaitLandingGround::Found, Hit.Get_Position()};
     }
 
     auto
@@ -724,6 +795,140 @@ namespace ck_procedural_gait
         -> int32
     {
         return FMath::Max(MinSearchLegs, InEnabledLegs / EnabledLegsPerSearch);
+    }
+
+    struct FFeetPlaneFit
+    {
+        ck::EProceduralFeetPlaneResult Result = ck::EProceduralFeetPlaneResult::Underdetermined;
+        ck::FProceduralSurfaceFeetSupport Support;
+    };
+
+    // How much a point of ground supports the body from below: nothing unless trusted, and in proportion to how level it
+    // lies, so a foot gripping a face (it holds the body sideways) weighs nothing and one on a 45-degree slope 0.71.
+    auto
+        Get_GroundWeight(
+            const FVector& InNormal,
+            bool InTrusted)
+        -> float
+    {
+        if (NOT InTrusted)
+        { return 0.0f; }
+
+        return static_cast<float>(FMath::Max(0.0, InNormal.GetSafeNormal().Z));
+    }
+
+    // One point of ground under the feet, in the solver's support frame: Weight is how much it holds the body up (its trust
+    // and how level it lies) times the swing's crossfade. The footprint spans every trusted point whatever its weight, so the
+    // plant a swing left and the ground it will land on both bound it whatever the swing alpha, and a leg going to a face
+    // foothold ahead keeps the body inside it though the face holds nothing up.
+    struct FFeetPlaneGround
+    {
+        FVector Position = FVector::ZeroVector;
+        float Weight = 0.0f;
+        bool Trusted = false;
+    };
+
+    // The ground the enabled legs stand on or are about to, as the solve left it: a planted leg's plant; a swinging leg's
+    // plant it left, weighing 1 - alpha, and the ground it will land on, weighing alpha, the landing point at the height the
+    // probe under it found, with the trust and normal the swing recorded for its target. A foot in flight is never ground.
+    // Nothing supports an airborne body.
+    auto
+        Get_FeetPlaneGround(
+            const ck::FProceduralGaitSolver& InSolver,
+            TArrayView<const ck::FProceduralGaitLegInput> InInputs)
+        -> TArray<FFeetPlaneGround, TInlineAllocator<32>>
+    {
+        auto Ground = TArray<FFeetPlaneGround, TInlineAllocator<32>>{};
+        if (InSolver.IsAirborne())
+        { return Ground; }
+
+        for (auto Index = 0; Index < InInputs.Num(); ++Index)
+        {
+            const auto& Input = InInputs[Index];
+            if (NOT Input.Get_Enabled())
+            { continue; }
+
+            const auto& State = InSolver.GetLegState(Index);
+            const auto& Plant = State.Get_Plant();
+            const auto& Swing = State.Get_Swing();
+            const auto PlantSupport = Get_GroundWeight(Plant.Get_Normal(), Plant.Get_Trusted());
+            if (NOT Swing.Get_Active())
+            {
+                Ground.Add(FFeetPlaneGround{Plant.Get_Position(), PlantSupport, Plant.Get_Trusted()});
+                continue;
+            }
+
+            const auto Alpha = FMath::Clamp(Swing.Get_Phase(), 0.0f, 1.0f);
+            auto Landing = Swing.Get_LandingPoint();
+            if (Input.Get_LandingGround() == ck::EProceduralGaitLandingGround::Found)
+            { Landing.Z = Input.Get_LandingGroundZ(); }
+            const auto LandingSupport = Get_GroundWeight(Swing.Get_TargetNormal(), Swing.Get_TargetTrusted());
+            Ground.Add(FFeetPlaneGround{Swing.Get_StartPosition(), (1.0f - Alpha) * PlantSupport, Plant.Get_Trusted()});
+            Ground.Add(FFeetPlaneGround{Landing, Alpha * LandingSupport, Swing.Get_TargetTrusted()});
+        }
+        return Ground;
+    }
+
+    // The plane through the ground points (support frame), fitted about the body and published in world space with that frame
+    // and the footprint of the trusted points.
+    auto
+        Get_FeetPlane(
+            TArrayView<const FFeetPlaneGround> InGround,
+            const FTransform& InBody)
+        -> FFeetPlaneFit
+    {
+        const auto Basis = InBody.GetRotation();
+        const auto BodySupport = Basis.UnrotateVector(InBody.GetLocation());
+        auto Feet = TArray<ck::FProceduralFeetPlaneFoot, TInlineAllocator<32>>{};
+        auto FootprintMin = FVector2D{TNumericLimits<double>::Max()};
+        auto FootprintMax = FVector2D{TNumericLimits<double>::Lowest()};
+        for (const auto& Point : InGround)
+        {
+            const auto Local = Point.Position - BodySupport;
+            Feet.Emplace(Local, Point.Weight);
+            if (NOT Point.Trusted)
+            { continue; }
+
+            FootprintMin = FVector2D{FMath::Min(FootprintMin.X, Local.X), FMath::Min(FootprintMin.Y, Local.Y)};
+            FootprintMax = FVector2D{FMath::Max(FootprintMax.X, Local.X), FMath::Max(FootprintMax.Y, Local.Y)};
+        }
+
+        auto Plane = ck::FProceduralFeetPlane{};
+        const auto Result = ck::FitProceduralFeetPlane(Feet, ck::ProceduralFeetPlaneMaxAngleDegrees, Plane);
+        if (Result != ck::EProceduralFeetPlaneResult::Fitted)
+        { return FFeetPlaneFit{Result}; }
+
+        return FFeetPlaneFit{Result, ck::FProceduralSurfaceFeetSupport{}
+            .Set_Point(InBody.GetLocation() + Basis.RotateVector(Plane.Get_Point()))
+            .Set_Normal(Basis.RotateVector(Plane.Get_Normal()))
+            .Set_Basis(Basis)
+            .Set_Origin(InBody.GetLocation())
+            .Set_FootprintMin(FootprintMin)
+            .Set_FootprintMax(FootprintMax)};
+    }
+
+    // The ground under a touchdown (ck::ResolveProceduralTouchdown) in world space, confirmed with the ray a face hold is
+    // re-validated with: a top along its up, a face along its own normal.
+    auto
+        Get_Touchdown(
+            UWorld* InWorld,
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            const FCk_ProceduralGait_Probe& InProbe)
+        -> ck::FProceduralTouchdown
+    {
+        const auto RayCast = [&](const FVector& InStart, const FVector& InEnd) -> ck::FProceduralSurfaceHit
+        {
+            const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(InWorld, InStart, InEnd, InProbe.Get_QueryFilter());
+            return ck::FProceduralSurfaceHit{}
+                .Set_Hit(Hit.Get_HasHit())
+                .Set_Position(Hit.Get_Position())
+                .Set_Normal(Hit.Get_Normal())
+                .Set_Fraction(Hit.Get_Fraction());
+        };
+        return ck::ResolveProceduralTouchdown(InPlant, InValidatedTarget, InTargetNormal, InUp, FaceHoldProbeHalfSpan, RayCast);
     }
 
     auto
@@ -795,13 +1000,17 @@ namespace ck
         const auto MaxHipLateral = ck_procedural_gait::Get_MaxHipLateral(InGaitComp._Legs,
             [](const FCk_Handle_ProceduralLeg& InLeg) { return ck::IsValid(InLeg); });
         auto InitialFeet = TArray<FVector, TInlineAllocator<8>>{};
+        auto InitialTrust = TArray<bool, TInlineAllocator<8>>{};
         InitialFeet.Reserve(InGaitComp._Legs.Num());
+        InitialTrust.Reserve(InGaitComp._Legs.Num());
         for (auto Index = 0; Index < InGaitComp._Legs.Num(); ++Index)
         {
             auto& Leg = InGaitComp._Legs[Index];
             if (ck::Is_NOT_Valid(Leg))
             {
+                constexpr auto Untrusted = false;
                 InitialFeet.Add(InverseBasis.RotateVector(Body.GetLocation()));
+                InitialTrust.Add(Untrusted);
                 continue;
             }
 
@@ -843,10 +1052,11 @@ namespace ck
             LegComp._IdealVerdict = ck_procedural_gait::Get_LegFootholdVerdict(Foothold.IdealVerdict);
 
             InitialFeet.Add(InverseBasis.RotateVector(Position));
+            InitialTrust.Add(Trusted);
         }
         InDebugComp._RaysLastSolve = RayCount;
 
-        const auto SolverReset = InGaitComp._Solver.Reset(InitialFeet);
+        const auto SolverReset = InGaitComp._Solver.Reset(InitialFeet, InitialTrust);
         CK_ENSURE_IF_NOT(SolverReset,
             TEXT("Procedural gait [{}] solver rejected the initial foot positions; feature is failed."), InHandle)
         {
@@ -921,6 +1131,7 @@ namespace ck
             const FFragment_ProceduralGait_Tunables& InTunables,
             FFragment_ProceduralGait& InGaitComp,
             FFragment_ProceduralGait_Debug& InDebugComp,
+            FFragment_ProceduralGait_FeetPlane& InFeetPlaneComp,
             const FFragment_Transform& InTransform)
         -> void
     {
@@ -987,6 +1198,7 @@ namespace ck
             DebugLeg.Set_Enabled(Enabled)
                 .Set_LandingPointWorld(FVector::ZeroVector)
                 .Set_LandingProbe(FCk_ProceduralAnimation_DebugProbe{})
+                .Set_LandingGround(EProceduralGaitLandingGround::Unknown)
                 .Set_ChosenFoothold(INDEX_NONE)
                 .Set_FootholdSource(EProceduralFootholdSource::None)
                 .Set_PlantOccluded(false);
@@ -1080,6 +1292,7 @@ namespace ck
                 .Ideal = Ideal,
                 .Plant = LegComp._Foot.Get_Position(),
                 .Planted = Planted,
+                .Travel = FVector::VectorPlaneProject(Velocity, Up),
                 .Reach = Reach,
                 .RestDrop = ck_procedural_gait::Get_RestDrop(Placement),
                 .Probe = &Probe,
@@ -1121,7 +1334,8 @@ namespace ck
                 .Set_Hip(HipSupport)
                 .Set_Reach(Reach)
                 .Set_PlantOccluded(PlantOccluded)
-                .Set_TargetIsFoothold(TargetIsFoothold);
+                .Set_TargetIsFoothold(TargetIsFoothold)
+                .Set_TargetTrusted(Trusted);
 
             if (LegComp._Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Swinging)
             {
@@ -1134,13 +1348,13 @@ namespace ck
                 { Input.Set_ClearanceGroundZ(InverseBasis.RotateVector(ClearanceHit.Get_Position()).Z); }
             }
 
-            const auto LandingGround = ck_procedural_gait::Get_LandingGroundHit(World, Basis, Hip, Reach,
-                InGaitComp._Solver.GetLegState(Index).Get_Swing(), Normal, Probe, Step, RayCount, DebugLeg);
-            if (LandingGround.IsSet())
-            { Input.Set_LandingGroundZ(InverseBasis.RotateVector(LandingGround->Get_Position()).Z); }
+            const auto LandingGround = ck_procedural_gait::Get_LandingGround(World, Basis, Hip, Reach,
+                InGaitComp._Solver.GetLegState(Index).Get_Swing(), Probe, Step, RayCount, DebugLeg);
+            Input.Set_LandingGround(LandingGround.Report)
+                .Set_LandingGroundZ(static_cast<float>(InverseBasis.RotateVector(LandingGround.Position).Z));
+            DebugLeg.Set_LandingGround(LandingGround.Report);
 
-            LegComp._Foot.Set_Contact(Trusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed)
-                .Set_Foothold(ck_procedural_gait::Get_LegFoothold(Foothold.Source));
+            LegComp._Foot.Set_Foothold(ck_procedural_gait::Get_LegFoothold(Foothold.Source));
             LegComp._IdealVerdict = ck_procedural_gait::Get_LegFootholdVerdict(Foothold.IdealVerdict);
             DebugLeg.Set_PlantOccluded(PlantOccluded);
             DebugLeg.Get_Targeting().Set_IdealTarget(Position)
@@ -1178,6 +1392,7 @@ namespace ck
             return;
         }
 
+        auto TouchdownRays = int32{0};
         for (auto Index = 0; Index < LegCount; ++Index)
         {
             if (NOT Inputs[Index].Get_Enabled())
@@ -1188,15 +1403,36 @@ namespace ck
             auto& LegComp = Leg.Get<FFragment_ProceduralLeg>();
             const auto PreviousPhase = LegComp._Foot.Get_Phase();
             const auto PreviousPosition = LegComp._Foot.Get_Position();
+
+            // The ground under a touchdown decides the plant's trust and normal; the landing report describes the landing
+            // point of the solve before.
+            if (Output.Get_Planted() && PreviousPhase == ECk_ProceduralLeg_FootPhase::Swinging)
+            {
+                const auto& Landed = InGaitComp._Solver.GetLegState(Index);
+                const auto Touchdown = ck_procedural_gait::Get_Touchdown(World, Basis.RotateVector(Landed.Get_Plant().Get_Position()),
+                    Basis.RotateVector(Landed.Get_Swing().Get_ValidatedTarget()), Basis.RotateVector(Landed.Get_Swing().Get_TargetNormal()),
+                    Up, Probe);
+                TouchdownRays += Touchdown.Get_Rays();
+                InGaitComp._Solver.SetPlantedPose(Index, InverseBasis.RotateVector(Touchdown.Get_Position()),
+                    InverseBasis.RotateVector(Touchdown.Get_Normal()).GetSafeNormal(), Touchdown.Get_Trusted());
+            }
+
+            // A planted foot reports the ground it touched down on; a swinging one, the target this solve found.
+            const auto& Plant = InGaitComp._Solver.GetLegState(Index).Get_Plant();
+            const auto ContactTrusted = Output.Get_Planted() ? Plant.Get_Trusted() : Inputs[Index].Get_TargetTrusted();
             LegComp._Foot
-                .Set_Position(Basis.RotateVector(Output.Get_Position()))
-                .Set_Normal(Basis.RotateVector(Output.Get_Normal()))
-                .Set_Rotation((Basis * Output.Get_Rotation()).GetNormalized())
+                .Set_Position(Basis.RotateVector(Output.Get_Planted() ? Plant.Get_Position() : Output.Get_Position()))
+                .Set_Normal(Basis.RotateVector(Output.Get_Planted() ? Plant.Get_Normal() : Output.Get_Normal()))
+                .Set_Rotation((Basis * (Output.Get_Planted() ? Plant.Get_Rotation() : Output.Get_Rotation())).GetNormalized())
                 .Set_SwingAlpha(Output.Get_SwingAlpha())
-                .Set_Phase(Output.Get_Planted() ? ECk_ProceduralLeg_FootPhase::Planted : ECk_ProceduralLeg_FootPhase::Swinging);
+                .Set_Phase(Output.Get_Planted() ? ECk_ProceduralLeg_FootPhase::Planted : ECk_ProceduralLeg_FootPhase::Swinging)
+                .Set_Contact(ContactTrusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed);
 
             ck_procedural_gait::DoPublish_FootPhaseChange(Leg, LegComp, PreviousPhase, PreviousPosition, Dt);
         }
+        InDebugComp._RaysLastSolve += TouchdownRays;
+
+        DoUpdate_FeetPlane(InHandle, InDeltaT, InTunables, InGaitComp, Inputs, Body, InFeetPlaneComp);
 
         if (InDeltaT > FCk_Time{})
         {
@@ -1235,7 +1471,10 @@ namespace ck
                 .Set_ReachCadenceFloor(InDebugComp._ReachCadenceFloor)
                 .Set_ReachSkippedLegs(InDebugComp._ReachSkippedLegs)
                 .Set_MissedLandingLifts(InGaitComp._Solver.Get_MissedLandingLifts())
-                .Set_RaysLastSolve(InDebugComp._RaysLastSolve);
+                .Set_RaysLastSolve(InDebugComp._RaysLastSolve)
+                .Set_FeetPlane(InFeetPlaneComp.Get_State())
+                .Set_FeetPlanePoint(InFeetPlaneComp.Get_Support().Get_Point())
+                .Set_FeetPlaneNormal(InFeetPlaneComp.Get_Support().Get_Normal());
             Snapshot.Set_Legs(InDebugComp._ScratchLegs);
 
             if (InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>())
@@ -1249,6 +1488,7 @@ namespace ck
                     .Set_TrustedContact(Support.Get_ContactTrusted())
                     .Set_MissingContact(Support.Get_MissingContact())
                     .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)))
+                    .Set_HeightSource(UCk_Utils_SurfaceMotion_UE::Get_HeightSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)))
                     .Set_CandidateNormal(Support.Get_CandidateNormal())
                     .Set_CandidateSeen(Support.Get_CandidateSeen());
                 Snapshot.Get_Gait().Set_SupportNormal(Support.Get_SupportNormal());
@@ -1256,6 +1496,49 @@ namespace ck
         }
 
         InGaitComp._Basis = Basis;
+    }
+
+    auto
+        FProcessor_ProceduralGait_Update::
+        DoUpdate_FeetPlane(
+            HandleType InHandle,
+            TimeType InDeltaT,
+            const FFragment_ProceduralGait_Tunables& InTunables,
+            const FFragment_ProceduralGait& InGaitComp,
+            TArrayView<const FProceduralGaitLegInput> InInputs,
+            const FTransform& InBody,
+            FFragment_ProceduralGait_FeetPlane& InOutFeetPlane)
+        -> void
+    {
+        const auto Ground = ck_procedural_gait::Get_FeetPlaneGround(InGaitComp._Solver, InInputs);
+        const auto Fit = ck_procedural_gait::Get_FeetPlane(Ground, InBody);
+        const auto GroundFinite = Fit.Result != EProceduralFeetPlaneResult::Malformed;
+        CK_ENSURE_IF_NOT(GroundFinite, TEXT("Procedural gait [{}] solved a non-finite plant or landing point; it publishes no feet plane."), InHandle)
+        {
+            InOutFeetPlane = FFragment_ProceduralGait_FeetPlane{};
+            return;
+        }
+
+        if (Fit.Result == EProceduralFeetPlaneResult::Fitted)
+        {
+            InOutFeetPlane._Support = Fit.Support;
+            InOutFeetPlane._State = EProceduralGaitFeetPlane::Fitted;
+            InOutFeetPlane._SinceFit = FCk_Time{};
+            return;
+        }
+
+        const auto SinceFit = InOutFeetPlane._SinceFit + InDeltaT;
+        const auto Holds = Fit.Result == EProceduralFeetPlaneResult::Underdetermined
+            && InOutFeetPlane._State != EProceduralGaitFeetPlane::None
+            && SinceFit <= InTunables.Get_Timing().Get_StepDuration() * ck_procedural_gait::FeetPlaneHoldStepDurations;
+        if (NOT Holds)
+        {
+            InOutFeetPlane = FFragment_ProceduralGait_FeetPlane{};
+            return;
+        }
+
+        InOutFeetPlane._State = EProceduralGaitFeetPlane::Held;
+        InOutFeetPlane._SinceFit = SinceFit;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

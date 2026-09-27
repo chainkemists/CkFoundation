@@ -2,6 +2,23 @@
 
 // --------------------------------------------------------------------------------------------------------------------
 
+namespace ck_procedural_foot_probe
+{
+    auto
+        Get_IsTrustedHit(
+            const ck::FProceduralSurfaceHit& InHit,
+            const FVector& InRayDirection)
+        -> bool
+    {
+        return InHit.Get_Hit() && InHit.Get_Fraction() > 0.0f && InHit.Get_Fraction() <= 1.0f
+            && NOT InHit.Get_Position().ContainsNaN() && NOT InHit.Get_Normal().ContainsNaN()
+            && NOT InHit.Get_Normal().IsNearlyZero()
+            && FVector::DotProduct(InHit.Get_Normal(), InRayDirection) < -KINDA_SMALL_NUMBER;
+    }
+}
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
     auto
@@ -56,6 +73,49 @@ namespace ck
             .Set_UpDistance(InUpDistance * UpScale[Attempt])
             .Set_DownDistance(InDownDistance * DownScale[Attempt])
             .Set_OutwardLean(Attempt == 0 ? InOutwardLean : 0.0f);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast)
+        -> FProceduralTouchdown
+    {
+        const auto Normal = InTargetNormal.GetSafeNormal();
+        auto Rays = int32{0};
+        const auto Confirm = [&](const FVector& InPoint) -> TOptional<FProceduralSurfaceHit>
+        {
+            const auto Hit = InRayCast(InPoint + Normal * InHalfSpan, InPoint - Normal * InHalfSpan);
+            ++Rays;
+            if (NOT ck_procedural_foot_probe::Get_IsTrustedHit(Hit, -Normal))
+            { return {}; }
+            return Hit;
+        };
+
+        const auto AtPlant = Confirm(InPlant);
+        if (AtPlant.IsSet())
+        {
+            return FProceduralTouchdown{}.Set_Position(AtPlant->Get_Position()).Set_Normal(AtPlant->Get_Normal().GetSafeNormal())
+                .Set_Trusted(true).Set_Rays(Rays);
+        }
+
+        if (NOT InValidatedTarget.Equals(InPlant))
+        {
+            const auto AtValidatedTarget = Confirm(InValidatedTarget);
+            if (AtValidatedTarget.IsSet())
+            {
+                return FProceduralTouchdown{}.Set_Position(AtValidatedTarget->Get_Position())
+                    .Set_Normal(AtValidatedTarget->Get_Normal().GetSafeNormal()).Set_Trusted(true).Set_Rays(Rays);
+            }
+        }
+
+        return FProceduralTouchdown{}.Set_Position(InPlant).Set_Normal(InUp).Set_Trusted(false).Set_Rays(Rays);
     }
 }
 

@@ -64,6 +64,18 @@ namespace ck_procedural_gait_utils
         return FVector::Dist(InPlacement.Get_RestFootLocal(), InPlacement.Get_HipLocal())
             <= static_cast<double>(InStep.Get_TargetReachFraction()) * Get_Reach(InChain);
     }
+
+    auto
+        Get_SupportWeight(
+            const FCk_ProceduralLeg_Foot& InFoot)
+        -> float
+    {
+        if (InFoot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted)
+        { return InFoot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted ? 1.0f : 0.0f; }
+
+        const auto SwingAlpha = FMath::Clamp(InFoot.Get_SwingAlpha(), 0.0f, 1.0f);
+        return FMath::Max(0.0f, 1.0f - 3.0f * SwingAlpha) + FMath::Max(0.0f, 3.0f * SwingAlpha - 2.0f);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -131,6 +143,7 @@ auto
     InBody.Add<ck::FFragment_ProceduralGait_Tunables>(MoveTemp(Tunables));
     InBody.Add<ck::FFragment_ProceduralGait>(MoveTemp(GaitComp));
     InBody.Add<ck::FFragment_ProceduralGait_Debug>(MoveTemp(DebugComp));
+    InBody.Add<ck::FFragment_ProceduralGait_FeetPlane>();
     InBody.Add<ck::FTag_ProceduralGait_NeedsSetup>();
 
     return CastChecked(InBody);
@@ -234,6 +247,27 @@ auto
         { ++EnabledCount; }
     }
     return EnabledCount;
+}
+
+auto
+    UCk_Utils_ProceduralGait_UE::
+    Get_FeetPlane(
+        const FCk_Handle_ProceduralGait& InGait)
+    -> FCk_ProceduralGait_FeetPlane
+{
+    if (Get_Status(InGait) != ECk_ProceduralAnimation_Status::Ready || NOT InGait.Has<ck::FFragment_ProceduralGait_FeetPlane>())
+    { return {}; }
+
+    const auto& FeetPlane = InGait.Get<ck::FFragment_ProceduralGait_FeetPlane>();
+    if (FeetPlane.Get_State() == ck::EProceduralGaitFeetPlane::None)
+    { return {}; }
+
+    return FCk_ProceduralGait_FeetPlane{}
+        .Set_Point(FeetPlane.Get_Support().Get_Point())
+        .Set_Normal(FeetPlane.Get_Support().Get_Normal())
+        .Set_State(FeetPlane.Get_State() == ck::EProceduralGaitFeetPlane::Fitted
+            ? ECk_ProceduralGait_FeetPlane::Fitted
+            : ECk_ProceduralGait_FeetPlane::Held);
 }
 
 // --------------------------------------------------------------------------------------------------------------------
