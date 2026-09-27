@@ -172,6 +172,22 @@ enum class ECk_ProceduralLeg_FootContact : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_FootContact);
 
+// Where a solve's foot target came from: the ideal target, the foothold the leg holds, or a search candidate (the floor
+// or face in front of an occluder, an inward or outward cast, a ring point). None when nothing usable was found.
+UENUM(BlueprintType)
+enum class ECk_ProceduralLeg_Foothold : uint8
+{
+    None,
+    Ideal,
+    Held,
+    Front,
+    Inward,
+    Outward,
+    Ring
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_Foothold);
+
 // --------------------------------------------------------------------------------------------------------------------
 
 USTRUCT(BlueprintType)
@@ -207,6 +223,10 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProceduralLeg_FootContact _Contact = ECk_ProceduralLeg_FootContact::Guessed;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralLeg_Foothold _Foothold = ECk_ProceduralLeg_Foothold::None;
+
 public:
     CK_PROPERTY(_Position);
     CK_PROPERTY(_Normal);
@@ -214,6 +234,7 @@ public:
     CK_PROPERTY(_SwingAlpha);
     CK_PROPERTY(_Phase);
     CK_PROPERTY(_Contact);
+    CK_PROPERTY(_Foothold);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

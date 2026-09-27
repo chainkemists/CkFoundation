@@ -22,7 +22,6 @@ namespace ck
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
     struct FFragment_ProceduralGait_Tunables;
-    struct FProceduralGaitBuiltSettings;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
