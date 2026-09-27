@@ -92,8 +92,9 @@ public:
     Get_Clearance(
         const FCk_Handle_ProceduralRig& InRig);
 
-    // Crossing when the last pose kept a link through a solid, or a joint between hip and foot inside the body slab, because no
-    // fan angle cleared them all. Always Clear for a rig without a clearance policy, which never tests its links.
+    // Crossing when the last pose kept a link through a solid because no fan angle cleared the links and the body slab. When
+    // nothing clears, the authored pole's pose is judged by its rays alone, so a joint of it inside the slab still reads Clear.
+    // Always Clear for a rig without a clearance policy, which never tests its links.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralRig",
               DisplayName="[Ck][ProceduralRig] Get Chain State")

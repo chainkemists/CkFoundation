@@ -74,7 +74,11 @@ namespace ck_procedural_gait_utils
         { return InFoot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted ? 1.0f : 0.0f; }
 
         const auto SwingAlpha = FMath::Clamp(InFoot.Get_SwingAlpha(), 0.0f, 1.0f);
-        return FMath::Max(0.0f, 1.0f - 3.0f * SwingAlpha) + FMath::Max(0.0f, 3.0f * SwingAlpha - 2.0f);
+        const auto FadeOut = FMath::Max(0.0f, 1.0f - 3.0f * SwingAlpha);
+        // A swing toward ground its gait does not trust (a gather into the air) fades in to nothing: its plant will weigh
+        // nothing, and fading it in first would step the fit at touchdown.
+        const auto FadeIn = InFoot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted ? FMath::Max(0.0f, 3.0f * SwingAlpha - 2.0f) : 0.0f;
+        return FadeOut + FadeIn;
     }
 }
 
