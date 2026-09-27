@@ -26,7 +26,8 @@ namespace ck
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Module-internal helpers shared by the gait's own utils, processors and the walker accelerant; not exported.
+// Module-internal helpers shared by the gait's own utils, processors and the walker accelerant; only the support weight is
+// exported, for its test.
 namespace ck_procedural_gait_utils
 {
     // A leg's reach: the sum of its chain's segment lengths.
@@ -46,8 +47,9 @@ namespace ck_procedural_gait_utils
 
     // How much a published foot counts in the body pose's conform fit: a trusted plant fully, an untrusted plant (one that
     // touched down where its gait found no ground it trusts) not at all, and a swinging foot fading out over the first third
-    // of its swing and back in over the last third, so the fit does not step when the planted set changes.
-    auto
+    // of its swing and, when its target is trusted, back in over the last third, so the fit does not step when the planted
+    // set changes.
+    CKPROCEDURALANIMATION_API auto
         Get_SupportWeight(
             const FCk_ProceduralLeg_Foot& InFoot)
         -> float;

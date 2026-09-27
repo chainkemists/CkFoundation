@@ -1,6 +1,7 @@
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Processor.h"
 
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
+#include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -168,8 +169,10 @@ namespace ck
         const auto Step = FCk_Time{Dt / Substeps};
         // The gait publishes its feet plane after this update runs, so the body rides the plane of the previous frame.
         auto FeetSupport = TOptional<FProceduralSurfaceFeetSupport>{};
+        // A gait that has latched a failure no longer writes its plane, so the last one it wrote must not hold the body.
         const auto RidesPlantedFeet = InParams.Get_Contact().Get_HeightSource() == ECk_SurfaceMotion_HeightSource::PlantedFeet
-            && InHandle.Has<FFragment_ProceduralGait_FeetPlane>();
+            && InHandle.Has<FFragment_ProceduralGait_FeetPlane>()
+            && UCk_Utils_ProceduralGait_UE::Get_Status(UCk_Utils_ProceduralGait_UE::Cast(InHandle)) == ECk_ProceduralAnimation_Status::Ready;
         if (RidesPlantedFeet)
         {
             const auto& FeetPlane = InHandle.Get<FFragment_ProceduralGait_FeetPlane>();
