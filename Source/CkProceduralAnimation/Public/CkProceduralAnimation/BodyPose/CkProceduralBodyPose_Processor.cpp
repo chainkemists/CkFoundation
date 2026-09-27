@@ -1,6 +1,7 @@
 #include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Processor.h"
 
 #include "CkProceduralAnimation/Core/CkProceduralBodySupport.h"
+#include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
 #include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
@@ -50,20 +51,6 @@ namespace ck_procedural_body_pose_processor
         { return 0.0f; }
 
         return FMath::Clamp((InMaxLagDegrees - InLagDegrees) / KneeDegrees, 0.0f, 1.0f);
-    }
-
-    // Planted feet count fully; a swinging foot fades out over the first third of its swing and back in over the last third,
-    // so the fitted plane does not step when the planted set changes.
-    auto
-        Get_ConformWeight(
-            const FCk_ProceduralLeg_Foot& InFoot)
-        -> float
-    {
-        if (InFoot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted)
-        { return 1.0f; }
-
-        const auto SwingAlpha = FMath::Clamp(InFoot.Get_SwingAlpha(), 0.0f, 1.0f);
-        return FMath::Max(0.0f, 1.0f - 3.0f * SwingAlpha) + FMath::Max(0.0f, 3.0f * SwingAlpha - 2.0f);
     }
 }
 
@@ -166,7 +153,7 @@ namespace ck
                 const auto& Foot = Leg.Get<FFragment_ProceduralLeg>().Get_Foot();
                 Feet.Emplace(BodyInverse.TransformPosition(Foot.Get_Position()),
                     Leg.Get<FFragment_ProceduralLeg_Params>().Get_Placement().Get_RestFootLocal(),
-                    ck_procedural_body_pose_processor::Get_ConformWeight(Foot));
+                    ck_procedural_gait_utils::Get_SupportWeight(Foot));
             }
 
             const auto ConformSettings = FProceduralBodyConformSettings{}

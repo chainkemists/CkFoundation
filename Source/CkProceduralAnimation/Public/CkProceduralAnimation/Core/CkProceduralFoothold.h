@@ -88,7 +88,8 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     // The leg's held foothold, in world space so a support-frame change cannot move it; re-validated every solve.
-    // _SearchedSolve is the solve whose search last found nothing usable, unset once a search succeeds.
+    // _SearchedSolve is the solve whose search last found nothing better than the target the leg already had, unset once
+    // a search picks a new foothold.
     struct CKPROCEDURALANIMATION_API FProceduralFootholdState
     {
         CK_GENERATED_BODY(FProceduralFootholdState);

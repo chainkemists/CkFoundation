@@ -5,6 +5,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
 #include "CkProceduralAnimation/Core/CkProceduralFoothold.h"
 #include "CkProceduralAnimation/Core/CkProceduralGaitSolver.h"
+#include "CkProceduralAnimation/Core/CkProceduralSurfaceMotion.h"
 #include "CkProceduralAnimation/Debug/CkProceduralAnimation_Debug.h"
 
 #include "CkCore/Macros/CkMacros.h"
@@ -105,6 +106,30 @@ namespace ck
         FProceduralGaitYawRateTracker _YawRateTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The plane through the ground the feet stand on and are about to land on, as of the last solve, with its frame and
+    // footprint; SurfaceMotion reads it, nothing else writes it.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralGait_FeetPlane
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralGait_FeetPlane);
+
+    public:
+        friend class FProcessor_ProceduralGait_Setup;
+        friend class FProcessor_ProceduralGait_Update;
+
+    private:
+        FProceduralSurfaceFeetSupport _Support;
+        EProceduralGaitFeetPlane _State = EProceduralGaitFeetPlane::None;
+        FCk_Time _SinceFit;
+
+    public:
+        CK_PROPERTY_GET(_Support);
+        CK_PROPERTY_GET(_State);
+        CK_PROPERTY_GET(_SinceFit);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

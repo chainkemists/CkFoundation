@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkProceduralAnimation/Core/CkProceduralSurfaceMotion.h"
+
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 
@@ -63,6 +65,42 @@ namespace ck
             float InDownDistance,
             float InOutwardLean)
         -> FProceduralGroundProbeSpan;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // Where a touchdown stands, how it lies and whether ground confirmed it, and how many rays the check cast.
+    struct CKPROCEDURALANIMATION_API FProceduralTouchdown
+    {
+        CK_GENERATED_BODY(FProceduralTouchdown);
+
+    private:
+        FVector _Position = FVector::ZeroVector;
+        FVector _Normal = FVector::UpVector;
+        bool _Trusted = false;
+        int32 _Rays = 0;
+
+    public:
+        CK_PROPERTY(_Position);
+        CK_PROPERTY(_Normal);
+        CK_PROPERTY(_Trusted);
+        CK_PROPERTY(_Rays);
+    };
+
+    // A touchdown is confirmed with one ray through the plant along the normal of the ground the swing aimed at, from
+    // InHalfSpan in front of the plant to InHalfSpan behind it. A trusted hit (on the segment, finite, facing against the ray)
+    // re-plants the foot at the hit, with the hit's normal, so a foot never stands off the surface that confirmed it. On a
+    // miss the same ray is cast once more through InValidatedTarget, when that lies elsewhere, and a hit there re-plants the
+    // foot at that hit. A second miss leaves the plant where it landed, untrusted, with InUp: a ray that met nothing tells
+    // nothing about the surface.
+    CKPROCEDURALANIMATION_API auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast)
+        -> FProceduralTouchdown;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

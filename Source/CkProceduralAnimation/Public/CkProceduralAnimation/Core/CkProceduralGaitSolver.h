@@ -8,6 +8,11 @@
 
 namespace ck
 {
+    // A target whose ground normal lies farther than this from the support up stands on a face: it has no tread to carry a
+    // foot along, so a swing lands on it where it lies (no stroke overshoot, no freeze push), no landing ground is probed
+    // under it, and the gait's foothold search weighs it against the tops in reach instead of taking it outright.
+    constexpr auto ProceduralGaitFaceAngleDegrees = 45.0f;
+
     // Coordinates are in a support-aligned frame whose +Z is up. The caller supplies
     // projected targets and rotates state with NewBasis.Inverse() * OldBasis when
     // the support frame changes. Measure body velocity in world space before rotating it.
@@ -251,13 +256,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // What the caller's probe under a swing's landing point (FProceduralGaitLegSwing::_LandingPoint) found. Unknown: no
+    // probe was cast (a planted leg, a catch step, a target on a face). None: the probe found no trusted ground within the
+    // force-step reach. Found: ground, at the height the input's _LandingGroundZ carries.
+    enum class EProceduralGaitLandingGround : uint8
+    {
+        Unknown,
+        None,
+        Found
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // _Hip is in the support frame like every other position. _Reach is the leg's chain length in centimetres; zero
-    // disables the reach clamp and the reach Emergency for that leg. _LandingGroundZ is the support-frame height of the
-    // ground under the swing's landing point (FProceduralGaitLegSwing::_LandingPoint), -FLT_MAX when there is none; a
-    // swing whose landing ground lies above its target, within reach, lifts the rest of its arc onto it. _PlantOccluded
+    // disables the reach clamp and the reach Emergency for that leg. _LandingGround reports the ground under the swing's
+    // landing point and _LandingGroundZ, meaningful only when it is Found, its support-frame height: a swing whose landing
+    // ground lies above its target, within reach, lifts the rest of its arc onto it; a swing told None lands on the target
+    // the caller validated instead of past it, and plants untrusted when None is still the report at touchdown. _PlantOccluded
     // marks a planted foot whose hip-to-foot line passes through a solid: with a valid target it is an Emergency of
     // ratio 1 that steps beyond the schedule. _TargetIsFoothold marks a target the caller chose and validated as a spot to
-    // stand on: a swing aimed at it gets neither the stroke overshoot nor the freeze push, so it lands on that spot.
+    // stand on: a swing aimed at it gets neither the stroke overshoot nor the freeze push, so it lands on that spot. A swing
+    // whose target is on a face when it accepts it is treated the same way (FProceduralGaitLegSwing::_TargetOnAFace).
+    // _TargetTrusted marks a target on ground the caller probed and trusts. The solver never moves such a target off its
+    // ground: while it lies within the force-step reach of the hip it is not held to the target reach, and beyond the
+    // force-step reach it counts as no target. At touchdown the plant is trusted when the landing ground is Found,
+    // untrusted when it is None, and otherwise when the swing's recorded target was trusted (FProceduralGaitLegPlant::_Trusted).
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
         CK_GENERATED_BODY(FProceduralGaitLegInput);
@@ -275,9 +298,11 @@ namespace ck
         bool _Enabled = true;
         FVector _Hip = FVector::ZeroVector;
         float _Reach = 0.0f;
-        float _LandingGroundZ = -FLT_MAX;
+        EProceduralGaitLandingGround _LandingGround = EProceduralGaitLandingGround::Unknown;
+        float _LandingGroundZ = 0.0f;
         bool _PlantOccluded = false;
         bool _TargetIsFoothold = false;
+        bool _TargetTrusted = true;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -290,9 +315,11 @@ namespace ck
         CK_PROPERTY(_Enabled);
         CK_PROPERTY(_Hip);
         CK_PROPERTY(_Reach);
+        CK_PROPERTY(_LandingGround);
         CK_PROPERTY(_LandingGroundZ);
         CK_PROPERTY(_PlantOccluded);
         CK_PROPERTY(_TargetIsFoothold);
+        CK_PROPERTY(_TargetTrusted);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -320,6 +347,8 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // _Trusted is whether the foot touched down on ground the caller trusted (see FProceduralGaitLegInput::_TargetTrusted);
+    // it holds until the next touchdown. A disabled leg's frozen pose rides with the body and is never trusted.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegPlant
     {
         CK_GENERATED_BODY(FProceduralGaitLegPlant);
@@ -330,11 +359,13 @@ namespace ck
         FVector _Position = FVector::ZeroVector;
         FVector _Normal = FVector::UpVector;
         FQuat _Rotation = FQuat::Identity;
+        bool _Trusted = true;
 
     public:
         CK_PROPERTY(_Position);
         CK_PROPERTY(_Normal);
         CK_PROPERTY(_Rotation);
+        CK_PROPERTY(_Trusted);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -347,6 +378,16 @@ namespace ck
     // in step with the swing's own easing. _BeyondSchedule marks a swing a hard-overstretched or occluded foot began outside
     // the phase schedule; it neither holds back nor waits for the schedule's take-offs. _Overshoot is cleared for good once
     // the swing is aimed at a foothold before its freeze, so the landing point cannot flip back and forth with the input.
+    // _ValidatedTarget is the target the caller handed over, captured once: the swing target at take-off, then the ideal
+    // target the freeze took before its push. _LandsOnTarget marks a swing told before its freeze that no ground lies under
+    // its landing point: it keeps neither the overshoot nor the freeze push, so it lands on the validated target. A swing
+    // first told so after its freeze is pulled back from _PullBackFrom to _ValidatedTarget over the rest of its swing, in
+    // step with its own easing from the swing alpha _PullBackStartAlpha (negative while not pulled back). _TargetTrusted
+    // and _TargetNormal are the trust and ground normal of the target as last accepted (at take-off, on a retarget before the
+    // freeze, at the freeze); an input with no valid target leaves them, and the target, as they are. _TargetOnAFace marks a
+    // swing whose target was on a face (its ground normal farther than ProceduralGaitFaceAngleDegrees from the support up)
+    // when the swing accepted it, and holds for the rest of the swing: the support frame can pitch while the foot is in the
+    // air, and a face read as ground mid-swing would take a displacement and a lift meant for a tread.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegSwing
     {
         CK_GENERATED_BODY(FProceduralGaitLegSwing);
@@ -367,6 +408,13 @@ namespace ck
         FVector _LiftedLandingPoint = FVector::ZeroVector;
         float _LandingLiftStartAlpha = -1.0f;
         bool _BeyondSchedule = false;
+        FVector _ValidatedTarget = FVector::ZeroVector;
+        bool _LandsOnTarget = false;
+        FVector _PullBackFrom = FVector::ZeroVector;
+        float _PullBackStartAlpha = -1.0f;
+        bool _TargetTrusted = true;
+        FVector _TargetNormal = FVector::UpVector;
+        bool _TargetOnAFace = false;
 
     public:
         CK_PROPERTY(_StartPosition);
@@ -382,6 +430,13 @@ namespace ck
         CK_PROPERTY(_LiftedLandingPoint);
         CK_PROPERTY(_LandingLiftStartAlpha);
         CK_PROPERTY(_BeyondSchedule);
+        CK_PROPERTY(_ValidatedTarget);
+        CK_PROPERTY(_LandsOnTarget);
+        CK_PROPERTY(_PullBackFrom);
+        CK_PROPERTY(_PullBackStartAlpha);
+        CK_PROPERTY(_TargetTrusted);
+        CK_PROPERTY(_TargetNormal);
+        CK_PROPERTY(_TargetOnAFace);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -518,8 +573,9 @@ namespace ck
         CK_GENERATED_BODY(FProceduralGaitSolver);
 
     public:
-        // Rejected input never changes state or the caller's output array.
-        auto Reset(TArrayView<const FVector> InInitialFootPositions) -> bool;
+        // Rejected input never changes state or the caller's output array. InInitialFootTrusted says, per foot, whether it
+        // stands on ground the caller trusts; empty trusts every foot, any other count than the positions' is rejected.
+        auto Reset(TArrayView<const FVector> InInitialFootPositions, TArrayView<const bool> InInitialFootTrusted = {}) -> bool;
         auto Step(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
             TArrayView<const FProceduralGaitLegInput> InInputs,
             TArrayView<FProceduralGaitLegOutput> OutOutputs, bool InAirborne = false) -> bool;
@@ -536,7 +592,7 @@ namespace ck
         auto GetCurrentPatternIndex() const -> int32 { return _PatternBlend._CurrentIndex; }
         auto IsAirborne() const -> bool { return _WasAirborne; }
         auto GetRestTime() const -> FCk_Time { return _RestTime; }
-        auto SetPlantedPose(int32 InLegIndex, const FVector& InPosition, const FVector& InNormal) -> void;
+        auto SetPlantedPose(int32 InLegIndex, const FVector& InPosition, const FVector& InNormal, bool InTrusted = true) -> void;
         auto SetDisabledPose(int32 InLegIndex, const FVector& InPosition, const FQuat& InRotation,
             const FVector& InNormal) -> bool;
         auto RequestStep(int32 InLegIndex, const FVector& InTarget) -> bool;
@@ -548,6 +604,8 @@ namespace ck
         static auto MakeFootRotation(const FVector& InFacingDirection, const FVector& InGroundNormal) -> FQuat;
         static auto ComputeTraceAxis(const FVector& InBodyUp, const FVector& InRadialDirection, float InOutwardLean) -> FVector;
         static auto ValidateSettings(const FProceduralGaitSettings& InSettings) -> bool;
+        // Whether InNormal lies farther than ProceduralGaitFaceAngleDegrees from InUp; a zero normal is a face.
+        static auto Get_IsFaceNormal(const FVector& InNormal, const FVector& InUp) -> bool;
         // Keeps InTarget within InMaxDistance of InHip: the planar (X, Y) offset shrinks and the height is kept; a height
         // alone beyond the limit clamps in 3D. A non-positive limit leaves the target unchanged.
         static auto ClampToReach(const FVector& InHip, const FVector& InTarget, float InMaxDistance) -> FVector;
@@ -566,18 +624,22 @@ namespace ck
         auto DoSelectPattern(float InBodyPlanarSpeed, bool InAdvance) -> void;
         auto DoReconcileEnabled(FProceduralGaitLegState& InOutState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoClampToReach(const FProceduralGaitLegInput& InInput, const FVector& InTarget) const -> FVector;
+        auto DoClampTarget(const FProceduralGaitLegInput& InInput, const FVector& InTarget, bool InTrusted) const -> FVector;
+        auto DoGet_DisplacedTarget(const FProceduralGaitLegInput& InInput, const FVector& InTarget, const FVector& InDisplacement,
+            bool InTrusted) const -> FVector;
+        auto DoGet_EffectiveInput(const FProceduralGaitLegInput& InInput) const -> FProceduralGaitLegInput;
         auto DoGet_IsEmergency(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_IsHardOverstretched(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;
         auto DoRedistributeOffsets() -> void;
         auto DoClearRedistribution() -> void;
         auto DoGet_SwingEase(float InPhase) const -> float;
-        auto DoGet_FrozenTarget(const FProceduralGaitLegInput& InInput, const FVector& InBodyPlanarVelocity,
-            FCk_Time InRemainingTime) const -> FVector;
+        auto DoGet_FrozenTarget(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput,
+            const FVector& InBodyPlanarVelocity, FCk_Time InRemainingTime) const -> FVector;
         auto DoGet_LandingPoint(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput,
-            const FVector& InSwingTarget) const -> FVector;
+            const FVector& InTarget, const FVector& InSwingTarget) const -> FVector;
         static auto DoBeginSwing(FProceduralGaitLegState& InOutState, const FVector& InStartPosition,
-            const FQuat& InStartRotation, const FVector& InTarget) -> void;
+            const FQuat& InStartRotation, const FVector& InTarget, bool InTargetTrusted, const FVector& InTargetNormal) -> void;
         static auto DoWriteDisabledOutput(const FProceduralGaitLegState& InState, FProceduralGaitLegOutput& OutOutput) -> void;
 
     private:

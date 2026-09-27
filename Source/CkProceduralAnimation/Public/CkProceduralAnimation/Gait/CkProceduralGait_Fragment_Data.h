@@ -375,8 +375,57 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProceduralGait_FeetPlane : uint8
+{
+    None    UMETA(DisplayName = "None (no plane the body can ride)"),
+    Fitted  UMETA(DisplayName = "Fitted (through this solve's supporting feet)"),
+    Held    UMETA(DisplayName = "Held (the last fitted plane, while too few feet support the body)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralGait_FeetPlane);
+
+// The plane the gait's last solve fitted through the supporting feet, in world space: a point on it and its unit normal.
+USTRUCT(BlueprintType)
+struct CKPROCEDURALANIMATION_API FCk_ProceduralGait_FeetPlane
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ProceduralGait_FeetPlane);
+
+private:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FVector _Point = FVector::ZeroVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FVector _Normal = FVector::UpVector;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralGait_FeetPlane _State = ECk_ProceduralGait_FeetPlane::None;
+
+public:
+    CK_PROPERTY(_Point);
+    CK_PROPERTY(_Normal);
+    CK_PROPERTY(_State);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 namespace ck
 {
+    enum class EProceduralGaitFeetPlane : uint8
+    {
+        None,
+        Fitted,
+        Held
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // The solver settings built from a gait's tunables and its enabled legs, with the reach cadence floor the build applied
     // (0 when no enabled leg bounds it) and the count of enabled legs too wide to stride along body X. The floor and the
     // count are diagnostics: only the debug fragment keeps them.

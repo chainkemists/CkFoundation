@@ -31,6 +31,25 @@ namespace ck::procedural_gait_solver
         const auto Alpha = 1.0 - FMath::Exp(-InRate * InDeltaTime.Get_Seconds());
         return FQuat::Slerp(InCurrent, InTarget, Alpha).GetNormalized();
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // What the probe under the landing point last found decides a touchdown's trust; without a probe (a face target, a catch
+    // step) the trust the swing recorded for its target does.
+    auto
+        Get_PlantTrusted(
+            const FProceduralGaitLegInput& InInput,
+            bool InSwingTargetTrusted)
+        -> bool
+    {
+        switch (InInput.Get_LandingGround())
+        {
+            case EProceduralGaitLandingGround::Found: return true;
+            case EProceduralGaitLandingGround::None: return false;
+            case EProceduralGaitLandingGround::Unknown: return InSwingTargetTrusted;
+        }
+        return false;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -116,7 +135,8 @@ namespace ck
     auto
         FProceduralGaitSolver::
         Reset(
-            TArrayView<const FVector> InInitialFootPositions)
+            TArrayView<const FVector> InInitialFootPositions,
+            TArrayView<const bool> InInitialFootTrusted)
         -> bool
     {
         for (const auto& Position : InInitialFootPositions)
@@ -125,11 +145,17 @@ namespace ck
             { return false; }
         }
 
+        const auto TrustCoversEveryFoot = InInitialFootTrusted.IsEmpty() || InInitialFootTrusted.Num() == InInitialFootPositions.Num();
+        if (NOT TrustCoversEveryFoot)
+        { return false; }
+
         _LegStates.Reset(InInitialFootPositions.Num());
-        for (const auto& Position : InInitialFootPositions)
+        for (auto Index = 0; Index < InInitialFootPositions.Num(); ++Index)
         {
+            const auto& Position = InInitialFootPositions[Index];
             auto& State = _LegStates.AddDefaulted_GetRef();
             State._Plant._Position = Position;
+            State._Plant._Trusted = InInitialFootTrusted.IsEmpty() || InInitialFootTrusted[Index];
             State._Emitted._AirPosition = Position;
             State._Emitted._Position = Position;
             State._Emitted._Rotation = State._Plant._Rotation;
@@ -227,7 +253,8 @@ namespace ck
         SetPlantedPose(
             int32 InLegIndex,
             const FVector& InPosition,
-            const FVector& InNormal)
+            const FVector& InNormal,
+            bool InTrusted)
         -> void
     {
         if (InPosition.ContainsNaN() || InNormal.ContainsNaN() || NOT InNormal.IsNormalized())
@@ -242,6 +269,7 @@ namespace ck
             State._Plant._Rotation = NormalDelta * State._Plant._Rotation;
             State._Plant._Position = InPosition;
             State._Plant._Normal = InNormal;
+            State._Plant._Trusted = InTrusted;
             State._Emitted._Position = State._Plant._Position;
             State._Emitted._Rotation = State._Plant._Rotation;
         }
@@ -272,6 +300,7 @@ namespace ck
         State._Plant._Position = InPosition;
         State._Plant._Rotation = InRotation;
         State._Plant._Normal = InNormal;
+        State._Plant._Trusted = false;
         State._Emitted._AirPosition = InPosition;
         return true;
     }
@@ -318,6 +347,9 @@ namespace ck
             State._Swing._Target = InDelta.RotateVector(State._Swing._Target);
             State._Swing._LandingPoint = InDelta.RotateVector(State._Swing._LandingPoint);
             State._Swing._LiftedLandingPoint = InDelta.RotateVector(State._Swing._LiftedLandingPoint);
+            State._Swing._ValidatedTarget = InDelta.RotateVector(State._Swing._ValidatedTarget);
+            State._Swing._PullBackFrom = InDelta.RotateVector(State._Swing._PullBackFrom);
+            State._Swing._TargetNormal = InDelta.RotateVector(State._Swing._TargetNormal);
             State._Emitted._AirPosition = InDelta.RotateVector(State._Emitted._AirPosition);
             State._Emitted._Position = InDelta.RotateVector(State._Emitted._Position);
             State._Emitted._Rotation = InDelta * State._Emitted._Rotation;
@@ -573,13 +605,18 @@ namespace ck
             { return false; }
         }
 
+        auto EffectiveInputs = TArray<FProceduralGaitLegInput, TInlineAllocator<16>>{};
+        EffectiveInputs.Reserve(InInputs.Num());
+        for (const auto& Input : InInputs)
+        { EffectiveInputs.Add(DoGet_EffectiveInput(Input)); }
+
         if (InDeltaTime <= FCk_Time{})
         {
             auto ReadOnlySolver = *this;
             return ReadOnlySolver.DoStep(InDeltaTime, InBodyPlanarSpeed, InBodyPlanarVelocity,
-                InInputs, OutOutputs, InAirborne);
+                EffectiveInputs, OutOutputs, InAirborne);
         }
-        const auto Advanced = DoStep(InDeltaTime, InBodyPlanarSpeed, InBodyPlanarVelocity, InInputs, OutOutputs, InAirborne);
+        const auto Advanced = DoStep(InDeltaTime, InBodyPlanarSpeed, InBodyPlanarVelocity, EffectiveInputs, OutOutputs, InAirborne);
         if (Advanced)
         {
             for (auto LegIndex = 0; LegIndex < OutOutputs.Num(); ++LegIndex)
@@ -692,8 +729,15 @@ namespace ck
                 State._Swing._Phase = 0.0f;
                 State._Swing._StartPosition = State._Emitted._AirPosition;
                 State._Swing._StartRotation = State._Plant._Rotation;
-                State._Swing._Target = DoClampToReach(In, In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition);
+                State._Swing._Target = DoClampTarget(In, In._TargetValid ? In._IdealTarget : State._Emitted._AirPosition,
+                    In._TargetValid && In._TargetTrusted);
                 State._Swing._LandingPoint = State._Swing._Target;
+                State._Swing._ValidatedTarget = State._Swing._Target;
+                State._Swing._TargetTrusted = In._TargetValid && In._TargetTrusted;
+                State._Swing._TargetNormal = In._TargetValid ? In._GroundNormal : State._Plant._Normal;
+                State._Swing._TargetOnAFace = In._TargetValid && Get_IsFaceNormal(In._GroundNormal, FVector::UpVector);
+                State._Swing._LandsOnTarget = false;
+                State._Swing._PullBackStartAlpha = -1.0f;
                 State._Swing._TargetFrozen = false;
                 State._Swing._LandingLiftStartAlpha = -1.0f;
 
@@ -858,43 +902,79 @@ namespace ck
                 {
                     State._Swing._Phase = FMath::Min(State._Swing._Phase + static_cast<float>(InDeltaTime / SwingDuration), 1.0f);
 
-                    if (NOT State._Swing._TargetFrozen && In._TargetValid && In._TargetIsFoothold)
+                    if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen && In._TargetValid
+                        && Get_IsFaceNormal(In._GroundNormal, FVector::UpVector))
+                    { State._Swing._TargetOnAFace = true; }
+
+                    if (NOT State._Swing._TargetFrozen && In._TargetValid && (In._TargetIsFoothold || State._Swing._TargetOnAFace))
                     { State._Swing._Overshoot = false; }
+
+                    // Nothing under the landing point means the overshoot and the freeze push carry the foot past the ground
+                    // the caller validated (off a top's edge, into the air): before the freeze the swing gives both up, after
+                    // it the landing is pulled back onto the validated target, for the rest of the swing either way.
+                    const auto NoLandingGround = NOT State._Swing._CatchStep && In._LandingGround == EProceduralGaitLandingGround::None;
+                    if (NoLandingGround && NOT State._Swing._TargetFrozen)
+                    {
+                        State._Swing._LandsOnTarget = true;
+                        State._Swing._Overshoot = false;
+                    }
 
                     if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen
                         && State._Swing._Phase >= _Settings._Step._RetargetFreezePhase && In._TargetValid)
                     {
-                        State._Swing._Target = DoGet_FrozenTarget(In, InBodyPlanarVelocity, SwingDuration * (1.0f - State._Swing._Phase));
+                        State._Swing._ValidatedTarget = DoClampTarget(In, In._IdealTarget, In._TargetTrusted);
+                        State._Swing._Target = DoGet_FrozenTarget(State, In, InBodyPlanarVelocity,
+                            SwingDuration * (1.0f - State._Swing._Phase));
+                        State._Swing._TargetTrusted = In._TargetTrusted;
+                        State._Swing._TargetNormal = In._GroundNormal;
                         State._Swing._TargetFrozen = true;
                     }
-                    else if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen)
+                    else if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen && In._TargetValid)
                     {
-                        const auto DesiredTarget = In._TargetValid ? In._IdealTarget : State._Plant._Position;
-                        State._Swing._Target = DoClampToReach(In, procedural_gait_solver::Damp(State._Swing._Target, DesiredTarget,
-                            FMath::Max(_Settings._Step._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime));
+                        State._Swing._Target = DoClampTarget(In, procedural_gait_solver::Damp(State._Swing._Target, In._IdealTarget,
+                            FMath::Max(_Settings._Step._RetargetSmoothing, KINDA_SMALL_NUMBER), InDeltaTime), In._TargetTrusted);
+                        State._Swing._TargetTrusted = In._TargetTrusted;
+                        State._Swing._TargetNormal = In._GroundNormal;
+                    }
+                    else if (NoLandingGround && State._Swing._TargetFrozen && State._Swing._PullBackStartAlpha < 0.0f)
+                    {
+                        State._Swing._PullBackFrom = DoGet_LandingPoint(State, In, State._Swing._ValidatedTarget, State._Swing._Target);
+                        State._Swing._PullBackStartAlpha = DoGet_SwingEase(PreviousPhase);
                     }
                 }
 
-                auto Target = DoGet_LandingPoint(State, In, State._Swing._Target);
+                // After the freeze the swing's target carries the push, and the target the freeze took before it is the
+                // validated one; before, the target carries no displacement yet.
+                const auto UndisplacedTarget = State._Swing._TargetFrozen ? State._Swing._ValidatedTarget : State._Swing._Target;
+                auto Target = DoGet_LandingPoint(State, In, UndisplacedTarget, State._Swing._Target);
+                if (State._Swing._PullBackStartAlpha >= 0.0f)
+                {
+                    const auto PullBackStart = State._Swing._PullBackStartAlpha;
+                    const auto PullBackShare = PullBackStart < 1.0f - KINDA_SMALL_NUMBER
+                        ? FMath::Clamp((DoGet_SwingEase(State._Swing._Phase) - PullBackStart) / (1.0f - PullBackStart), 0.0f, 1.0f)
+                        : 1.0f;
+                    Target = FMath::Lerp(State._Swing._PullBackFrom, State._Swing._ValidatedTarget, static_cast<double>(PullBackShare));
+                }
                 // Before the freeze the damped target trails the moving ideal and the freeze snaps it forward, so the point
                 // reported for probing is the one the freeze will produce: a swing too short to lift after the snap still
                 // learns the ground it lands on in time. The report reaches the solver a frame later, when the ideal has moved
                 // on by a frame of travel, so the prediction starts from there.
                 const auto PredictsTheFreeze = NOT State._Swing._TargetFrozen && NOT State._Swing._CatchStep && In._TargetValid;
                 State._Swing._LandingPoint = PredictsTheFreeze
-                    ? DoGet_LandingPoint(State, In, DoGet_FrozenTarget(In, InBodyPlanarVelocity,
-                        SwingDuration * (1.0f - _Settings._Step._RetargetFreezePhase) + InDeltaTime))
+                    ? DoGet_LandingPoint(State, In, DoClampTarget(In, In._IdealTarget, In._TargetTrusted),
+                        DoGet_FrozenTarget(State, In, InBodyPlanarVelocity,
+                            SwingDuration * (1.0f - _Settings._Step._RetargetFreezePhase) + InDeltaTime))
                     : Target;
 
                 // The overshoot and the freeze push can carry a target probed on a lower tread past the next riser; the ground
                 // under the landing point then lies above it.
-                const auto HasLandingGround = NOT State._Swing._CatchStep && In._LandingGroundZ > -FLT_MAX * 0.5f;
+                const auto HasLandingGround = NOT State._Swing._CatchStep && In._LandingGround == EProceduralGaitLandingGround::Found;
                 const auto OnLandingGround = FVector{Target.X, Target.Y, In._LandingGroundZ};
                 const auto LandingGroundAbove = HasLandingGround && In._LandingGroundZ > Target.Z
                     && (In._Reach <= 0.0f || FVector::Dist(OnLandingGround, In._Hip) <= _Settings._Reach._TargetFraction * In._Reach);
                 // A lifted swing follows the latest report, down to no lift at all: the landing point can move off the upper
-                // tread after the lift began, and a plant must not hover over the lower one. No ground under the landing point
-                // (a probe miss, or ground out of reach over a gap) is no report, so the last lift holds.
+                // tread after the lift began, and a plant must not hover over the lower one. A report other than Found leaves
+                // the last lift as it is.
                 if (State._Swing._LandingLiftStartAlpha >= 0.0f)
                 {
                     if (HasLandingGround)
@@ -906,8 +986,7 @@ namespace ck
                     State._Swing._LiftedLandingPoint = OnLandingGround;
                 }
 
-                const auto LandingRotation = MakeFootRotation(In._FacingDirection,
-                    In._TargetValid ? In._GroundNormal : State._Plant._Normal);
+                const auto LandingRotation = MakeFootRotation(In._FacingDirection, State._Swing._TargetNormal);
 
                 if (State._Swing._Phase >= 1.0f)
                 {
@@ -941,8 +1020,9 @@ namespace ck
                     State._Swing._CatchStep = false;
 
                     State._Plant._Position = Target;
-                    State._Plant._Normal = In._TargetValid ? In._GroundNormal : State._Plant._Normal;
+                    State._Plant._Normal = State._Swing._TargetNormal;
                     State._Plant._Rotation = LandingRotation;
+                    State._Plant._Trusted = procedural_gait_solver::Get_PlantTrusted(In, State._Swing._TargetTrusted);
 
                     Out._Position = State._Plant._Position;
                     Out._Normal = State._Plant._Normal;
@@ -995,7 +1075,7 @@ namespace ck
                     }
 
                     Out._Position = Position;
-                    Out._Normal = In._TargetValid ? In._GroundNormal : State._Plant._Normal;
+                    Out._Normal = State._Swing._TargetNormal;
                     Out._Rotation = Rotation;
                     Out._SwingAlpha = State._Swing._Phase;
                     Out._Planted = false;
@@ -1030,13 +1110,17 @@ namespace ck
 
                 if (Advance && (OnSchedule || BeyondSchedule))
                 {
-                    const auto SwingTarget = DoClampToReach(In, CatchStep
-                        ? State._PendingStep._Target
-                        : (In._TargetValid ? In._IdealTarget : State._Plant._Position));
-                    DoBeginSwing(State, State._Plant._Position, State._Plant._Rotation, SwingTarget);
+                    const auto TargetTrusted = NOT CatchStep && In._TargetValid && In._TargetTrusted;
+                    const auto SwingTarget = CatchStep
+                        ? DoClampToReach(In, State._PendingStep._Target)
+                        : DoClampTarget(In, In._TargetValid ? In._IdealTarget : State._Plant._Position, TargetTrusted);
+                    DoBeginSwing(State, State._Plant._Position, State._Plant._Rotation, SwingTarget, TargetTrusted,
+                        In._TargetValid ? In._GroundNormal : State._Plant._Normal);
                     State._Swing._TargetFrozen = false;
+                    State._Swing._TargetOnAFace = NOT CatchStep && In._TargetValid && Get_IsFaceNormal(In._GroundNormal, FVector::UpVector);
 
-                    State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency) && NOT In._TargetIsFoothold;
+                    State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency) && NOT In._TargetIsFoothold
+                        && NOT State._Swing._TargetOnAFace;
 
                     State._Swing._CatchStep = CatchStep;
                     State._Swing._BeyondSchedule = NOT OnSchedule;
@@ -1085,6 +1169,7 @@ namespace ck
             InOutState._PendingStep._Time = FCk_Time{};
             InOutState._Plant._Position = InOutState._Emitted._Position;
             InOutState._Plant._Rotation = InOutState._Emitted._Rotation;
+            InOutState._Plant._Trusted = false;
             InOutState._Enabled = false;
             return true;
         }
@@ -1093,13 +1178,14 @@ namespace ck
         // Take-off skips disabled legs, so a leg re-enabled mid-air would otherwise tuck from a stale air pose.
         InOutState._Emitted._AirPosition = InOutState._Emitted._Position;
 
-        const auto Target = DoClampToReach(InInput, InInput._IdealTarget);
+        const auto Target = DoClampTarget(InInput, InInput._IdealTarget, InInput._TargetTrusted);
         const auto TargetIsAway = InInput._TargetValid
             && FVector::DistSquared(InOutState._Emitted._Position, Target) > KINDA_SMALL_NUMBER;
 
         if (TargetIsAway)
         {
-            DoBeginSwing(InOutState, InOutState._Emitted._Position, InOutState._Emitted._Rotation, Target);
+            DoBeginSwing(InOutState, InOutState._Emitted._Position, InOutState._Emitted._Rotation, Target, InInput._TargetTrusted,
+                InInput._GroundNormal);
             return true;
         }
 
@@ -1156,7 +1242,9 @@ namespace ck
             FProceduralGaitLegState& InOutState,
             const FVector& InStartPosition,
             const FQuat& InStartRotation,
-            const FVector& InTarget)
+            const FVector& InTarget,
+            bool InTargetTrusted,
+            const FVector& InTargetNormal)
         -> void
     {
         InOutState._Swing._Active = true;
@@ -1170,6 +1258,12 @@ namespace ck
         InOutState._Swing._LandingPoint = InTarget;
         InOutState._Swing._LandingLiftStartAlpha = -1.0f;
         InOutState._Swing._BeyondSchedule = false;
+        InOutState._Swing._ValidatedTarget = InTarget;
+        InOutState._Swing._LandsOnTarget = false;
+        InOutState._Swing._PullBackStartAlpha = -1.0f;
+        InOutState._Swing._TargetTrusted = InTargetTrusted;
+        InOutState._Swing._TargetNormal = InTargetNormal;
+        InOutState._Swing._TargetOnAFace = false;
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1190,31 +1284,35 @@ namespace ck
     auto
         FProceduralGaitSolver::
         DoGet_FrozenTarget(
+            const FProceduralGaitLegState& InState,
             const FProceduralGaitLegInput& InInput,
             const FVector& InBodyPlanarVelocity,
             FCk_Time InRemainingTime) const
         -> FVector
     {
         // A foothold was validated where it lies; pushed along the travel, the foot would land on ground nobody checked.
-        if (InInput._TargetIsFoothold)
-        { return DoClampToReach(InInput, InInput._IdealTarget); }
+        if (InInput._TargetIsFoothold || InState._Swing._LandsOnTarget || InState._Swing._TargetOnAFace)
+        { return DoClampTarget(InInput, InInput._IdealTarget, InInput._TargetTrusted); }
 
-        return DoClampToReach(InInput, InInput._IdealTarget + InBodyPlanarVelocity * InRemainingTime.Get_Seconds());
+        return DoGet_DisplacedTarget(InInput, InInput._IdealTarget, InBodyPlanarVelocity * InRemainingTime.Get_Seconds(),
+            InInput._TargetTrusted);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
 
     // The swing target carried on along its stroke by the overshoot, then held within reach of where the hip is now: the hip
-    // moves during the swing.
+    // moves during the swing. InTarget is the target without the freeze push, InSwingTarget the one with it; the push and
+    // the overshoot are displacements of InTarget, clamped together (see DoGet_DisplacedTarget).
     auto
         FProceduralGaitSolver::
         DoGet_LandingPoint(
             const FProceduralGaitLegState& InState,
             const FProceduralGaitLegInput& InInput,
+            const FVector& InTarget,
             const FVector& InSwingTarget) const
         -> FVector
     {
-        auto Landing = InSwingTarget;
+        auto Displacement = InSwingTarget - InTarget;
         if (InState._Swing._Overshoot && _Settings._Step._StrokeOvershootFraction > 0.0f)
         {
             const auto Stroke = InSwingTarget - InState._Swing._StartPosition;
@@ -1224,10 +1322,23 @@ namespace ck
                 const auto Overshoot = FMath::Min(
                     StrokeLength * _Settings._Step._StrokeOvershootFraction,
                     FMath::Max(_Settings._Step._MaxStrokeOvershoot, 0.0f));
-                Landing += (Stroke / StrokeLength) * Overshoot;
+                Displacement += (Stroke / StrokeLength) * Overshoot;
             }
         }
-        return DoClampToReach(InInput, Landing);
+        return DoGet_DisplacedTarget(InInput, InTarget, Displacement, InState._Swing._TargetTrusted);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        Get_IsFaceNormal(
+            const FVector& InNormal,
+            const FVector& InUp)
+        -> bool
+    {
+        return FVector::DotProduct(InNormal.GetSafeNormal(), InUp.GetSafeNormal())
+            < FMath::Cos(FMath::DegreesToRadians(static_cast<double>(ProceduralGaitFaceAngleDegrees)));
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -1285,6 +1396,65 @@ namespace ck
         { return InTarget; }
 
         return ClampToReach(InInput._Hip, InTarget, _Settings._Reach._TargetFraction * InInput._Reach);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // A target on ground the caller validated stays on that ground while it lies within the force-step reach: pulled toward
+    // the hip, a target near the reach limit would leave its tread or top for the air beside it. The reach Emergency steps
+    // the leg again once the body has moved on. Anything else is held within the target reach.
+    auto
+        FProceduralGaitSolver::
+        DoClampTarget(
+            const FProceduralGaitLegInput& InInput,
+            const FVector& InTarget,
+            bool InTrusted) const
+        -> FVector
+    {
+        const auto ForceStepLimit = static_cast<double>(_Settings._Reach._ForceStepFraction * InInput._Reach);
+        if (InTrusted && InInput._Reach > 0.0f && FVector::DistSquared(InTarget, InInput._Hip) <= FMath::Square(ForceStepLimit))
+        { return InTarget; }
+
+        return DoClampToReach(InInput, InTarget);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // A target displaced by the stroke overshoot and the freeze push is held within the target reach as a whole, pulled toward
+    // the hip: the landing-ground probe under the landing point then verifies it, and with nothing there the swing drops the
+    // displacement or pulls back to the target. A target without a displacement is held as DoClampTarget holds it, so ground
+    // the caller validated stays where it is.
+    auto
+        FProceduralGaitSolver::
+        DoGet_DisplacedTarget(
+            const FProceduralGaitLegInput& InInput,
+            const FVector& InTarget,
+            const FVector& InDisplacement,
+            bool InTrusted) const
+        -> FVector
+    {
+        if (InDisplacement.SizeSquared() <= UE_DOUBLE_SMALL_NUMBER)
+        { return DoClampTarget(InInput, InTarget, InTrusted); }
+
+        return DoClampToReach(InInput, InTarget + InDisplacement);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // A trusted target beyond the force-step reach is ground the leg cannot stand on from here: it counts as no target. A
+    // target on a face is landed on where it lies, like a searched foothold.
+    auto
+        FProceduralGaitSolver::
+        DoGet_EffectiveInput(
+            const FProceduralGaitLegInput& InInput) const
+        -> FProceduralGaitLegInput
+    {
+        auto Effective = InInput;
+        const auto ForceStepLimit = static_cast<double>(_Settings._Reach._ForceStepFraction * InInput._Reach);
+        if (InInput._TargetValid && InInput._TargetTrusted && InInput._Reach > 0.0f
+            && FVector::DistSquared(InInput._IdealTarget, InInput._Hip) > FMath::Square(ForceStepLimit))
+        { Effective._TargetValid = false; }
+        return Effective;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

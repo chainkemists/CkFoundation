@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralSurfaceMotion.h"
 
+#include "CkProceduralAnimation/Core/CkProceduralFeetPlane.h"
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck_procedural_surface_motion
@@ -14,6 +16,12 @@ namespace ck_procedural_surface_motion
     // Past a convex edge the down ray can see a lower floor while the surface the body just climbed onto lies ahead; the
     // look-ahead wins when its hit lies higher than the down hit by more than this share of the clearance.
     constexpr auto LookAheadRiseClearances = 0.25f;
+    // The planted feet's plane counts only over their footprint grown by this share of the clearance on every side: the
+    // feet support the ground within them, and an unbounded plane would carry the body off a ledge before the fan ran.
+    constexpr auto FeetFootprintMarginClearances = 0.25;
+    // Over one plane the feet contact and the down ray's hit agree to rounding; the feet contact replaces the ray's only
+    // when it lies higher by more than this, so on plain ground the ray keeps the contact.
+    constexpr auto FeetAboveRayTolerance = 0.01;
 
     struct FContact
     {
@@ -87,14 +95,66 @@ namespace ck_procedural_surface_motion
         return LookAhead;
     }
 
+    auto
+        Get_Height(
+            const FContact& InContact,
+            const FVector& InPosition,
+            const FVector& InUp)
+        -> double
+    {
+        return FVector::DotProduct(InPosition - InContact.Hit.Get_Position(), InUp);
+    }
+
+    // The planted feet's contact under the candidate: on their plane straight down the support normal, carrying InNormal.
+    // None outside the footprint grown by FeetFootprintMarginClearances, or for a plane too steep for the support (the body
+    // turning onto a wall its feet have not reached yet).
+    auto
+        DoGet_FeetContact(
+            const ck::FProceduralSurfaceMotionSettings& InSettings,
+            const TOptional<ck::FProceduralSurfaceFeetSupport>& InFeetSupport,
+            const FVector& InPosition,
+            const FVector& InUp,
+            const FVector& InNormal)
+        -> TOptional<FContact>
+    {
+        if (NOT InFeetSupport.IsSet())
+        { return {}; }
+
+        const auto& Feet = *InFeetSupport;
+        const auto Local = Feet.Get_Basis().UnrotateVector(InPosition - Feet.Get_Origin());
+        const auto Margin = FeetFootprintMarginClearances * InSettings.Get_Clearance();
+        const auto InsideFootprint = Local.X >= Feet.Get_FootprintMin().X - Margin && Local.X <= Feet.Get_FootprintMax().X + Margin
+            && Local.Y >= Feet.Get_FootprintMin().Y - Margin && Local.Y <= Feet.Get_FootprintMax().Y + Margin;
+        if (NOT InsideFootprint)
+        { return {}; }
+
+        const auto Normal = Feet.Get_Normal().GetSafeNormal();
+        const auto Alignment = FVector::DotProduct(InUp, Normal);
+        const auto RideableFromHere = Alignment >= FMath::Cos(FMath::DegreesToRadians(static_cast<double>(ck::ProceduralFeetPlaneMaxAngleDegrees)));
+        if (NOT RideableFromHere)
+        { return {}; }
+
+        const auto Height = FVector::DotProduct(InPosition - Feet.Get_Point(), Normal) / Alignment;
+        const auto OnPlane = ck::FProceduralSurfaceHit{}
+            .Set_Hit(true)
+            .Set_Position(InPosition - InUp * Height)
+            .Set_Normal(InNormal);
+        return FContact{OnPlane, ck::EProceduralSurfaceContactSource::Feet};
+    }
+
     // Forward contact is used only within the body's clearance, so a distant wall cannot pull a creature off its floor.
     // Every candidate is a current query; held feet never masquerade as newly observed support normals. The forward ray and
     // the fan look where the body is going, so they are cast only while it moves; the down ray and the look-ahead hold the
-    // surface it stands at, so a body stopped just past a crest keeps the top.
+    // surface it stands at, so a body stopped just past a crest keeps the top. The planted feet's contact stands in for the
+    // down ray's hit when it lies higher, and keeps the support holding over a down miss. It carries the down ray's normal
+    // when that ray hit, so a crease the feet span still turns the body onto the facet under it, and the feet plane's
+    // normal over a miss, where the ray tells nothing about the surface and the feet do: on a convex wall the body's
+    // support would otherwise stay on the facet it last saw while the body walks round, and its rays miss the wall for good.
     auto
         DoFind_Contacts(
             const ck::FProceduralSurfaceMotionSettings& InSettings,
             ck::FProceduralSurfaceRayCast InRayCast,
+            const TOptional<ck::FProceduralSurfaceFeetSupport>& InFeetSupport,
             FCk_Time InStep,
             const FVector& InPosition,
             const FVector& InUp,
@@ -111,6 +171,18 @@ namespace ck_procedural_surface_motion
         Contacts.SupportHolds = DownHit.Get_Hit() && DownHit.Get_Fraction() > 0.0f;
         if (Get_IsTrusted(DownHit, -InUp))
         { Contacts.Down = FContact{DownHit, ESource::Down}; }
+
+        const auto Feet = DoGet_FeetContact(InSettings, InFeetSupport, InPosition, InUp,
+            Contacts.Down.IsSet() ? Contacts.Down->Hit.Get_Normal() : (InFeetSupport.IsSet() ? InFeetSupport->Get_Normal() : InUp));
+        if (Feet.IsSet())
+        {
+            Contacts.SupportHolds = true;
+            const auto FeetAboveRay = NOT Contacts.Down.IsSet()
+                || Get_Height(*Feet, InPosition, InUp) < Get_Height(*Contacts.Down, InPosition, InUp) - FeetAboveRayTolerance;
+            if (FeetAboveRay)
+            { Contacts.Down = Feet; }
+        }
+
         if (InMoving)
         { Contacts.Proposal = DoCast(InRayCast, InPosition, InPosition + InForward * Clearance, ESource::Forward); }
         if (Contacts.Proposal.IsSet())
@@ -256,6 +328,7 @@ namespace ck
             float InSpeed,
             FCk_Time InStep,
             FProceduralSurfaceRayCast InRayCast,
+            const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
             FProceduralSurfaceMotionState& InOutState)
         -> void
@@ -271,8 +344,8 @@ namespace ck
         const auto Candidate = OldPosition + Forward * (InSpeed * Step);
         const auto Moving = InSpeed > 0.0f;
 
-        const auto Contacts = ck_procedural_surface_motion::DoFind_Contacts(InSettings, InRayCast, InStep, Candidate, Up, Forward,
-            Moving);
+        const auto Contacts = ck_procedural_surface_motion::DoFind_Contacts(InSettings, InRayCast, InFeetSupport, InStep, Candidate, Up,
+            Forward, Moving);
         if (Contacts.Proposal.IsSet())
         {
             const auto& Proposal = *Contacts.Proposal;
