@@ -50,6 +50,30 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_ChainSolver);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+UENUM(BlueprintType)
+enum class ECk_ProceduralRig_Clearance : uint8
+{
+    None    UMETA(DisplayName = "None (the chain is posed toward its pole)"),
+    Swivel  UMETA(DisplayName = "Swivel (the knee turns about the hip-foot line to keep the links out of solids)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_Clearance);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+// Whether the posed chain's links are out of solids and its joints between hip and foot out of the body slab. A rig without a
+// clearance policy never tests its links and reads Clear.
+UENUM(BlueprintType)
+enum class ECk_ProceduralRig_ChainState : uint8
+{
+    Clear,
+    Crossing
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_ChainState);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralRig_Spec
 {
@@ -71,10 +95,15 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProceduralRig_ChainSolver _Solver = ECk_ProceduralRig_ChainSolver::Auto;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_ProceduralRig_Clearance _Clearance = ECk_ProceduralRig_Clearance::None;
+
 public:
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_Foot);
     CK_PROPERTY(_Solver);
+    CK_PROPERTY(_Clearance);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ProceduralRig_Spec, _Segments);

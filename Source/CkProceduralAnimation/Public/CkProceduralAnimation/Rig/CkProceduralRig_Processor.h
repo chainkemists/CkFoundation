@@ -42,8 +42,7 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Parallel-ready: reads its own leg's fragments and the body transform, writes only through deferred transform
-    // requests. Kept single-threaded until a benchmark justifies TParallelProcessor.
+    // Serial: a rig with a clearance policy casts Jolt rays, and the Jolt query API is game-thread-only.
     class CKPROCEDURALANIMATION_API FProcessor_ProceduralRig_Update : public ck_exp::TProcessor<
         FProcessor_ProceduralRig_Update,
         FCk_Handle_ProceduralRig,

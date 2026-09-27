@@ -129,6 +129,10 @@ private:
     ECk_ProceduralRig_Failure _Failure = ECk_ProceduralRig_Failure::None;
     TArray<FCk_ProceduralAnimation_DebugPart> _Segments;
     FCk_ProceduralAnimation_DebugPart _Foot;
+    ECk_ProceduralRig_Clearance _Clearance = ECk_ProceduralRig_Clearance::None;
+    ECk_ProceduralRig_ChainState _ChainState = ECk_ProceduralRig_ChainState::Clear;
+    float _SwivelDegrees = 0.0f;
+    int32 _CrossingLinks = 0;
 
 public:
     CK_PROPERTY(_Composed);
@@ -136,6 +140,10 @@ public:
     CK_PROPERTY(_Failure);
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_Foot);
+    CK_PROPERTY(_Clearance);
+    CK_PROPERTY(_ChainState);
+    CK_PROPERTY(_SwivelDegrees);
+    CK_PROPERTY(_CrossingLinks);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -359,7 +367,8 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Body, motion, probe and solver values belong to the last accepted advancing solve.
-// Current status/freshness flags and actual rig transforms are overlaid at query time.
+// Current status/freshness flags, actual rig transforms, the rigs' chain clearance and the ray count with the rigs' link
+// rays (which they cast after the gait's solve) are overlaid at query time.
 // RigPosePending marks parts whose deferred transform requests have not yet applied.
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugSnapshot
 {
@@ -413,7 +422,8 @@ public:
 
 public:
     // Every ray the gait's last update cast: foothold candidates and their occlusion traces, planted-foot traces, and the
-    // clearance and landing rays of swinging feet. 0 for an invalid handle or a gait that has not updated.
+    // clearance and landing rays of swinging feet; plus the link rays its rigs with a clearance policy cast after it that
+    // frame. 0 for an invalid handle or a gait that has not updated.
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralAnimation|Debug",
               DisplayName="[Ck][ProceduralAnimation] Get Rays Last Solve")

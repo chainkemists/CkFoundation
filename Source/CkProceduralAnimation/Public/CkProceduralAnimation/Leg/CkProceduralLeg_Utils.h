@@ -94,6 +94,15 @@ public:
     Get_Foot(
         const FCk_Handle_ProceduralLeg& InLeg);
 
+    // The verdict of the ideal target on the last solve that probed the leg: Usable when the ideal was the target or a hold
+    // agreed with it, otherwise why the gait looked elsewhere. A disabled leg keeps the verdict of its last enabled solve.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralLeg",
+              DisplayName="[Ck][ProceduralLeg] Get Ideal Verdict")
+    static ECk_ProceduralLeg_FootholdVerdict
+    Get_IdealVerdict(
+        const FCk_Handle_ProceduralLeg& InLeg);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|ProceduralLeg",
               DisplayName="[Ck][ProceduralLeg] Get Enable Disable")

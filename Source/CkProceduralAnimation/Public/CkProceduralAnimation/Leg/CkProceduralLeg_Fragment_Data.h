@@ -190,6 +190,23 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_Foothold);
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// Why a solve's ideal target was or was not usable: the gait's own verdict (see the module doc's Foothold search).
+UENUM(BlueprintType)
+enum class ECk_ProceduralLeg_FootholdVerdict : uint8
+{
+    Usable,
+    Miss,
+    Unreachable,
+    TooSteep,
+    Occluded,
+    Inboard,
+    UnderBody
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_FootholdVerdict);
+
+// --------------------------------------------------------------------------------------------------------------------
+
 USTRUCT(BlueprintType)
 struct CKPROCEDURALANIMATION_API FCk_ProceduralLeg_Foot
 {
