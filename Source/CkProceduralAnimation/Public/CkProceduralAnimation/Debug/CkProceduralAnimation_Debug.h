@@ -323,7 +323,8 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // _CandidateNormal and _CandidateSeen mirror the contact waiting out its confirmation: a turn beyond the confirm angle is
-// pending while _CandidateSeen is above zero, and adopted once it reaches the confirm time.
+// pending while _CandidateSeen is above zero, and adopted once it reaches the confirm time. _Obstruction and
+// _ObstructionNormal are the last substep's: Wall with the face's normal while the body slid along it.
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugMotion
 {
     CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugMotion);
@@ -339,6 +340,10 @@ private:
     ECk_SurfaceMotion_HeightSource _HeightSource = ECk_SurfaceMotion_HeightSource::Rays;
     FVector _CandidateNormal = FVector::UpVector;
     FCk_Time _CandidateSeen;
+    ECk_SurfaceMotion_WallPolicy _WallPolicy = ECk_SurfaceMotion_WallPolicy::Climb;
+    float _MaxStepHeight = 0.0f;
+    ECk_SurfaceMotion_Obstruction _Obstruction = ECk_SurfaceMotion_Obstruction::None;
+    FVector _ObstructionNormal = FVector::ZeroVector;
 
 public:
     CK_PROPERTY(_Velocity);
@@ -351,6 +356,10 @@ public:
     CK_PROPERTY(_HeightSource);
     CK_PROPERTY(_CandidateNormal);
     CK_PROPERTY(_CandidateSeen);
+    CK_PROPERTY(_WallPolicy);
+    CK_PROPERTY(_MaxStepHeight);
+    CK_PROPERTY(_Obstruction);
+    CK_PROPERTY(_ObstructionNormal);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
