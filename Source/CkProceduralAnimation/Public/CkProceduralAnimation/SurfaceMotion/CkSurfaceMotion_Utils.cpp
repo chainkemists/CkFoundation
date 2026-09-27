@@ -34,6 +34,8 @@ namespace ck_surface_motion_utils
             { return ECk_SurfaceMotion_ContactSource::Fan; }
             case ck::EProceduralSurfaceContactSource::Fall:
             { return ECk_SurfaceMotion_ContactSource::Fall; }
+            case ck::EProceduralSurfaceContactSource::Feet:
+            { return ECk_SurfaceMotion_ContactSource::Feet; }
             default:
             { return ECk_SurfaceMotion_ContactSource::None; }
         }
@@ -145,6 +147,17 @@ auto
     return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
         ? ck_surface_motion_utils::DoGet_ContactSource(InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_ContactSource())
         : ECk_SurfaceMotion_ContactSource::None;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_HeightSource(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_HeightSource
+{
+    return ck::IsValid(InHandle) && Has(InHandle)
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Params>().Get_Contact().Get_HeightSource()
+        : ECk_SurfaceMotion_HeightSource::Rays;
 }
 
 auto

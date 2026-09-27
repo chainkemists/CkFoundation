@@ -43,6 +43,14 @@ namespace ck_procedural_gait_utils
             const FCk_ProceduralLeg_ChainGeometry& InChain,
             const FCk_ProceduralGait_Step& InStep)
         -> bool;
+
+    // How much a published foot counts in the body pose's conform fit: a trusted plant fully, an untrusted plant (one that
+    // touched down where its gait found no ground it trusts) not at all, and a swinging foot fading out over the first third
+    // of its swing and back in over the last third, so the fit does not step when the planted set changes.
+    auto
+        Get_SupportWeight(
+            const FCk_ProceduralLeg_Foot& InFoot)
+        -> float;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -149,6 +157,15 @@ public:
               DisplayName="[Ck][ProceduralGait] Get Enabled Leg Count")
     static int32
     Get_EnabledLegCount(
+        const FCk_Handle_ProceduralGait& InGait);
+
+    // The plane the last solve fitted through the supporting feet (a surface motion with the PlantedFeet height source rides
+    // on it): Fitted, Held while too few feet support the body, None otherwise and unless the gait is Ready.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralGait",
+              DisplayName="[Ck][ProceduralGait] Get Feet Plane")
+    static FCk_ProceduralGait_FeetPlane
+    Get_FeetPlane(
         const FCk_Handle_ProceduralGait& InGait);
 
 public:

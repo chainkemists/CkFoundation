@@ -236,6 +236,8 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProceduralLeg_FootPhase _Phase = ECk_ProceduralLeg_FootPhase::Swinging;
 
+    // While planted, whether the foot touched down on ground, kept until it next touches down: the gait's touchdown ray
+    // met ground through the plant. While swinging, whether this solve's target is ground its gait probed and trusts.
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly,
               meta = (AllowPrivateAccess = true))
     ECk_ProceduralLeg_FootContact _Contact = ECk_ProceduralLeg_FootContact::Guessed;

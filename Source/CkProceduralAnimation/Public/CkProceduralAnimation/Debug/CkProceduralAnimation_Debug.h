@@ -169,8 +169,9 @@ public:
 // --------------------------------------------------------------------------------------------------------------------
 
 // Value-only diagnostic records remain readable after their source entity is destroyed. _LandingPointWorld is the point a
-// swinging foot's landing ground was probed under this solve (the swing's landing point as of the previous solve) and
-// _LandingProbe that ray; the probe is not attempted (zero attempts) while the leg is planted or on a catch step.
+// swinging foot's landing ground was probed under this solve (the swing's landing point as of the previous solve),
+// _LandingProbe that ray and _LandingGround what the solve was told of it; the probe is not attempted (zero attempts,
+// Unknown) while the leg is planted, on a catch step or aimed at a face.
 // _Footholds lists the candidates this solve validated, in the order they were cast, and _ChosenFoothold the one that
 // became the target (INDEX_NONE when none was usable).
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLeg
@@ -186,6 +187,7 @@ private:
     FCk_ProceduralAnimation_DebugProbe _Probe;
     FVector _LandingPointWorld = FVector::ZeroVector;
     FCk_ProceduralAnimation_DebugProbe _LandingProbe;
+    ck::EProceduralGaitLandingGround _LandingGround = ck::EProceduralGaitLandingGround::Unknown;
     FCk_ProceduralAnimation_DebugLegRig _Rig;
     TArray<FCk_ProceduralAnimation_DebugFoothold, TInlineAllocator<16>> _Footholds;
     int32 _ChosenFoothold = INDEX_NONE;
@@ -201,6 +203,7 @@ public:
     CK_PROPERTY(_Probe);
     CK_PROPERTY(_LandingPointWorld);
     CK_PROPERTY(_LandingProbe);
+    CK_PROPERTY(_LandingGround);
     CK_PROPERTY(_Rig);
     CK_PROPERTY(_Footholds);
     CK_PROPERTY(_ChosenFoothold);
@@ -293,6 +296,10 @@ private:
     int32 _ReachSkippedLegs = 0;
     int32 _MissedLandingLifts = 0;
     int32 _RaysLastSolve = 0;
+    // The plane the solve published through the supporting feet: world point, normal and state.
+    FVector _FeetPlanePoint = FVector::ZeroVector;
+    FVector _FeetPlaneNormal = FVector::UpVector;
+    ck::EProceduralGaitFeetPlane _FeetPlane = ck::EProceduralGaitFeetPlane::None;
 
 public:
     CK_PROPERTY(_BodyTransform);
@@ -308,6 +315,9 @@ public:
     CK_PROPERTY(_ReachSkippedLegs);
     CK_PROPERTY(_MissedLandingLifts);
     CK_PROPERTY(_RaysLastSolve);
+    CK_PROPERTY(_FeetPlanePoint);
+    CK_PROPERTY(_FeetPlaneNormal);
+    CK_PROPERTY(_FeetPlane);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -326,6 +336,7 @@ private:
     bool _TrustedContact = false;
     FCk_Time _MissingContact;
     ECk_SurfaceMotion_ContactSource _ContactSource = ECk_SurfaceMotion_ContactSource::None;
+    ECk_SurfaceMotion_HeightSource _HeightSource = ECk_SurfaceMotion_HeightSource::Rays;
     FVector _CandidateNormal = FVector::UpVector;
     FCk_Time _CandidateSeen;
 
@@ -337,6 +348,7 @@ public:
     CK_PROPERTY(_TrustedContact);
     CK_PROPERTY(_MissingContact);
     CK_PROPERTY(_ContactSource);
+    CK_PROPERTY(_HeightSource);
     CK_PROPERTY(_CandidateNormal);
     CK_PROPERTY(_CandidateSeen);
 };

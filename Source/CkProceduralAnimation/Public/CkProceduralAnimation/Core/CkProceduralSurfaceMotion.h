@@ -10,8 +10,9 @@
 
 namespace ck
 {
-    // The ray whose hit the body last accepted. None: no ray hit (contact grace or airborne). A substep that only coasts while
-    // a large turn waits for confirmation accepts nothing and keeps the source.
+    // The ray whose hit the body last accepted, or Feet for the plane through the planted feet. None: no contact (contact
+    // grace or airborne). A substep that only coasts while a large turn waits for confirmation accepts nothing and keeps the
+    // source.
     enum class EProceduralSurfaceContactSource : uint8
     {
         None,
@@ -19,7 +20,8 @@ namespace ck
         Down,
         LookAhead,
         Fan,
-        Fall
+        Fall,
+        Feet
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -107,6 +109,31 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The support the planted feet provide: the plane (world point and normal), the frame it was fitted in and the weighted
+    // feet's footprint in that frame (XY, relative to the origin), which bounds where the plane counts.
+    struct CKPROCEDURALANIMATION_API FProceduralSurfaceFeetSupport
+    {
+        CK_GENERATED_BODY(FProceduralSurfaceFeetSupport);
+
+    private:
+        FVector _Point = FVector::ZeroVector;
+        FVector _Normal = FVector::UpVector;
+        FQuat _Basis = FQuat::Identity;
+        FVector _Origin = FVector::ZeroVector;
+        FVector2D _FootprintMin = FVector2D::ZeroVector;
+        FVector2D _FootprintMax = FVector2D::ZeroVector;
+
+    public:
+        CK_PROPERTY(_Point);
+        CK_PROPERTY(_Normal);
+        CK_PROPERTY(_Basis);
+        CK_PROPERTY(_Origin);
+        CK_PROPERTY(_FootprintMin);
+        CK_PROPERTY(_FootprintMax);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // Returns the first hit on the segment from InStart to InEnd.
     using FProceduralSurfaceRayCast = TFunctionRef<FProceduralSurfaceHit(const FVector& InStart, const FVector& InEnd)>;
 
@@ -131,6 +158,15 @@ namespace ck
     // - Without a trusted hit the body coasts for the contact grace, then falls under gravity along a swept ray until it
     //   lands. The landing keeps the travel tangent laid onto the landing plane (then the steering, then the body's
     //   forward).
+    // - Planted feet (InFeetSupport set): while the candidate, expressed in the support's frame, lies inside its footprint
+    //   grown by a quarter clearance on every side, and the plane's normal lies within ProceduralFeetPlaneMaxAngleDegrees
+    //   of the support normal, the feet give a contact on their plane straight down the support normal, at the height
+    //   dot(Candidate - Point, N) / dot(Up, N) above it. It becomes the substep's down contact when it lies higher than the
+    //   down ray's hit (a tie goes to the ray), so the body never rides lower than the rays put it; it carries the down
+    //   ray's normal when that ray hit and the plane's normal over a miss, where the ray tells nothing about the surface.
+    //   While it exists the support holds, so a face still needs confirmation, and a down miss is not a miss: the
+    //   look-ahead and the fan are cast only when neither contact exists, and the grace and the fall never start. Outside
+    //   the footprint every rule above applies unchanged; unset, nothing changes.
     // The caller keeps the settings valid, InStep positive and the body finite.
     CKPROCEDURALANIMATION_API auto
         StepProceduralSurfaceMotion(
@@ -139,6 +175,7 @@ namespace ck
             float InSpeed,
             FCk_Time InStep,
             FProceduralSurfaceRayCast InRayCast,
+            const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
             FProceduralSurfaceMotionState& InOutState)
         -> void;

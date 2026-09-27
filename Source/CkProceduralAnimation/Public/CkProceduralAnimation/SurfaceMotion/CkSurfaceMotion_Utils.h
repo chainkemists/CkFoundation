@@ -115,6 +115,14 @@ public:
     Get_ContactSource(
         const FCk_Handle_SurfaceMotion& InHandle);
 
+    // The height source the Spec composed the surface motion with; Rays for an invalid handle.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Height Source")
+    static ECk_SurfaceMotion_HeightSource
+    Get_HeightSource(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SurfaceMotion",

@@ -94,6 +94,7 @@ namespace ck
         TReadOnly<FFragment_ProceduralGait_Tunables>,
         TReadWrite<FFragment_ProceduralGait>,
         TReadWrite<FFragment_ProceduralGait_Debug>,
+        TReadWrite<FFragment_ProceduralGait_FeetPlane>,
         TReadOnly<FFragment_Transform>,
         TExclude<FTag_ProceduralGait_NeedsSetup>,
         TExclude<FFragment_ProceduralGait_Failure>,
@@ -115,7 +116,20 @@ namespace ck
             const FFragment_ProceduralGait_Tunables& InTunables,
             FFragment_ProceduralGait& InGaitComp,
             FFragment_ProceduralGait_Debug& InDebugComp,
+            FFragment_ProceduralGait_FeetPlane& InFeetPlaneComp,
             const FFragment_Transform& InTransform)
+            -> void;
+
+    private:
+        static auto
+        DoUpdate_FeetPlane(
+            HandleType InHandle,
+            TimeType InDeltaT,
+            const FFragment_ProceduralGait_Tunables& InTunables,
+            const FFragment_ProceduralGait& InGaitComp,
+            TArrayView<const FProceduralGaitLegInput> InInputs,
+            const FTransform& InBody,
+            FFragment_ProceduralGait_FeetPlane& InOutFeetPlane)
             -> void;
     };
 

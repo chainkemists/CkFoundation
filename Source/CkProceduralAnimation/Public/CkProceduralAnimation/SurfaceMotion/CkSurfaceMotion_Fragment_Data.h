@@ -42,8 +42,9 @@ enum class ECk_SurfaceMotion_ContactQuery : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactQuery);
 
 // The ray whose hit the body last accepted: forward within the clearance, down under the body, the look-ahead down ray
-// ahead of the body, the fan around a convex edge, or the swept fall. None while no ray hits. A substep that coasts while
-// a large turn waits for confirmation accepts nothing and keeps the source.
+// ahead of the body, the fan around a convex edge, or the swept fall; or Feet, the plane through the planted feet (height
+// source PlantedFeet). None while nothing supports the body. A substep that coasts while a large turn waits for
+// confirmation accepts nothing and keeps the source.
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_ContactSource : uint8
 {
@@ -52,10 +53,20 @@ enum class ECk_SurfaceMotion_ContactSource : uint8
     Down,
     LookAhead,
     Fan,
-    Fall
+    Fall,
+    Feet
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactSource);
+
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_HeightSource : uint8
+{
+    Rays         UMETA(DisplayName = "Rays (the body keeps its clearance above what its rays hit)"),
+    PlantedFeet  UMETA(DisplayName = "Planted Feet (the body also rides on the plane through its planted feet)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_HeightSource);
 
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_Failure : uint8
@@ -101,6 +112,14 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_Time _ConfirmTime = FCk_Time{0.075};
 
+    // PlantedFeet also keeps the body at its clearance above the plane the body's gait fits through the ground its feet
+    // stand on and are about to land on, within their footprint, whenever that plane lies above what the rays hit; the rays
+    // decide attitude where the down ray hits and the plane's normal over a down miss, and outside the footprint only the
+    // rays count. A body without a gait has no such plane.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_SurfaceMotion_HeightSource _HeightSource = ECk_SurfaceMotion_HeightSource::Rays;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Jolt_QueryFilter _QueryFilter;
@@ -111,6 +130,7 @@ public:
     CK_PROPERTY(_ContactGrace);
     CK_PROPERTY(_ConfirmAngle);
     CK_PROPERTY(_ConfirmTime);
+    CK_PROPERTY(_HeightSource);
     CK_PROPERTY(_QueryFilter);
 };
 

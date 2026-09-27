@@ -1,5 +1,7 @@
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Processor.h"
 
+#include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
+
 #include "CkCore/Ensure/CkEnsure.h"
 
 #include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
@@ -154,9 +156,21 @@ namespace ck
         constexpr auto IntegrationInterval = FCk_Time{0.016};
         const auto Substeps = FMath::Clamp(FMath::CeilToInt(FMath::Min(Dt / IntegrationInterval.Get_Seconds(), 64.0)), 1, 64);
         const auto Step = FCk_Time{Dt / Substeps};
+        // The gait publishes its feet plane after this update runs, so the body rides the plane of the previous frame.
+        auto FeetSupport = TOptional<FProceduralSurfaceFeetSupport>{};
+        const auto RidesPlantedFeet = InParams.Get_Contact().Get_HeightSource() == ECk_SurfaceMotion_HeightSource::PlantedFeet
+            && InHandle.Has<FFragment_ProceduralGait_FeetPlane>();
+        if (RidesPlantedFeet)
+        {
+            const auto& FeetPlane = InHandle.Get<FFragment_ProceduralGait_FeetPlane>();
+            if (FeetPlane.Get_State() != EProceduralGaitFeetPlane::None)
+            { FeetSupport = FeetPlane.Get_Support(); }
+        }
+
         for (auto Iteration = 0; Iteration < Substeps; ++Iteration)
         {
-            StepProceduralSurfaceMotion(Settings, InMotionComp._Direction, InMotionComp._Speed, Step, RayCast, Body, InSupportComp._State);
+            StepProceduralSurfaceMotion(Settings, InMotionComp._Direction, InMotionComp._Speed, Step, RayCast, FeetSupport, Body,
+                InSupportComp._State);
         }
         InSupportComp._EvaluatedFrame = GFrameCounter;
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
