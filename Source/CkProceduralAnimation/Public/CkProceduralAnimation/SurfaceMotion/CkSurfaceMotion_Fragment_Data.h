@@ -42,9 +42,9 @@ enum class ECk_SurfaceMotion_ContactQuery : uint8
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactQuery);
 
 // The ray whose hit the body last accepted: forward within the clearance, down under the body, the look-ahead down ray
-// ahead of the body, the fan around a convex edge, or the swept fall; or Feet, the plane through the planted feet (height
-// source PlantedFeet). None while nothing supports the body. A substep that coasts while a large turn waits for
-// confirmation accepts nothing and keeps the source.
+// ahead of the body, the fan around a convex edge, or the swept fall; Feet, the plane through the planted feet (height
+// source PlantedFeet); or Step, the top of a face the body steps onto (max step height). None while nothing supports the
+// body. A substep that coasts while a large turn waits for confirmation accepts nothing and keeps the source.
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_ContactSource : uint8
 {
@@ -54,10 +54,31 @@ enum class ECk_SurfaceMotion_ContactSource : uint8
     LookAhead,
     Fan,
     Fall,
-    Feet
+    Feet,
+    Step
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ContactSource);
+
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_WallPolicy : uint8
+{
+    Climb  UMETA(DisplayName = "Climb (a face within the clearance becomes the next support)"),
+    Slide  UMETA(DisplayName = "Slide (the body slides along a face it cannot step onto)")
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_WallPolicy);
+
+// Wall while the last substep slid the body along a face it could neither step onto nor climb: every wall under Slide, and a
+// face without room under either policy.
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_Obstruction : uint8
+{
+    None,
+    Wall
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_Obstruction);
 
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_HeightSource : uint8
@@ -120,6 +141,20 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_SurfaceMotion_HeightSource _HeightSource = ECk_SurfaceMotion_HeightSource::Rays;
 
+    // 0: no stepping. Otherwise above the clearance and at most the probe reach: a face the forward ray meets (one taller
+    // than the clearance) whose top lies at most this high above the ground under the body is a step, and the body rises
+    // onto its top instead of treating it as a wall. A face lower than the clearance is never seen by the forward ray; the
+    // down ray lifts the body over it whatever this says.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0))
+    float _MaxStepHeight = 0.0f;
+
+    // What a face that is not a step is: Climb confirms it and makes it the next support; Slide never makes it support and
+    // takes the travel into it away, so a glancing face slows the body and a head-on one stops it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    ECk_SurfaceMotion_WallPolicy _WallPolicy = ECk_SurfaceMotion_WallPolicy::Climb;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite,
               meta = (AllowPrivateAccess = true))
     FCk_Jolt_QueryFilter _QueryFilter;
@@ -131,6 +166,8 @@ public:
     CK_PROPERTY(_ConfirmAngle);
     CK_PROPERTY(_ConfirmTime);
     CK_PROPERTY(_HeightSource);
+    CK_PROPERTY(_MaxStepHeight);
+    CK_PROPERTY(_WallPolicy);
     CK_PROPERTY(_QueryFilter);
 };
 
@@ -141,7 +178,10 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_SurfaceMotion_Contact, IsValid_Policy_Defau
         && FMath::IsFinite(InContact.Get_ProbeReach()) && InContact.Get_ProbeReach() > InContact.Get_Clearance()
         && FMath::IsFinite(InContact.Get_ContactGrace().Get_Seconds()) && InContact.Get_ContactGrace() >= FCk_Time{}
         && FMath::IsFinite(InContact.Get_ConfirmAngle()) && InContact.Get_ConfirmAngle() >= 0.0f && InContact.Get_ConfirmAngle() <= 180.0f
-        && FMath::IsFinite(InContact.Get_ConfirmTime().Get_Seconds()) && InContact.Get_ConfirmTime() >= FCk_Time{};
+        && FMath::IsFinite(InContact.Get_ConfirmTime().Get_Seconds()) && InContact.Get_ConfirmTime() >= FCk_Time{}
+        && FMath::IsFinite(InContact.Get_MaxStepHeight())
+        && (InContact.Get_MaxStepHeight() == 0.0f
+            || (InContact.Get_MaxStepHeight() > InContact.Get_Clearance() && InContact.Get_MaxStepHeight() <= InContact.Get_ProbeReach()));
 });
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1481,16 +1481,21 @@ namespace ck
             {
                 const auto& Motion = InHandle.Get<FFragment_SurfaceMotion>();
                 const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>()._State;
+                const auto MotionHandle = UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle);
                 Snapshot.Get_Motion().Set_Velocity(Support.Get_Velocity())
                     .Set_RequestedDirection(Motion._Direction)
                     .Set_RequestedSpeed(Motion._Speed)
                     .Set_Grounded(Support.Get_Grounded())
                     .Set_TrustedContact(Support.Get_ContactTrusted())
                     .Set_MissingContact(Support.Get_MissingContact())
-                    .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)))
-                    .Set_HeightSource(UCk_Utils_SurfaceMotion_UE::Get_HeightSource(UCk_Utils_SurfaceMotion_UE::CastChecked(InHandle)))
+                    .Set_ContactSource(UCk_Utils_SurfaceMotion_UE::Get_ContactSource(MotionHandle))
+                    .Set_HeightSource(UCk_Utils_SurfaceMotion_UE::Get_HeightSource(MotionHandle))
                     .Set_CandidateNormal(Support.Get_CandidateNormal())
-                    .Set_CandidateSeen(Support.Get_CandidateSeen());
+                    .Set_CandidateSeen(Support.Get_CandidateSeen())
+                    .Set_WallPolicy(UCk_Utils_SurfaceMotion_UE::Get_WallPolicy(MotionHandle))
+                    .Set_MaxStepHeight(UCk_Utils_SurfaceMotion_UE::Get_MaxStepHeight(MotionHandle))
+                    .Set_Obstruction(UCk_Utils_SurfaceMotion_UE::Get_Obstruction(MotionHandle))
+                    .Set_ObstructionNormal(UCk_Utils_SurfaceMotion_UE::Get_ObstructionNormal(MotionHandle));
                 Snapshot.Get_Gait().Set_SupportNormal(Support.Get_SupportNormal());
             }
         }
