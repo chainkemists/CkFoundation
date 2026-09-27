@@ -165,7 +165,7 @@ namespace ck_procedural_gait
     };
 
     // One search per this many enabled legs and solve, and never fewer than MinSearchLegs: a walker whose every ideal target
-    // fails at once (a centipede on a beam) would otherwise run the full fan on every leg in the same frame. A hold serves for
+    // fails at once (a long body over a beam narrower than its hips) would otherwise run the full fan on every leg in the same frame. A hold serves for
     // as long as the ideal target is unusable, so a failing leg searches once and then holds, and the budget binds only while
     // many legs fail together. The legs left over keep the contact grace this solve and search on a later one, round-robin.
     constexpr auto EnabledLegsPerSearch = 2;
@@ -182,12 +182,22 @@ namespace ck_procedural_gait
     // A face hold is checked with one ray this far to either side of it along its normal: the hold lies on the face, so a
     // short ray meets it again, and a short start stays out of solids next to the face.
     constexpr auto FaceHoldProbeHalfSpan = 10.0f;
+    // A search ring at this share of the reach reaches the next top across a gap as wide as a top while every ring point
+    // stays inside the leg's target reach from an ideal at its rest distance.
     constexpr auto DerivedSearchRadiusShareOfReach = 0.3f;
+    // Two spots closer than this many step thresholds agree: a foot moved between them would travel less than a step.
     constexpr auto DerivedKeepRadiusInStepThresholds = 1.5f;
+    // The floor in front of an occluder is probed this share of the reach back from the face toward the hip: far enough
+    // from the face for the foot to stand, close enough to be the spot the occluded target was aiming at.
     constexpr auto FrontFloorShareOfReach = 0.1f;
+    // The inward casts aim from the ideal target under the hip at these depths in rest drops: the near one meets a pillar
+    // side or a cylinder curving away at the leg's own height, the far one the floor under a hip raised on a top or a post.
     constexpr auto InwardCloseDepthInRestDrops = 1.5f;
     constexpr auto InwardFarDepthInRestDrops = 4.0f;
+    // The outward cast starts this many rest drops above the hip so it looks down over a top or a face beyond the ideal.
     constexpr auto OutwardHeightInRestDrops = 2.0f;
+    // Eight ring points, 45 degrees apart, put at least two on a top across any gap narrower than the ring's radius while
+    // keeping a search under the fan the budget allows.
     constexpr auto RingPoints = 8;
     // While too few feet support the body the last fitted plane is held this many step durations: long enough to bridge the
     // swing of a phase group between two stances, short enough that a body that leaves its feet behind soon rides its rays.
@@ -1427,6 +1437,7 @@ namespace ck
                 .Set_SwingAlpha(Output.Get_SwingAlpha())
                 .Set_Phase(Output.Get_Planted() ? ECk_ProceduralLeg_FootPhase::Planted : ECk_ProceduralLeg_FootPhase::Swinging)
                 .Set_Contact(ContactTrusted ? ECk_ProceduralLeg_FootContact::Trusted : ECk_ProceduralLeg_FootContact::Guessed);
+            InDebugComp._ScratchLegs[Index].Get_Foot().Set_ContactTrusted(ContactTrusted);
 
             ck_procedural_gait::DoPublish_FootPhaseChange(Leg, LegComp, PreviousPhase, PreviousPosition, Dt);
         }
