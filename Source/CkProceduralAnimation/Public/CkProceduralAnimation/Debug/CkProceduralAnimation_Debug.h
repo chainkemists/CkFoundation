@@ -2,6 +2,7 @@
 
 #include "CkProceduralAnimation/CkProceduralAnimation_Fragment_Data.h"
 #include "CkProceduralAnimation/Core/CkProceduralFootProbe.h"
+#include "CkProceduralAnimation/Core/CkProceduralFoothold.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment_Data.h"
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Fragment_Data.h"
@@ -139,9 +140,31 @@ public:
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// One foothold candidate of a solve, in world space.
+struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugFoothold
+{
+    CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugFoothold);
+
+private:
+    FVector _Position = FVector::ZeroVector;
+    FVector _Normal = FVector::UpVector;
+    ck::EProceduralFootholdSource _Source = ck::EProceduralFootholdSource::None;
+    ck::EProceduralFootholdVerdict _Verdict = ck::EProceduralFootholdVerdict::Miss;
+
+public:
+    CK_PROPERTY(_Position);
+    CK_PROPERTY(_Normal);
+    CK_PROPERTY(_Source);
+    CK_PROPERTY(_Verdict);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
 // Value-only diagnostic records remain readable after their source entity is destroyed. _LandingPointWorld is the point a
 // swinging foot's landing ground was probed under this solve (the swing's landing point as of the previous solve) and
 // _LandingProbe that ray; the probe is not attempted (zero attempts) while the leg is planted or on a catch step.
+// _Footholds lists the candidates this solve validated, in the order they were cast, and _ChosenFoothold the one that
+// became the target (INDEX_NONE when none was usable).
 struct CKPROCEDURALANIMATION_API FCk_ProceduralAnimation_DebugLeg
 {
     CK_GENERATED_BODY(FCk_ProceduralAnimation_DebugLeg);
@@ -156,6 +179,10 @@ private:
     FVector _LandingPointWorld = FVector::ZeroVector;
     FCk_ProceduralAnimation_DebugProbe _LandingProbe;
     FCk_ProceduralAnimation_DebugLegRig _Rig;
+    TArray<FCk_ProceduralAnimation_DebugFoothold, TInlineAllocator<16>> _Footholds;
+    int32 _ChosenFoothold = INDEX_NONE;
+    ck::EProceduralFootholdSource _FootholdSource = ck::EProceduralFootholdSource::None;
+    bool _PlantOccluded = false;
 
 public:
     CK_PROPERTY(_Id);
@@ -167,6 +194,10 @@ public:
     CK_PROPERTY(_LandingPointWorld);
     CK_PROPERTY(_LandingProbe);
     CK_PROPERTY(_Rig);
+    CK_PROPERTY(_Footholds);
+    CK_PROPERTY(_ChosenFoothold);
+    CK_PROPERTY(_FootholdSource);
+    CK_PROPERTY(_PlantOccluded);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -253,6 +284,7 @@ private:
     float _ReachCadenceFloor = 0.0f;
     int32 _ReachSkippedLegs = 0;
     int32 _MissedLandingLifts = 0;
+    int32 _RaysLastSolve = 0;
 
 public:
     CK_PROPERTY(_BodyTransform);
@@ -267,6 +299,7 @@ public:
     CK_PROPERTY(_ReachCadenceFloor);
     CK_PROPERTY(_ReachSkippedLegs);
     CK_PROPERTY(_MissedLandingLifts);
+    CK_PROPERTY(_RaysLastSolve);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -377,6 +410,16 @@ public:
     Get_Entities(
         UWorld* InWorld)
         -> TArray<FCk_Handle>;
+
+public:
+    // Every ray the gait's last update cast: foothold candidates and their occlusion traces, planted-foot traces, and the
+    // clearance and landing rays of swinging feet. 0 for an invalid handle or a gait that has not updated.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|ProceduralAnimation|Debug",
+              DisplayName="[Ck][ProceduralAnimation] Get Rays Last Solve")
+    static int32
+    Get_RaysLastSolve(
+        const FCk_Handle_ProceduralGait& InGait);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CkProceduralAnimation/Core/CkProceduralGaitSolver.h"
+
 #include "CkCore/Macros/CkMacros.h"
 #include "CkCore/Time/CkTime.h"
 #include "CkCore/Types/DataAsset/CkDataAsset.h"
@@ -224,6 +226,69 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Probe, IsValid_Policy_Defaul
 
 // --------------------------------------------------------------------------------------------------------------------
 
+// The foothold search that runs when a leg's ideal target is missed, out of reach or occluded. The two radii derive
+// from the leg when 0: the search ring from 0.3 of its reach, the keep radius of a held foothold from 1.5 step
+// thresholds.
+USTRUCT(BlueprintType)
+struct CKPROCEDURALANIMATION_API FCk_ProceduralGait_Foothold
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_ProceduralGait_Foothold);
+
+private:
+    // Centimetres from the ideal target to the eight ring candidates.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _SearchRadius = 0.0f;
+
+    // Centimetres a held foothold may lie from the ideal target before the search runs again.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _KeepRadius = 0.0f;
+
+    // Degrees from the support up; applies to search candidates only, the ideal target and a held foothold accept any
+    // surface they do not see from behind.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = 0, ClampMax = 90))
+    float _MaxAngle = 90.0f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _SlopeWeight = 0.5f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _ContinuityWeight = 0.25f;
+
+    // Centimetres: a hip-to-foothold trace that hits a solid farther than this from the foothold is occluded.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    float _OcclusionTolerance = 3.0f;
+
+public:
+    CK_PROPERTY(_SearchRadius);
+    CK_PROPERTY(_KeepRadius);
+    CK_PROPERTY(_MaxAngle);
+    CK_PROPERTY(_SlopeWeight);
+    CK_PROPERTY(_ContinuityWeight);
+    CK_PROPERTY(_OcclusionTolerance);
+};
+
+CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralGait_Foothold, IsValid_Policy_Default,
+[=](const FCk_ProceduralGait_Foothold& InFoothold)
+{
+    return FMath::IsFinite(InFoothold.Get_SearchRadius()) && InFoothold.Get_SearchRadius() >= 0.0f
+        && FMath::IsFinite(InFoothold.Get_KeepRadius()) && InFoothold.Get_KeepRadius() >= 0.0f
+        && FMath::IsFinite(InFoothold.Get_MaxAngle()) && InFoothold.Get_MaxAngle() >= 0.0f && InFoothold.Get_MaxAngle() <= 90.0f
+        && FMath::IsFinite(InFoothold.Get_SlopeWeight()) && InFoothold.Get_SlopeWeight() >= 0.0f
+        && FMath::IsFinite(InFoothold.Get_ContinuityWeight()) && InFoothold.Get_ContinuityWeight() >= 0.0f
+        && FMath::IsFinite(InFoothold.Get_OcclusionTolerance()) && InFoothold.Get_OcclusionTolerance() >= 0.0f;
+});
+
+// --------------------------------------------------------------------------------------------------------------------
+
 UCLASS(BlueprintType)
 class CKPROCEDURALANIMATION_API UCk_ProceduralGait_Data : public UCk_DataAsset_PDA
 {
@@ -251,10 +316,15 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_ProceduralGait_Probe _Probe;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly,
+              meta = (AllowPrivateAccess = true))
+    FCk_ProceduralGait_Foothold _Foothold;
+
 public:
     CK_PROPERTY(_Timing);
     CK_PROPERTY(_Step);
     CK_PROPERTY(_Probe);
+    CK_PROPERTY(_Foothold);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -281,13 +351,18 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_ProceduralGait_Probe _Probe;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    FCk_ProceduralGait_Foothold _Foothold;
+
 public:
     CK_PROPERTY_GET(_Timing);
     CK_PROPERTY_GET(_Step);
     CK_PROPERTY_GET(_Probe);
+    CK_PROPERTY_GET(_Foothold);
 
 public:
-    CK_DEFINE_CONSTRUCTORS(FCk_Request_ProceduralGait_ApplyPreset, _Timing, _Step, _Probe);
+    CK_DEFINE_CONSTRUCTORS(FCk_Request_ProceduralGait_ApplyPreset, _Timing, _Step, _Probe, _Foothold);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -297,5 +372,32 @@ DECLARE_DYNAMIC_DELEGATE_ThreeParams(
     FCk_Handle_ProceduralGait, InGait,
     int32, InEnabledCount,
     int32, InTotalCount);
+
+// --------------------------------------------------------------------------------------------------------------------
+
+namespace ck
+{
+    // The solver settings built from a gait's tunables and its enabled legs, with the reach cadence floor the build applied
+    // (0 when no enabled leg bounds it) and the count of enabled legs too wide to stride along body X. The floor and the
+    // count are diagnostics: only the debug fragment keeps them.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitBuiltSettings
+    {
+    public:
+        CK_GENERATED_BODY(FProceduralGaitBuiltSettings);
+
+    private:
+        FProceduralGaitSettings _Settings;
+        float _ReachCadenceFloor = 0.0f;
+        int32 _ReachSkippedLegs = 0;
+
+    public:
+        CK_PROPERTY_GET(_Settings);
+        CK_PROPERTY_GET(_ReachCadenceFloor);
+        CK_PROPERTY_GET(_ReachSkippedLegs);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralGaitBuiltSettings, _Settings, _ReachCadenceFloor, _ReachSkippedLegs);
+    };
+}
 
 // --------------------------------------------------------------------------------------------------------------------

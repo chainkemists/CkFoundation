@@ -38,6 +38,13 @@ auto
         Result = EDataValidationResult::Invalid;
     }
 
+    if (ck::Is_NOT_Valid(_Foothold))
+    {
+        InContext.AddError(FText::FromString(TEXT("FCk_ProceduralGait_Foothold is invalid: the search and keep radii, the slope and "
+            "continuity weights and the occlusion tolerance must be finite and >= 0, and the max angle in [0, 90].")));
+        Result = EDataValidationResult::Invalid;
+    }
+
     return Result;
 }
 #endif

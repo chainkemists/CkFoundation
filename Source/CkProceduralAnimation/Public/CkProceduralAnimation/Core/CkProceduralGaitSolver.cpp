@@ -816,7 +816,7 @@ namespace ck
         // leg index order hands the slot to another group again. The Emergency leg whose group has nothing in flight
         // therefore holds back every other group's take-off until it steps, Emergency take-offs included: while the body
         // turns in place every group is in Emergency at once, and index order would starve one of them. Only a
-        // hard-overstretched foot steps past it, beyond the schedule.
+        // hard-overstretched or occluded foot steps past it, beyond the schedule.
         auto PriorityPhaseOffset = TOptional<float>{};
         auto PriorityRatio = 0.0;
         for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
@@ -857,6 +857,9 @@ namespace ck
                 if (Advance)
                 {
                     State._Swing._Phase = FMath::Min(State._Swing._Phase + static_cast<float>(InDeltaTime / SwingDuration), 1.0f);
+
+                    if (NOT State._Swing._TargetFrozen && In._TargetValid && In._TargetIsFoothold)
+                    { State._Swing._Overshoot = false; }
 
                     if (NOT State._Swing._CatchStep && NOT State._Swing._TargetFrozen
                         && State._Swing._Phase >= _Settings._Step._RetargetFreezePhase && In._TargetValid)
@@ -1018,8 +1021,11 @@ namespace ck
                 const auto OnSchedule = NOT IsInhibited(LegPhaseOffset) && NOT YieldsToPriority && Triggered;
                 // A body climbing away from its planted feet stretches every group's floor feet at once, and the schedule
                 // steps them one group after another. A foot past its chain steps now, inhibited or yielding, as long as no
-                // other group swings beyond the schedule and the budget allows.
-                const auto BeyondSchedule = NOT OnSchedule && NOT CatchStep && Budget && DoGet_IsHardOverstretched(State, In)
+                // other group swings beyond the schedule and the budget allows. So does a foot its hip cannot see: the body
+                // carries it deeper behind the solid for every frame it waits, and at a walker's travel speed the other
+                // group's reach Emergencies would keep its ratio of 1 waiting for longer than a step.
+                const auto StepsBeyondSchedule = DoGet_IsHardOverstretched(State, In) || (In._PlantOccluded && In._TargetValid);
+                const auto BeyondSchedule = NOT OnSchedule && NOT CatchStep && Budget && StepsBeyondSchedule
                     && (BeyondScheduleOffsets.IsEmpty() || ContainsGroup(BeyondScheduleOffsets, LegPhaseOffset));
 
                 if (Advance && (OnSchedule || BeyondSchedule))
@@ -1030,7 +1036,7 @@ namespace ck
                     DoBeginSwing(State, State._Plant._Position, State._Plant._Rotation, SwingTarget);
                     State._Swing._TargetFrozen = false;
 
-                    State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency);
+                    State._Swing._Overshoot = NOT CatchStep && (Wants || Emergency) && NOT In._TargetIsFoothold;
 
                     State._Swing._CatchStep = CatchStep;
                     State._Swing._BeyondSchedule = NOT OnSchedule;
@@ -1189,6 +1195,10 @@ namespace ck
             FCk_Time InRemainingTime) const
         -> FVector
     {
+        // A foothold was validated where it lies; pushed along the travel, the foot would land on ground nobody checked.
+        if (InInput._TargetIsFoothold)
+        { return DoClampToReach(InInput, InInput._IdealTarget); }
+
         return DoClampToReach(InInput, InInput._IdealTarget + InBodyPlanarVelocity * InRemainingTime.Get_Seconds());
     }
 
@@ -1286,6 +1296,9 @@ namespace ck
             const FProceduralGaitLegInput& InInput) const
         -> bool
     {
+        if (InInput._PlantOccluded && InInput._TargetValid)
+        { return true; }
+
         const auto Threshold = _Settings._Step._Threshold * FMath::Max(InInput._StepThresholdScale, KINDA_SMALL_NUMBER);
         const auto Error = FVector::Dist(InState._Plant._Position, InInput._IdealTarget);
         if (Error > Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f))
@@ -1320,10 +1333,14 @@ namespace ck
         const auto Threshold = _Settings._Step._Threshold * FMath::Max(InInput._StepThresholdScale, KINDA_SMALL_NUMBER);
         const auto ErrorRatio = FVector::Dist(InState._Plant._Position, InInput._IdealTarget)
             / (Threshold * FMath::Max(_Settings._Step._EmergencyFactor, 1.0f));
+        // An occluded plant counts as an Emergency at its trigger, so an over-reach or a large error still outranks it in the
+        // priority choice; it steps beyond the schedule either way.
+        constexpr auto OccludedPlantRatio = 1.0;
+        const auto BaseRatio = InInput._PlantOccluded ? FMath::Max(ErrorRatio, OccludedPlantRatio) : ErrorRatio;
         if (InInput._Reach <= 0.0f)
-        { return ErrorRatio; }
+        { return BaseRatio; }
 
-        return FMath::Max(ErrorRatio,
+        return FMath::Max(BaseRatio,
             FVector::Dist(InState._Plant._Position, InInput._Hip) / (_Settings._Reach._ForceStepFraction * InInput._Reach));
     }
 

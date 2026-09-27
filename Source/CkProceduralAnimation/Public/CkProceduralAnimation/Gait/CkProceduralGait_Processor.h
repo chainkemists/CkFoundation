@@ -18,6 +18,7 @@ namespace ck
         FCk_Handle_ProceduralGait,
         TReadOnly<FFragment_ProceduralGait_Tunables>,
         TReadWrite<FFragment_ProceduralGait>,
+        TReadWrite<FFragment_ProceduralGait_Debug>,
         TReadOnly<FFragment_Transform>,
         FTag_ProceduralGait_NeedsSetup,
         TExclude<FTag_DestroyEntity_Initiate>,
@@ -38,6 +39,7 @@ namespace ck
             HandleType InHandle,
             const FFragment_ProceduralGait_Tunables& InTunables,
             FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp,
             const FFragment_Transform& InTransform)
             -> void;
     };
