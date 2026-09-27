@@ -24,6 +24,14 @@ CK_REGISTER_PROCESSOR(ck::FProcessor_SurfaceMotion_CancelPendingRequests);
 namespace ck_surface_motion
 {
     auto
+        DoGet_WallPolicy(
+            ECk_SurfaceMotion_WallPolicy InWallPolicy)
+        -> ck::EProceduralSurfaceWallPolicy
+    {
+        return InWallPolicy == ECk_SurfaceMotion_WallPolicy::Slide ? ck::EProceduralSurfaceWallPolicy::Slide : ck::EProceduralSurfaceWallPolicy::Climb;
+    }
+
+    auto
         DoBuild_Settings(
             const ck::FFragment_SurfaceMotion_Params& InParams)
         -> ck::FProceduralSurfaceMotionSettings
@@ -39,7 +47,9 @@ namespace ck_surface_motion
             .Set_SurfaceTurnRateDegrees(Movement.Get_SurfaceTurnRate())
             .Set_ClearanceSpeed(Movement.Get_ClearanceSpeed())
             .Set_Gravity(Movement.Get_Gravity())
-            .Set_SteerFloor(Movement.Get_SteerFloor());
+            .Set_SteerFloor(Movement.Get_SteerFloor())
+            .Set_MaxStepHeight(Contact.Get_MaxStepHeight())
+            .Set_WallPolicy(DoGet_WallPolicy(Contact.Get_WallPolicy()));
     }
 }
 

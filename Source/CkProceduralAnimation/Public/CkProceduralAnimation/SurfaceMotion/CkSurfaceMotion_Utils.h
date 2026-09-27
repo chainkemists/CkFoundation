@@ -123,6 +123,39 @@ public:
     Get_HeightSource(
         const FCk_Handle_SurfaceMotion& InHandle);
 
+    // The wall policy the Spec composed the surface motion with; Climb for an invalid handle.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Wall Policy")
+    static ECk_SurfaceMotion_WallPolicy
+    Get_WallPolicy(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    // The max step height the Spec composed the surface motion with (0: no stepping); 0 for an invalid handle.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Max Step Height")
+    static float
+    Get_MaxStepHeight(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    // Wall while the last substep slid the body along a face it could neither step onto nor climb; None otherwise and
+    // unless Ready.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Obstruction")
+    static ECk_SurfaceMotion_Obstruction
+    Get_Obstruction(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    // The normal of the face the body slid along on the last substep; zero unless Get_Obstruction reads Wall.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Obstruction Normal")
+    static FVector
+    Get_ObstructionNormal(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
 public:
     UFUNCTION(BlueprintCallable,
               Category = "Ck|Utils|SurfaceMotion",

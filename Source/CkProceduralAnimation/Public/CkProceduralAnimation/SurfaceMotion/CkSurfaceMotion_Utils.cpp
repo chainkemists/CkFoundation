@@ -36,9 +36,19 @@ namespace ck_surface_motion_utils
             { return ECk_SurfaceMotion_ContactSource::Fall; }
             case ck::EProceduralSurfaceContactSource::Feet:
             { return ECk_SurfaceMotion_ContactSource::Feet; }
+            case ck::EProceduralSurfaceContactSource::Step:
+            { return ECk_SurfaceMotion_ContactSource::Step; }
             default:
             { return ECk_SurfaceMotion_ContactSource::None; }
         }
+    }
+
+    auto
+        DoGet_Obstruction(
+            ck::EProceduralSurfaceObstruction InObstruction)
+        -> ECk_SurfaceMotion_Obstruction
+    {
+        return InObstruction == ck::EProceduralSurfaceObstruction::Wall ? ECk_SurfaceMotion_Obstruction::Wall : ECk_SurfaceMotion_Obstruction::None;
     }
 }
 
@@ -63,7 +73,7 @@ auto
     const auto ParamsValid = ck::IsValid(InParams);
     CK_ENSURE_IF_NOT(ParamsValid,
         TEXT("Surface motion Add rejected body [{}]: invalid clearance, probe reach, contact grace, confirm angle, confirm time, "
-             "speed, turn rate, gravity or steer floor."),
+             "speed, turn rate, gravity or steer floor. A max step height is 0, or above the clearance and at most the probe reach."),
         InBody)
     { return {}; }
 
@@ -158,6 +168,50 @@ auto
     return ck::IsValid(InHandle) && Has(InHandle)
         ? InHandle.Get<ck::FFragment_SurfaceMotion_Params>().Get_Contact().Get_HeightSource()
         : ECk_SurfaceMotion_HeightSource::Rays;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_WallPolicy(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_WallPolicy
+{
+    return ck::IsValid(InHandle) && Has(InHandle)
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Params>().Get_Contact().Get_WallPolicy()
+        : ECk_SurfaceMotion_WallPolicy::Climb;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_MaxStepHeight(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> float
+{
+    return ck::IsValid(InHandle) && Has(InHandle)
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Params>().Get_Contact().Get_MaxStepHeight()
+        : 0.0f;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_Obstruction(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_Obstruction
+{
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? ck_surface_motion_utils::DoGet_Obstruction(InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_Obstruction())
+        : ECk_SurfaceMotion_Obstruction::None;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_ObstructionNormal(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> FVector
+{
+    return Get_Obstruction(InHandle) == ECk_SurfaceMotion_Obstruction::Wall
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>()._State.Get_ObstructionNormal()
+        : FVector::ZeroVector;
 }
 
 auto

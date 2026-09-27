@@ -10,9 +10,9 @@
 
 namespace ck
 {
-    // The ray whose hit the body last accepted, or Feet for the plane through the planted feet. None: no contact (contact
-    // grace or airborne). A substep that only coasts while a large turn waits for confirmation accepts nothing and keeps the
-    // source.
+    // The ray whose hit the body last accepted, Feet for the plane through the planted feet, or Step for the top of a face
+    // the body steps onto. None: no contact (contact grace or airborne). A substep that only coasts while a large turn waits
+    // for confirmation accepts nothing and keeps the source.
     enum class EProceduralSurfaceContactSource : uint8
     {
         None,
@@ -21,7 +21,23 @@ namespace ck
         LookAhead,
         Fan,
         Fall,
-        Feet
+        Feet,
+        Step
+    };
+
+    // What the body does with a face the forward ray meets that is not a step: Climb makes it the next support once
+    // confirmed; Slide never makes it support and takes the travel into it away.
+    enum class EProceduralSurfaceWallPolicy : uint8
+    {
+        Climb,
+        Slide
+    };
+
+    // Wall: this substep's travel was slid along a face the body could neither step onto nor climb.
+    enum class EProceduralSurfaceObstruction : uint8
+    {
+        None,
+        Wall
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -60,6 +76,9 @@ namespace ck
         float _ClearanceSpeed = 200.0f;
         FVector _Gravity = FVector{0.0, 0.0, -980.0};
         float _SteerFloor = 0.4f;
+        // 0: no stepping. Otherwise above the clearance and at most the probe reach.
+        float _MaxStepHeight = 0.0f;
+        EProceduralSurfaceWallPolicy _WallPolicy = EProceduralSurfaceWallPolicy::Climb;
 
     public:
         CK_PROPERTY(_Clearance);
@@ -71,6 +90,8 @@ namespace ck
         CK_PROPERTY(_ClearanceSpeed);
         CK_PROPERTY(_Gravity);
         CK_PROPERTY(_SteerFloor);
+        CK_PROPERTY(_MaxStepHeight);
+        CK_PROPERTY(_WallPolicy);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -93,6 +114,11 @@ namespace ck
         FVector _CandidateNormal = FVector::UpVector;
         FVector _CandidatePoint = FVector::ZeroVector;
         FCk_Time _CandidateSeen = FCk_Time::ZeroSecond();
+        // The last substep's: Wall with the face's normal and the distance the body is kept off it while it was kept off a
+        // face, None and zero otherwise. A body steered into the wall follows it on the next substep.
+        EProceduralSurfaceObstruction _Obstruction = EProceduralSurfaceObstruction::None;
+        FVector _ObstructionNormal = FVector::ZeroVector;
+        float _ObstructionStandoff = 0.0f;
 
     public:
         CK_PROPERTY(_SupportNormal);
@@ -105,6 +131,9 @@ namespace ck
         CK_PROPERTY(_CandidateNormal);
         CK_PROPERTY(_CandidatePoint);
         CK_PROPERTY(_CandidateSeen);
+        CK_PROPERTY(_Obstruction);
+        CK_PROPERTY(_ObstructionNormal);
+        CK_PROPERTY(_ObstructionStandoff);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -167,6 +196,27 @@ namespace ck
     //   While it exists the support holds, so a face still needs confirmation, and a down miss is not a miss: the
     //   look-ahead and the fan are cast only when neither contact exists, and the grace and the fall never start. Outside
     //   the footprint every rule above applies unchanged; unset, nothing changes.
+    // - Steps and walls: the forward ray, at the body's height, meets only faces taller than the clearance; a lower face is
+    //   climbed by the down ray once it is under the body. With MaxStepHeight above 0, a down ray from MaxStepHeight plus
+    //   a clearance above the face's hit and a quarter clearance past it, for MaxStepHeight plus two clearances, looks for
+    //   the face's top: a trusted hit above the support point (the down hit, else one clearance under the body) by at most
+    //   MaxStepHeight and within ConfirmAngle of the support normal is a step, which becomes the down contact (source Step)
+    //   and holds the support; the face is not proposed. Any other face is a wall: Climb proposes it when the body has room
+    //   on it (below); Slide never proposes it, and a wall without room is never proposed under either policy. Such a face
+    //   obstructs the body: once the body would stand closer to it than the standoff (the clearance, or half the room when a
+    //   body one clearance off it would stand inside the solid across the gap), the travel loses its component into it and
+    //   the body is pushed back out along its normal by at most ClearanceSpeed x InStep; the down ray and the rest are cast
+    //   again from there, and the state reports the obstruction (Wall, its normal, the standoff). The fan's face
+    //   without room obstructs the body the same way while the travel points into it. While the last substep's
+    //   obstruction is Wall and the travel points into it, one ray from the candidate along the obstruction's normal,
+    //   for the probe reach, follows the wall: a hit keeps the obstruction on it, a miss ends it. The obstruction never
+    //   changes the support normal or the travel tangent.
+    // - Room: a contact is adopted only when a free ray from its hit along its normal, from 1 cm to one clearance off it,
+    //   meets nothing or only the surface the body stands on within a quarter clearance (a concave corner).
+    //   A contact without room is not proposed (the down contact under the body, else the miss path, takes its place); a
+    //   pending turn with no room under the body coasts; a fall landing without room loses the velocity into its face and
+    //   keeps falling, kept off the face like an obstruction. The feet contact is never checked. One ray per contact
+    //   checked.
     // The caller keeps the settings valid, InStep positive and the body finite.
     CKPROCEDURALANIMATION_API auto
         StepProceduralSurfaceMotion(
