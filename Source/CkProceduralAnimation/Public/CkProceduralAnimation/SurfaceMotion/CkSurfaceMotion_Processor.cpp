@@ -160,6 +160,7 @@ namespace ck
         InSupportComp._ReachPaceTrials = 0;
         InSupportComp._ReachPaceRays = 0;
         InSupportComp._AttemptedStanceSpeed = 0.0f;
+        InSupportComp._ReachPaceFeedback.Reset();
         const auto RayCast = [&](const FVector& InStart, const FVector& InEnd) -> FProceduralSurfaceHit
         {
             ++InSupportComp._ReachPaceRays;
@@ -237,6 +238,20 @@ namespace ck
             const auto Outcome = StepProceduralSurfaceMotionPaced(Settings, InMotionComp._Direction, InMotionComp._Speed,
                 Step, RayCast, FeetSupport, TArrayView<const FProceduralSurfaceReachPaceAnchor>{CoreAnchors},
                 CorePoseOffset, Body, InSupportComp._State);
+            // Earlier rejected trials are not unioned with the final accepted-body stamp. Only the final substep can
+            // request release, and any physical override in this frame withdraws that request below.
+            if (Iteration == Substeps - 1 && Outcome.Get_RejectedFullBody().IsSet())
+            {
+                const auto& TrialBody = Outcome.Get_RejectedFullBody().GetValue();
+                const auto TrialPosedBody = HasPose ? PoseOffset * TrialBody : FTransform::Identity;
+                for (const auto AnchorIndex : Outcome.Get_RejectedAnchorIndices())
+                {
+                    const auto& Anchor = ReachAnchors[AnchorIndex];
+                    InSupportComp._ReachPaceFeedback.Emplace(Anchor.Get_Leg(), Anchor.Get_FootWorld(),
+                        TrialBody.TransformPosition(Anchor.Get_HipLocal()), HasPose
+                            ? TOptional<FVector>{TrialPosedBody.TransformPosition(Anchor.Get_HipLocal())} : TOptional<FVector>{});
+                }
+            }
             InSupportComp._ReachPaceTrials += Outcome.Get_Trials();
             AttemptedStanceDistance += Outcome.Get_AttemptedStanceSpeed() * Step.Get_Seconds();
             InSupportComp._ReachPaceScale = FMath::Min(InSupportComp._ReachPaceScale, Outcome.Get_Scale());
@@ -250,6 +265,8 @@ namespace ck
                 { InSupportComp._ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Pacing; }
             }
         }
+        if (InSupportComp._ReachPaceState == ECk_SurfaceMotion_ReachPaceState::PhysicalOverride)
+        { InSupportComp._ReachPaceFeedback.Reset(); }
         InSupportComp._AttemptedStanceSpeed = static_cast<float>(AttemptedStanceDistance / Dt);
         InSupportComp._EvaluatedBody = Body;
         InSupportComp._EvaluatedFrame = GFrameCounter;
