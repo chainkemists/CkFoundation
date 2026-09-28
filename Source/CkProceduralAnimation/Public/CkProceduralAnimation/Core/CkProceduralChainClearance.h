@@ -114,6 +114,23 @@ namespace ck
             float InDegrees)
         -> FVector;
 
+    // Admission for a solved swivel pose, in one world frame. The authored first joint is the un-swivelled solver's
+    // actual result, not an assumed knee shape. Candidates preserve its bend hemisphere about hip->foot and its authored
+    // body-tangent side; the pole must also preserve that tangent side. An already-negative authored joint is a lower
+    // bound, not silently corrected. A missing projected pole bend uses the authored joint's projected bend; a missing
+    // tangent carries no lateral intent. Finite inputs and a nonzero BodyUp are required; malformed input rejects.
+    // Distances within 1e-3 cm of the authored halfspace boundary are numerical ties. No endpoints are altered.
+    CKPROCEDURALANIMATION_API auto
+        Get_IsProceduralBendSidePreserved(
+            const FVector& InHip,
+            const FVector& InFoot,
+            const FVector& InAuthoredPole,
+            const FVector& InBodyUp,
+            const FVector& InAuthoredKnee,
+            const FVector& InCandidatePole,
+            const FVector& InCandidateKnee)
+        -> bool;
+
     // The fan order for one solve: InLastClearDegrees first when it is a fan angle other than 0, then 0, then the fan's
     // remaining angles in fan order. Writes at most the fan's count into OutOrder and returns the count.
     CKPROCEDURALANIMATION_API auto

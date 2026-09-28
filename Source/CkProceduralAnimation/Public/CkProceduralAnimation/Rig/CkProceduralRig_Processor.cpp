@@ -310,6 +310,7 @@ namespace ck_procedural_rig
         int32 CrossingLinks = 0;
         float PoseDegrees = 0.0f;
         FChainCrossings MeasuredCrossings;
+        FVector AuthoredKnee = FVector::ZeroVector;
     };
 
     // The fan, from the last clear angle on: the first pose whose every link is clear of solids and of the body slab is kept;
@@ -349,6 +350,13 @@ namespace ck_procedural_rig
             ++OrderCount;
         }
 
+        auto Authored = FChainJoints{};
+        Authored.SetNumZeroed(OutJoints.Num());
+        if (NOT DoPose_Chain(InPose, Authored, InLengths, InHip, InTarget, InPole, InBodyRotation))
+        { return {}; }
+
+        const auto HasKnee = InPose != EChainPose::Aim;
+        const auto AuthoredKnee = Authored[1];
         auto Candidate = FChainJoints{};
         Candidate.SetNumZeroed(OutJoints.Num());
         auto Kept = FClearedChain{};
@@ -357,8 +365,14 @@ namespace ck_procedural_rig
         {
             const auto Degrees = Order[OrderIndex];
             const auto Pole = ck::ComputeProceduralPoleSwivel(InHip, InTarget, InPole, Degrees);
-            if (NOT DoPose_Chain(InPose, Candidate, InLengths, InHip, InTarget, Pole, InBodyRotation))
+            if (Degrees == 0.0f)
+            { Candidate = Authored; }
+            else if (NOT DoPose_Chain(InPose, Candidate, InLengths, InHip, InTarget, Pole, InBodyRotation))
             { return {}; }
+
+            if (HasKnee && NOT ck::Get_IsProceduralBendSidePreserved(InHip, InTarget, InPole,
+                InDrawnBody.GetRotation().GetAxisZ(), AuthoredKnee, Pole, Candidate[1]))
+            { continue; }
 
             const auto ChainCrossings = DoCount_CrossingLinks(InWorld, Candidate, InDrawnBody, InBodySlab, InFilter, InOutRayCount);
             const auto IsClear = ChainCrossings.LinksOrSlab == 0;
@@ -373,7 +387,7 @@ namespace ck_procedural_rig
             { OutJoints[JointIndex] = Candidate[JointIndex]; }
 
             Kept = FClearedChain{.Posed = true, .Pole = Pole, .SwivelDegrees = Degrees, .CrossingLinks = Crossings,
-                .PoseDegrees = Degrees, .MeasuredCrossings = ChainCrossings};
+                .PoseDegrees = Degrees, .MeasuredCrossings = ChainCrossings, .AuthoredKnee = AuthoredKnee};
             KeptCrossings = Crossings;
             if (IsClear)
             { break; }
@@ -401,6 +415,7 @@ namespace ck_procedural_rig
         FVector Hip = FVector::ZeroVector;
         FVector Target = FVector::ZeroVector;
         FVector AuthoredPole = FVector::ZeroVector;
+        FVector AuthoredKnee = FVector::ZeroVector;
         EChainPose Pose = EChainPose::Aim;
         FBox BodySlab = FBox{ForceInit};
         TArray<FBodyCandidate, TInlineAllocator<24>> Candidates;
@@ -433,6 +448,11 @@ namespace ck_procedural_rig
         Candidate.Degrees = InDegrees;
         if (NOT DoPose_Chain(InOutChain.Pose, Candidate.Joints, Lengths, InOutChain.Hip, InOutChain.Target,
                 Candidate.Pole, InBodyRotation))
+        { return; }
+
+        if (InOutChain.Pose != EChainPose::Aim && NOT ck::Get_IsProceduralBendSidePreserved(
+            InOutChain.Hip, InOutChain.Target, InOutChain.AuthoredPole, InDrawnBody.GetRotation().GetAxisZ(),
+            InOutChain.AuthoredKnee, Candidate.Pole, Candidate.Joints[1]))
         { return; }
 
         Candidate.MeasuredCrossings = DoCount_CrossingLinks(InWorld, Candidate.Joints, InDrawnBody,
@@ -563,6 +583,7 @@ namespace ck
                     BodyRotation, Posed, Chain.BodySlab, Rig._SwivelDegrees, World, Filter, RayCount,
                     NOT Params.Get_SegmentClearanceRadii().IsEmpty());
                 ChainPosed = Cleared.Posed;
+                Chain.AuthoredKnee = Cleared.AuthoredKnee;
                 Legacy.Pole = Cleared.Pole;
                 Legacy.Degrees = Cleared.PoseDegrees;
                 Legacy.Crossings = Cleared.CrossingLinks;
@@ -572,6 +593,8 @@ namespace ck
             {
                 ChainPosed = ck_procedural_rig::DoPose_Chain(Chain.Pose, Legacy.Joints,
                     LegParams.Get_Chain().Get_SegmentLengths(), Chain.Hip, Chain.Target, Chain.AuthoredPole, BodyRotation);
+                if (ChainPosed)
+                { Chain.AuthoredKnee = Legacy.Joints[1]; }
             }
             CK_ENSURE_IF_NOT(ChainPosed,
                 TEXT("Procedural rig [{}] could not pose its curve chain from hip [{}] to foot [{}]; its last pose is retained."),
