@@ -225,6 +225,28 @@ auto
         : FVector::ZeroVector;
 }
 
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_ReachPaceScale(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> float
+{
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>().Get_ReachPaceScale()
+        : 1.0f;
+}
+
+auto
+    UCk_Utils_SurfaceMotion_UE::
+    Get_ReachPaceState(
+        const FCk_Handle_SurfaceMotion& InHandle)
+    -> ECk_SurfaceMotion_ReachPaceState
+{
+    return Get_Status(InHandle) == ECk_ProceduralAnimation_Status::Ready
+        ? InHandle.Get<ck::FFragment_SurfaceMotion_Support>().Get_ReachPaceState()
+        : ECk_SurfaceMotion_ReachPaceState::Free;
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

@@ -15,6 +15,50 @@ namespace ck_procedural_foot_probe
             && NOT InHit.Get_Normal().IsNearlyZero()
             && FVector::DotProduct(InHit.Get_Normal(), InRayDirection) < -KINDA_SMALL_NUMBER;
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        DoResolve_Touchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            ck::FProceduralSurfaceRayCast InRayCast,
+            TFunctionRef<bool(const FVector&)> InIsAdmissible)
+        -> ck::FProceduralTouchdown
+    {
+        const auto Normal = InTargetNormal.GetSafeNormal();
+        auto Rays = int32{0};
+        const auto Confirm = [&](const FVector& InPoint) -> TOptional<ck::FProceduralSurfaceHit>
+        {
+            const auto Hit = InRayCast(InPoint + Normal * InHalfSpan, InPoint - Normal * InHalfSpan);
+            ++Rays;
+            if (NOT Get_IsTrustedHit(Hit, -Normal) || NOT InIsAdmissible(Hit.Get_Position()))
+            { return {}; }
+            return Hit;
+        };
+
+        const auto AtPlant = Confirm(InPlant);
+        if (AtPlant.IsSet())
+        {
+            return ck::FProceduralTouchdown{}.Set_Position(AtPlant->Get_Position()).Set_Normal(AtPlant->Get_Normal().GetSafeNormal())
+                .Set_Trusted(true).Set_Rays(Rays);
+        }
+
+        if (NOT InValidatedTarget.Equals(InPlant))
+        {
+            const auto AtValidatedTarget = Confirm(InValidatedTarget);
+            if (AtValidatedTarget.IsSet())
+            {
+                return ck::FProceduralTouchdown{}.Set_Position(AtValidatedTarget->Get_Position())
+                    .Set_Normal(AtValidatedTarget->Get_Normal().GetSafeNormal()).Set_Trusted(true).Set_Rays(Rays);
+            }
+        }
+
+        return ck::FProceduralTouchdown{}.Set_Position(InPlant).Set_Normal(InUp).Set_Trusted(false).Set_Rays(Rays);
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -87,35 +131,53 @@ namespace ck
             FProceduralSurfaceRayCast InRayCast)
         -> FProceduralTouchdown
     {
-        const auto Normal = InTargetNormal.GetSafeNormal();
-        auto Rays = int32{0};
-        const auto Confirm = [&](const FVector& InPoint) -> TOptional<FProceduralSurfaceHit>
-        {
-            const auto Hit = InRayCast(InPoint + Normal * InHalfSpan, InPoint - Normal * InHalfSpan);
-            ++Rays;
-            if (NOT ck_procedural_foot_probe::Get_IsTrustedHit(Hit, -Normal))
-            { return {}; }
-            return Hit;
-        };
+        return ck_procedural_foot_probe::DoResolve_Touchdown(InPlant, InValidatedTarget, InTargetNormal, InUp,
+            InHalfSpan, InRayCast, [](const FVector&) { return true; });
+    }
 
-        const auto AtPlant = Confirm(InPlant);
-        if (AtPlant.IsSet())
-        {
-            return FProceduralTouchdown{}.Set_Position(AtPlant->Get_Position()).Set_Normal(AtPlant->Get_Normal().GetSafeNormal())
-                .Set_Trusted(true).Set_Rays(Rays);
-        }
+    // --------------------------------------------------------------------------------------------------------------------
 
-        if (NOT InValidatedTarget.Equals(InPlant))
-        {
-            const auto AtValidatedTarget = Confirm(InValidatedTarget);
-            if (AtValidatedTarget.IsSet())
+    auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast,
+            const FVector& InSimulationHip,
+            const TOptional<FVector>& InPresentationHip,
+            float InReach)
+        -> FProceduralTouchdown
+    {
+        return ResolveProceduralTouchdown(InPlant, InValidatedTarget, InTargetNormal, InUp, InHalfSpan, InRayCast,
+            InSimulationHip, InPresentationHip, InReach, [](const FVector&) { return true; });
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast,
+            const FVector& InSimulationHip,
+            const TOptional<FVector>& InPresentationHip,
+            float InReach,
+            TFunctionRef<bool(const FVector&)> InIsContactAvailable)
+        -> FProceduralTouchdown
+    {
+        const auto ReachSq = FMath::Square(static_cast<double>(InReach) + 1.0e-3);
+        return ck_procedural_foot_probe::DoResolve_Touchdown(InPlant, InValidatedTarget, InTargetNormal, InUp,
+            InHalfSpan, InRayCast, [&](const FVector& InHit)
             {
-                return FProceduralTouchdown{}.Set_Position(AtValidatedTarget->Get_Position())
-                    .Set_Normal(AtValidatedTarget->Get_Normal().GetSafeNormal()).Set_Trusted(true).Set_Rays(Rays);
-            }
-        }
-
-        return FProceduralTouchdown{}.Set_Position(InPlant).Set_Normal(InUp).Set_Trusted(false).Set_Rays(Rays);
+                return FVector::DistSquared(InSimulationHip, InHit) <= ReachSq
+                    && (NOT InPresentationHip.IsSet() || FVector::DistSquared(*InPresentationHip, InHit) <= ReachSq)
+                    && InIsContactAvailable(InHit);
+            });
     }
 }
 

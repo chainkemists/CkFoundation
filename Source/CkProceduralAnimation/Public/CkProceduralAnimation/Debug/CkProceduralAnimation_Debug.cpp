@@ -204,7 +204,9 @@ auto
             .Set_Clearance(Chain.Get_Clearance())
             .Set_ChainState(Rig._ChainState)
             .Set_SwivelDegrees(Rig._SwivelDegrees)
-            .Set_CrossingLinks(Rig._CrossingLinks);
+            .Set_CrossingLinks(Rig._CrossingLinks)
+            .Set_SiblingCrossingLinks(Rig._SiblingCrossingLinks)
+            .Set_SegmentClearanceRadii(Chain.Get_SegmentClearanceRadii());
     }
     Snapshot.Get_Gait().Set_RaysLastSolve(Body.Get<ck::FFragment_ProceduralGait_Debug>()._RaysLastSolve);
 

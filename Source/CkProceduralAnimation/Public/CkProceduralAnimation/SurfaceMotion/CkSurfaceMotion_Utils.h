@@ -94,6 +94,21 @@ public:
     Get_Velocity(
         const FCk_Handle_SurfaceMotion& InHandle);
 
+    // Last physics frame's accepted voluntary-motion scale and reach-pacing outcome. Free/1 for a missing or unready motion.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Reach Pace Scale")
+    static float
+    Get_ReachPaceScale(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|SurfaceMotion",
+              DisplayName="[Ck][SurfaceMotion] Get Reach Pace State")
+    static ECk_SurfaceMotion_ReachPaceState
+    Get_ReachPaceState(
+        const FCk_Handle_SurfaceMotion& InHandle);
+
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|SurfaceMotion",
               DisplayName="[Ck][SurfaceMotion] Get Support Normal")

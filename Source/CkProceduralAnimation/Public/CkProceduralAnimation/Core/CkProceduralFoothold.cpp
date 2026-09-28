@@ -22,13 +22,14 @@ namespace ck_procedural_foothold
     }
 
     auto
-        Get_AreSettingsFinite(
+        Get_AreSettingsWellFormed(
             const ck::FProceduralFootholdSettings& InSettings)
         -> bool
     {
         return FMath::IsFinite(InSettings.Get_SlopeWeight())
             && FMath::IsFinite(InSettings.Get_ContinuityWeight())
-            && FMath::IsFinite(InSettings.Get_MaxAngleDegrees());
+            && FMath::IsFinite(InSettings.Get_MaxAngleDegrees())
+            && NOT InSettings.Get_SlopeUp().ContainsNaN() && NOT InSettings.Get_SlopeUp().GetSafeNormal().IsNearlyZero();
     }
 }
 
@@ -104,12 +105,15 @@ namespace ck
             const FProceduralFootholdSettings& InSettings)
         -> double
     {
-        if (NOT FMath::IsFinite(InReach) || InReach <= 0.0f)
+        if (NOT FMath::IsFinite(InReach) || InReach <= 0.0f || InIdeal.ContainsNaN() || InPlant.ContainsNaN()
+            || NOT ck_procedural_foothold::Get_IsCandidateFinite(InCandidate)
+            || NOT ck_procedural_foothold::Get_AreSettingsWellFormed(InSettings))
         { return TNumericLimits<double>::Max(); }
 
         const auto Reach = static_cast<double>(InReach);
         const auto Distance = FVector::Dist(InCandidate.Get_Position(), InIdeal) / Reach;
-        const auto Slope = InSettings.Get_SlopeWeight() * (1.0 - InCandidate.Get_Normal().GetSafeNormal().Z);
+        const auto Slope = InSettings.Get_SlopeWeight() * (1.0 - FVector::DotProduct(
+            InCandidate.Get_Normal().GetSafeNormal(), InSettings.Get_SlopeUp().GetSafeNormal()));
         const auto Continuity = InPlanted
             ? InSettings.Get_ContinuityWeight() * FMath::Abs(InCandidate.Get_Position().Z - InPlant.Z) / Reach
             : 0.0;
@@ -132,7 +136,7 @@ namespace ck
         const auto InputIsWellFormed = NOT InCandidates.IsEmpty()
             && FMath::IsFinite(InReach) && InReach > 0.0f
             && NOT InIdeal.ContainsNaN() && NOT InPlant.ContainsNaN()
-            && ck_procedural_foothold::Get_AreSettingsFinite(InSettings)
+            && ck_procedural_foothold::Get_AreSettingsWellFormed(InSettings)
             && algo::AllOf(InCandidates, &ck_procedural_foothold::Get_IsCandidateFinite);
         if (NOT InputIsWellFormed)
         { return INDEX_NONE; }

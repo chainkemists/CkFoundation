@@ -169,6 +169,33 @@ namespace ck_procedural_surface_motion
         return Get_Room(InSettings, InRayCast, InOutContact, InUp) >= static_cast<double>(InSettings.Get_Clearance());
     }
 
+    // A remote tangent-plane contact can hold the body off a curved surface even though its own down ray misses.
+    // Localize the observed patch with one bounded ray from the body. A perpendicular crest side or a contact without
+    // room does not replace the original top; keeping the complete original contact preserves crest bridging.
+    auto
+        DoLocalize_LookAhead(
+            const ck::FProceduralSurfaceMotionSettings& InSettings,
+            ck::FProceduralSurfaceRayCast InRayCast,
+            const FVector& InPosition,
+            const FVector& InUp,
+            FContact& InOutContact)
+        -> void
+    {
+        const auto AheadNormal = InOutContact.Hit.Get_Normal().GetSafeNormal();
+        const auto Aim = InOutContact.Hit.Get_Position() - AheadNormal * InSettings.Get_Clearance();
+        const auto Delta = Aim - InPosition;
+        const auto Distance = Delta.Size();
+        if (Distance <= UE_DOUBLE_SMALL_NUMBER)
+        { return; }
+
+        const auto End = InPosition + Delta * (FMath::Min(Distance, static_cast<double>(InSettings.Get_ProbeReach())) / Distance);
+        auto Local = DoCast(InRayCast, InPosition, End, ck::EProceduralSurfaceContactSource::LookAhead);
+        if (Local.IsSet()
+            && FVector::DotProduct(Local->Hit.Get_Normal().GetSafeNormal(), AheadNormal) > UE_KINDA_SMALL_NUMBER
+            && Get_HasRoom(InSettings, InRayCast, *Local, InUp))
+        { InOutContact = *Local; }
+    }
+
     // The face as an obstruction: kept off at the clearance, or, when a body one clearance off it would stand inside the
     // solid across the gap, at the gap's middle.
     auto
@@ -388,6 +415,8 @@ namespace ck_procedural_surface_motion
             if (NOT LookAheadCast)
             {
                 LookAhead = DoCast_LookAhead(InSettings, InRayCast, Contacts.Candidate, InUp, InForward);
+                if (LookAhead.IsSet())
+                { DoLocalize_LookAhead(InSettings, InRayCast, Contacts.Candidate, InUp, *LookAhead); }
                 LookAheadCast = true;
             }
             return LookAhead;
@@ -504,6 +533,7 @@ namespace ck_procedural_surface_motion
             const FVector& InNormal,
             const FVector& InForward,
             double InStep,
+            float InVoluntaryScale,
             FTransform& InOutBody)
         -> void
     {
@@ -511,7 +541,8 @@ namespace ck_procedural_surface_motion
         const auto TargetRotation = FRotationMatrix::MakeFromZX(InNormal, InForward).ToQuat();
         const auto Angle = OldRotation.AngularDistance(TargetRotation);
         const auto Alpha = Angle > KINDA_SMALL_NUMBER
-            ? FMath::Min(1.0, FMath::DegreesToRadians(InSettings.Get_SurfaceTurnRateDegrees()) * InStep / Angle) : 1.0;
+            ? FMath::Min(1.0, FMath::DegreesToRadians(InSettings.Get_SurfaceTurnRateDegrees()) * InVoluntaryScale * InStep / Angle)
+            : static_cast<double>(InVoluntaryScale);
         InOutBody.SetRotation(FQuat::Slerp(OldRotation, TargetRotation, Alpha).GetNormalized());
     }
 
@@ -525,6 +556,7 @@ namespace ck_procedural_surface_motion
             const FVector& InForward,
             const FVector& InCandidate,
             double InStep,
+            float InVoluntaryScale,
             FTransform& InOutBody,
             ck::FProceduralSurfaceMotionState& InOutState)
         -> void
@@ -535,10 +567,10 @@ namespace ck_procedural_surface_motion
         InOutState.Set_TravelTangent(TargetForward);
         InOutState.Set_ContactSource(InContact.Source);
 
-        DoTurn(InSettings, Normal, TargetForward, InStep, InOutBody);
+        DoTurn(InSettings, Normal, TargetForward, InStep, InVoluntaryScale, InOutBody);
 
         const auto Height = FVector::DotProduct(InCandidate - InContact.Hit.Get_Position(), Normal);
-        const auto MaxCorrection = InSettings.Get_ClearanceSpeed() * InStep;
+        const auto MaxCorrection = InSettings.Get_ClearanceSpeed() * InVoluntaryScale * InStep;
         const auto Correction = FMath::Clamp(InSettings.Get_Clearance() - Height, -MaxCorrection, MaxCorrection);
         InOutBody.SetLocation(InCandidate + Normal * Correction);
     }
@@ -568,7 +600,8 @@ namespace ck
             FProceduralSurfaceRayCast InRayCast,
             const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
-            FProceduralSurfaceMotionState& InOutState)
+            FProceduralSurfaceMotionState& InOutState,
+            float InVoluntaryScale)
         -> void
     {
         const auto Step = InStep.Get_Seconds();
@@ -579,7 +612,7 @@ namespace ck
         // alternates floor and wall hits during a corner turn.
         const auto Up = InOutState.Get_SupportNormal();
         const auto Forward = ck_procedural_surface_motion::DoGet_Forward(InSettings, InOutState, InSteerDirection, OldRotation);
-        const auto Travel = Forward * (InSpeed * Step);
+        const auto Travel = Forward * (InSpeed * InVoluntaryScale * Step);
         const auto Moving = InSpeed > 0.0f;
 
         auto Contacts = ck_procedural_surface_motion::DoFind_Contacts(InSettings, InRayCast, InFeetSupport, InOutState, InStep, OldPosition,
@@ -610,14 +643,14 @@ namespace ck
                 && ck_procedural_surface_motion::Get_HasRoom(InSettings, InRayCast, *Contacts.Down, Up);
             if (Pending && NOT SupportUnder)
             {
-                ck_procedural_surface_motion::DoTurn(InSettings, Up, Forward, Step, InOutBody);
+                ck_procedural_surface_motion::DoTurn(InSettings, Up, Forward, Step, InVoluntaryScale, InOutBody);
                 InOutBody.SetLocation(Candidate);
                 InOutState.Set_TravelTangent(Forward);
             }
             else
             {
                 ck_procedural_surface_motion::DoAdopt(InSettings, Pending ? *Contacts.Down : Proposal, Up, Forward, Candidate, Step,
-                    InOutBody, InOutState);
+                    InVoluntaryScale, InOutBody, InOutState);
             }
             InOutState.Set_Velocity((InOutBody.GetLocation() - OldPosition) / Step);
             return;
@@ -630,7 +663,7 @@ namespace ck
         if (InOutState.Get_Grounded() && InOutState.Get_MissingContact() <= InSettings.Get_ContactGrace())
         {
             InOutBody.SetLocation(Candidate);
-            InOutState.Set_Velocity(Contacts.Obstruction.IsSet() ? Contacts.Travel / Step : Forward * InSpeed);
+            InOutState.Set_Velocity(Contacts.Obstruction.IsSet() ? Contacts.Travel / Step : Forward * InSpeed * InVoluntaryScale);
             return;
         }
 
@@ -677,6 +710,145 @@ namespace ck
         InOutState.Set_SupportNormal(Normal);
         InOutState.Set_TravelTangent(InOutBody.GetRotation().GetAxisX());
         InOutState.Set_MissingContact(FCk_Time{});
+    }
+
+    auto
+        StepProceduralSurfaceMotionPaced(
+            const FProceduralSurfaceMotionSettings& InSettings,
+            const FVector& InSteerDirection,
+            float InSpeed,
+            FCk_Time InStep,
+            FProceduralSurfaceRayCast InRayCast,
+            const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
+            TArrayView<const FProceduralSurfaceReachPaceAnchor> InAnchors,
+            const TOptional<FTransform>& InPoseOffset,
+            FTransform& InOutBody,
+            FProceduralSurfaceMotionState& InOutState)
+        -> FProceduralSurfaceReachPaceOutcome
+    {
+        auto Outcome = FProceduralSurfaceReachPaceOutcome{};
+        const auto StartBody = InOutBody;
+        const auto StartState = InOutState;
+        const auto TryScale = [&](float InScale, FTransform& OutBody, FProceduralSurfaceMotionState& OutState) -> void
+        {
+            OutBody = StartBody;
+            OutState = StartState;
+            StepProceduralSurfaceMotion(InSettings, InSteerDirection, InSpeed, InStep, InRayCast, InFeetSupport,
+                OutBody, OutState, InScale);
+            Outcome.Set_Trials(Outcome.Get_Trials() + 1);
+        };
+
+        struct FReachLimit
+        {
+            double Sim = 0.0;
+            double Posed = 0.0;
+        };
+        constexpr auto ReachTolerance = 1.0e-3;
+        const auto FitsReach = [&](const FTransform& InCandidate, TArrayView<const FReachLimit> InLimits) -> bool
+        {
+            const auto Posed = InPoseOffset.IsSet() ? InPoseOffset.GetValue() * InCandidate : FTransform::Identity;
+            for (auto Index = 0; Index < InAnchors.Num(); ++Index)
+            {
+                const auto& Anchor = InAnchors[Index];
+                if (FVector::Dist(InCandidate.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld())
+                        > InLimits[Index].Sim + ReachTolerance
+                    || (InPoseOffset.IsSet() && FVector::Dist(Posed.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld())
+                        > InLimits[Index].Posed + ReachTolerance))
+                { return false; }
+            }
+            return true;
+        };
+
+        auto FullBody = FTransform{};
+        auto FullState = FProceduralSurfaceMotionState{};
+        TryScale(1.0f, FullBody, FullState);
+        if (InAnchors.IsEmpty())
+        {
+            InOutBody = FullBody;
+            InOutState = FullState;
+            return Outcome;
+        }
+
+        auto Limits = TArray<FReachLimit, TInlineAllocator<64>>{};
+        Limits.Reserve(InAnchors.Num());
+        for (const auto& Anchor : InAnchors)
+        { Limits.Add(FReachLimit{Anchor.Get_Reach(), Anchor.Get_Reach()}); }
+        if (FitsReach(FullBody, TArrayView<const FReachLimit>{Limits}))
+        {
+            InOutBody = FullBody;
+            InOutState = FullState;
+            return Outcome;
+        }
+
+        auto ZeroBody = FTransform{};
+        auto ZeroState = FProceduralSurfaceMotionState{};
+        TryScale(0.0f, ZeroBody, ZeroState);
+        const auto FullPosed = InPoseOffset.IsSet() ? InPoseOffset.GetValue() * FullBody : FTransform::Identity;
+        const auto ZeroPosed = InPoseOffset.IsSet() ? InPoseOffset.GetValue() * ZeroBody : FTransform::Identity;
+        auto AttemptedHipDistance = 0.0;
+        for (const auto& Anchor : InAnchors)
+        {
+            AttemptedHipDistance = FMath::Max(AttemptedHipDistance,
+                FVector::Dist(FullBody.TransformPosition(Anchor.Get_HipLocal()), ZeroBody.TransformPosition(Anchor.Get_HipLocal())));
+            if (InPoseOffset.IsSet())
+            {
+                AttemptedHipDistance = FMath::Max(AttemptedHipDistance,
+                    FVector::Dist(FullPosed.TransformPosition(Anchor.Get_HipLocal()), ZeroPosed.TransformPosition(Anchor.Get_HipLocal())));
+            }
+        }
+        if (InStep > FCk_Time{})
+        { Outcome.Set_AttemptedStanceSpeed(static_cast<float>(AttemptedHipDistance / InStep.Get_Seconds())); }
+        auto PhysicalOverride = false;
+        for (auto Index = 0; Index < InAnchors.Num(); ++Index)
+        {
+            const auto& Anchor = InAnchors[Index];
+            const auto SimDistance = FVector::Dist(ZeroBody.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld());
+            const auto PosedDistance = InPoseOffset.IsSet()
+                ? FVector::Dist(ZeroPosed.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld()) : 0.0;
+            PhysicalOverride |= SimDistance > Anchor.Get_Reach() + ReachTolerance
+                || (InPoseOffset.IsSet() && PosedDistance > Anchor.Get_Reach() + ReachTolerance);
+            Limits[Index].Sim = FMath::Max(static_cast<double>(Anchor.Get_Reach()), SimDistance);
+            Limits[Index].Posed = FMath::Max(static_cast<double>(Anchor.Get_Reach()), PosedDistance);
+        }
+        Outcome.Set_PhysicalOverride(PhysicalOverride);
+
+        auto AcceptedBody = ZeroBody;
+        auto AcceptedState = ZeroState;
+        auto AcceptedScale = 0.0f;
+        if (FitsReach(FullBody, TArrayView<const FReachLimit>{Limits}))
+        {
+            AcceptedBody = FullBody;
+            AcceptedState = FullState;
+            AcceptedScale = 1.0f;
+        }
+        else
+        {
+            auto Lower = 0.0f;
+            auto Upper = 1.0f;
+            constexpr auto ReachPaceSearchIterations = 6;
+            for (auto Search = 0; Search < ReachPaceSearchIterations; ++Search)
+            {
+                const auto Scale = (Lower + Upper) * 0.5f;
+                auto TrialBody = FTransform{};
+                auto TrialState = FProceduralSurfaceMotionState{};
+                TryScale(Scale, TrialBody, TrialState);
+                if (FitsReach(TrialBody, TArrayView<const FReachLimit>{Limits}))
+                {
+                    Lower = Scale;
+                    AcceptedBody = TrialBody;
+                    AcceptedState = TrialState;
+                    AcceptedScale = Scale;
+                }
+                else
+                { Upper = Scale; }
+            }
+        }
+
+        // Every accepted pose and support state came from the same trial. Contact transitions need not be monotone in
+        // voluntary scale; the bounded search only commits candidates it actually checked.
+        InOutBody = AcceptedBody;
+        InOutState = AcceptedState;
+        return Outcome.Set_Scale(AcceptedScale);
     }
 }
 
