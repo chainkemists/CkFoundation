@@ -331,6 +331,51 @@ namespace ck
     // --------------------------------------------------------------------------------------------------------------------
 
     auto
+        Get_IsProceduralBendSidePreserved(
+            const FVector& InHip,
+            const FVector& InFoot,
+            const FVector& InAuthoredPole,
+            const FVector& InBodyUp,
+            const FVector& InAuthoredKnee,
+            const FVector& InCandidatePole,
+            const FVector& InCandidateKnee)
+        -> bool
+    {
+        if (InHip.ContainsNaN() || InFoot.ContainsNaN() || InAuthoredPole.ContainsNaN()
+            || InBodyUp.ContainsNaN() || InAuthoredKnee.ContainsNaN() || InCandidatePole.ContainsNaN()
+            || InCandidateKnee.ContainsNaN() || InBodyUp.IsNearlyZero())
+        { return false; }
+
+        constexpr auto BoundaryTolerance = 1.0e-3;
+        const auto Up = InBodyUp.GetSafeNormal();
+        const auto Axis = (InFoot - InHip).GetSafeNormal();
+        const auto AuthoredPole = InAuthoredPole - InHip;
+        const auto AuthoredKnee = InAuthoredKnee - InHip;
+        const auto CandidateKnee = InCandidateKnee - InHip;
+        auto Bend = FVector::VectorPlaneProject(AuthoredPole, Axis).GetSafeNormal();
+        if (Bend.IsNearlyZero())
+        { Bend = FVector::VectorPlaneProject(AuthoredKnee, Axis).GetSafeNormal(); }
+
+        const auto Preserves = [&](const FVector& InDirection, const FVector& InBaseline, const FVector& InCandidate) -> bool
+        {
+            if (InDirection.IsNearlyZero())
+            { return true; }
+
+            const auto BaselineDistance = FVector::DotProduct(InBaseline, InDirection);
+            const auto CandidateDistance = FVector::DotProduct(InCandidate, InDirection);
+            return FMath::IsFinite(BaselineDistance) && FMath::IsFinite(CandidateDistance)
+                && CandidateDistance >= FMath::Min(0.0, BaselineDistance) - BoundaryTolerance;
+        };
+
+        const auto Tangent = FVector::VectorPlaneProject(AuthoredPole, Up).GetSafeNormal();
+        return Preserves(Bend, AuthoredKnee, CandidateKnee)
+            && Preserves(Tangent, AuthoredKnee, CandidateKnee)
+            && Preserves(Tangent, AuthoredPole, InCandidatePole - InHip);
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
         Get_ProceduralPoleSwivelOrder(
             float InLastClearDegrees,
             TArrayView<float> OutOrder)
