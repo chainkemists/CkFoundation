@@ -218,14 +218,14 @@ namespace ck
             TargetVelocityAmount);
         const auto ProposedOffset = FTransform{Rotation.GetNormalized(), Location};
 
-        // Gait ran earlier in this group. Only its current, still-attached trusted plants can constrain presentation;
-        // SurfaceMotion already used the previous solve to constrain the simulation body in Physics.
+        // Gait ran earlier in this group. Current trusted plants and published swinging feet bound presentation reach;
+        // the latter already fit their simulation hips. SurfaceMotion continues to pace only trusted stance contacts.
         auto ReachAnchors = TArray<FProceduralBodyPoseReachAnchor, TInlineAllocator<64>>{};
         const auto& Stance = InGaitComp._ReachStance;
         if (Stance.Get_HasSample() && Stance.Get_SolveSequence() == InGaitComp._SolveSequence
             && Stance.Get_BodyAtSolve().Equals(Body, 1.0e-3))
         {
-            ReachAnchors.Reserve(Stance.Get_Anchors().Num());
+            ReachAnchors.Reserve(InGaitComp._Legs.Num());
             for (const auto& Anchor : Stance.Get_Anchors())
             {
                 const auto& Leg = Anchor.Get_Leg();
@@ -242,6 +242,25 @@ namespace ck
                     ReachAnchors.Emplace(Anchor.Get_HipLocal(), Anchor.Get_FootWorld(), Anchor.Get_Reach());
                 }
             }
+
+            // These are current flight positions, not support or landing reservations. They constrain only the drawn
+            // body's offset; adding them to the stance snapshot would make a swinging foot hold simulation travel.
+            for (const auto& Leg : InGaitComp._Legs)
+            {
+                if (ck::Is_NOT_Valid(Leg) || Leg.Has<FTag_DestroyEntity_Initiate>() || Leg.Has<FTag_ProceduralLeg_Disabled>()
+                    || UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Leg) != InHandle.ConvertToHandle()
+                    || NOT Leg.Has<FFragment_ProceduralLeg>() || NOT Leg.Has<FFragment_ProceduralLeg_Params>())
+                { continue; }
+
+                const auto& Foot = Leg.Get<FFragment_ProceduralLeg>().Get_Foot();
+                if (Foot.Get_Phase() != ECk_ProceduralLeg_FootPhase::Swinging)
+                { continue; }
+
+                const auto& Params = Leg.Get<FFragment_ProceduralLeg_Params>();
+                const auto Reach = ck_procedural_gait_utils::Get_Reach(Params.Get_Chain());
+                if (Reach > 0.0f)
+                { ReachAnchors.Emplace(Params.Get_Placement().Get_HipLocal(), Foot.Get_Position(), Reach); }
+            }
         }
 
         InPoseComp._Offset = ProposedOffset;
@@ -250,7 +269,7 @@ namespace ck
             const auto Projected = ProjectProceduralBodyPoseToReach(Body, PreviousOffset, ProposedOffset,
                 TArrayView<const FProceduralBodyPoseReachAnchor>{ReachAnchors});
             CK_ENSURE_IF_NOT(Projected.IsSet(),
-                TEXT("Procedural body pose [{}] received malformed planted reach; feature is failed."), InHandle)
+                TEXT("Procedural body pose [{}] received malformed leg reach; feature is failed."), InHandle)
             {
                 InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedSupport);
                 return;
