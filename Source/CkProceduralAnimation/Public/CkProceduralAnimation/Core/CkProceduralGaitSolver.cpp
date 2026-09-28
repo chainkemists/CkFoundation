@@ -648,6 +648,10 @@ namespace ck
                 || NOT FMath::IsFinite(Input._ClearanceGroundZ) || NOT FMath::IsFinite(Input._LandingGroundZ)
                 || (Input._TargetValid && NOT Input._GroundNormal.IsNormalized())
                 || Input._Hip.ContainsNaN() || (Input._PosedHip.IsSet() && Input._PosedHip.GetValue().ContainsNaN())
+                || (Input._ReachPaceTrial.IsSet()
+                    && (Input._ReachPaceTrial.GetValue().Get_Hip().ContainsNaN()
+                        || (Input._ReachPaceTrial.GetValue().Get_PosedHip().IsSet()
+                            && Input._ReachPaceTrial.GetValue().Get_PosedHip().GetValue().ContainsNaN())))
                 || NOT FMath::IsFinite(Input._Reach) || Input._Reach < 0.0f
                 || NOT FMath::IsFinite(Input._FootContactRadius) || Input._FootContactRadius < 0.0f)
             { return false; }
@@ -951,13 +955,43 @@ namespace ck
             return ContainsGroup(ScheduledOffsets, InPhaseOffset) || ContainsGroup(BeyondScheduleOffsets, InPhaseOffset);
         };
 
+        // A pace-limiting plant with a demonstrably relieving trusted target reserves the next free take-off before
+        // unrelated error Emergencies can consume the slot by leg index. Existing beyond-schedule groups finish first;
+        // the reservation ends as soon as its leg starts, loses the target, or no longer receives fresh trial feedback.
+        auto ReachPacePhaseOffset = TOptional<float>{};
+        auto ReachPaceLegIndex = int32{INDEX_NONE};
+        auto ReachPaceRatio = 0.0;
+        for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
+        {
+            const auto& In = InInputs[LegIndex];
+            const auto& State = _LegStates[LegIndex];
+            const auto Offset = _PatternBlend._EffectiveOffsets[LegIndex];
+            if (NOT State._Enabled || State._Swing._Active || State._PendingStep._Time > FCk_Time{}
+                || HasSwingInGroup(Offset) || NOT DoGet_IsReachPaceRelief(State, In)
+                || (NOT BeyondScheduleOffsets.IsEmpty() && NOT ContainsGroup(BeyondScheduleOffsets, Offset))
+                || NOT DoGet_IsContactAvailable(LegIndex, In._IdealTarget, InInputs))
+            { continue; }
+
+            const auto& Trial = In._ReachPaceTrial.GetValue();
+            const auto SimDistance = FVector::Dist(State._Plant._Position, Trial.Get_Hip());
+            const auto Distance = Trial.Get_PosedHip().IsSet()
+                ? FMath::Max(SimDistance, FVector::Dist(State._Plant._Position, Trial.Get_PosedHip().GetValue())) : SimDistance;
+            const auto Ratio = Distance / In._Reach;
+            if (NOT ReachPacePhaseOffset.IsSet() || Ratio > ReachPaceRatio)
+            {
+                ReachPacePhaseOffset = Offset;
+                ReachPaceLegIndex = LegIndex;
+                ReachPaceRatio = Ratio;
+            }
+        }
+
         // An Emergency leg waits on inhibition while other groups keep starting swings, and on the frame they drain,
         // leg index order hands the slot to another group again. The Emergency leg whose group has nothing in flight
         // therefore reserves the next new scheduled group's take-off, Emergency take-offs included: while the body turns
         // in place every group is in Emergency at once, and index order would starve one of them. A hard-overstretched or
         // occluded foot passes it beyond the schedule; an Emergency can join an active scheduled group only on the bounded
         // remaining deadline below.
-        auto PriorityPhaseOffset = TOptional<float>{};
+        auto PriorityPhaseOffset = ReachPacePhaseOffset;
         auto PriorityRatio = 0.0;
         for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
         {
@@ -965,7 +999,7 @@ namespace ck
             const auto& State = _LegStates[LegIndex];
             const auto Offset = _PatternBlend._EffectiveOffsets[LegIndex];
 
-            if (NOT State._Enabled || State._Swing._Active || NOT In._TargetValid || HasSwingInGroup(Offset)
+            if (ReachPacePhaseOffset.IsSet() || NOT State._Enabled || State._Swing._Active || NOT In._TargetValid || HasSwingInGroup(Offset)
                 || NOT DoGet_IsEmergency(State, In))
             { continue; }
 
@@ -977,8 +1011,12 @@ namespace ck
             }
         }
 
-        for (auto LegIndex = 0; LegIndex < InInputs.Num(); ++LegIndex)
+        // Visit the actual limiting leg before its same-phase peers can spend the last slot. Other legs retain their
+        // original order, and without pressure feedback the traversal is unchanged.
+        for (auto Visit = 0; Visit < InInputs.Num(); ++Visit)
         {
+            const auto LegIndex = ReachPaceLegIndex == INDEX_NONE ? Visit
+                : Visit == 0 ? ReachPaceLegIndex : Visit <= ReachPaceLegIndex ? Visit - 1 : Visit;
             const auto& In = InInputs[LegIndex];
             auto& State = _LegStates[LegIndex];
             auto& Out = OutOutputs[LegIndex];
@@ -1201,6 +1239,7 @@ namespace ck
                 const auto Wants = In._TargetValid && Error > Threshold;
                 const auto RecoveryWants = In._TargetValid && In._TargetTrusted && NOT State._Plant._Trusted;
                 const auto Crowded = In._PlantCrowded && In._FootContactRadius > 0.0f;
+                const auto ReachPaceRelief = DoGet_IsReachPaceRelief(State, In);
                 const auto Emergency = In._TargetValid && DoGet_IsEmergency(State, In);
                 const auto Budget = _Settings._Cadence._MaxSimultaneousSwings <= 0 || NumSwinging < _Settings._Cadence._MaxSimultaneousSwings;
 
@@ -1214,7 +1253,8 @@ namespace ck
                 const auto Triggered = CatchStep || (Emergency && (NOT Crowded || Budget)) || (Wants && IsWindowOpen(LegPhaseOffset) && Budget)
                     || (SettleWants && Budget) || (RecoveryWants && Budget);
                 auto JoinDurationScale = 0.0f;
-                if (Emergency && YieldsToPriority && NOT CatchStep && Budget && NOT IsInhibited(LegPhaseOffset))
+                if (Emergency && (YieldsToPriority || (ReachPaceRelief && ContainsGroup(ScheduledOffsets, LegPhaseOffset)))
+                    && NOT CatchStep && Budget && NOT IsInhibited(LegPhaseOffset))
                 {
                     for (const auto& Deadline : ReservedJoinDeadlines)
                     {
@@ -1222,16 +1262,22 @@ namespace ck
                         { JoinDurationScale = FMath::Max(JoinDurationScale, Deadline.DurationScale); }
                     }
                 }
-                // Only this emergency bypass of a waiting group's priority is synchronized to existing peers. Ordinary
+                // Emergency priority bypasses and pace-relief joins use the same bounded peer deadline. Ordinary
                 // take-offs and catch steps retain their existing duration and reservation policy.
                 const auto JoinsReservedGroup = JoinDurationScale > 0.0f;
-                const auto OnSchedule = NOT IsInhibited(LegPhaseOffset) && (NOT YieldsToPriority || JoinsReservedGroup) && Triggered;
+                const auto YieldsToReachPace = ReachPacePhaseOffset.IsSet() && NOT CatchStep
+                    && NOT FMath::IsNearlyEqual(ReachPacePhaseOffset.GetValue(), LegPhaseOffset, 1.0e-3f);
+                const auto OnSchedule = NOT IsInhibited(LegPhaseOffset) && NOT YieldsToReachPace
+                    && (NOT YieldsToPriority || JoinsReservedGroup) && Triggered && (NOT ReachPaceRelief || Budget || CatchStep)
+                    && (NOT ReachPaceRelief || NOT HasSwingInGroup(LegPhaseOffset) || JoinsReservedGroup || CatchStep);
                 // A body climbing away from its planted feet stretches every group's floor feet at once, and the schedule
                 // steps them one group after another. A foot past its chain steps now, inhibited or yielding, as long as no
                 // other group swings beyond the schedule and the budget allows. So does a foot its hip cannot see: the body
                 // carries it deeper behind the solid for every frame it waits, and at a walker's travel speed the other
-                // group's reach Emergencies would keep its ratio of 1 waiting for longer than a step.
-                const auto StepsBeyondSchedule = DoGet_IsHardOverstretched(State, In) || (In._PlantOccluded && In._TargetValid);
+                // group's reach Emergencies would keep its ratio of 1 waiting for longer than a step. A fresh rejected motion
+                // trial permits the same escape when a trusted replacement demonstrably relieves that trial's reach bound.
+                const auto StepsBeyondSchedule = DoGet_IsHardOverstretched(State, In) || (In._PlantOccluded && In._TargetValid)
+                    || (ReachPaceRelief && NOT YieldsToReachPace);
                 const auto BeyondSchedule = NOT OnSchedule && NOT CatchStep && Budget && StepsBeyondSchedule
                     && (BeyondScheduleOffsets.IsEmpty() || ContainsGroup(BeyondScheduleOffsets, LegPhaseOffset));
 
@@ -1248,8 +1294,8 @@ namespace ck
                     { State._Swing._DurationScale = JoinDurationScale; }
                     State._Swing._TargetFrozen = false;
                     State._Swing._TargetOnAFace = NOT CatchStep && In._TargetValid && Get_IsFaceNormal(In._GroundNormal, FVector::UpVector);
-                    // An unsupported foot recovers to the contact the caller validated, without stroke or freeze displacement.
-                    const auto ExactContact = RecoveryWants || In._FootContactRadius > 0.0f;
+                    // Recovery and reach relief land on the validated contact without stroke or freeze displacement.
+                    const auto ExactContact = RecoveryWants || ReachPaceRelief || In._FootContactRadius > 0.0f;
                     State._Swing._LandsOnTarget = ExactContact && NOT CatchStep;
 
                     State._Swing._Overshoot = NOT CatchStep && NOT ExactContact && (Wants || Emergency) && NOT In._TargetIsFoothold
@@ -1637,6 +1683,31 @@ namespace ck
         const auto Simulation = FVector::Dist(InState._Plant._Position, InInput._Hip);
         return InInput._PosedHip.IsSet()
             ? FMath::Max(Simulation, FVector::Dist(InState._Plant._Position, InInput._PosedHip.GetValue())) : Simulation;
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProceduralGaitSolver::
+        DoGet_IsReachPaceRelief(
+            const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput)
+        -> bool
+    {
+        if (NOT InState._Plant._Trusted || NOT InInput._TargetValid || NOT InInput._TargetTrusted
+            || InInput._Reach <= 0.0f || NOT InInput._ReachPaceTrial.IsSet())
+        { return false; }
+
+        constexpr auto ReachTolerance = 1.0e-3;
+        const auto Limit = static_cast<double>(InInput._Reach) + ReachTolerance;
+        const auto& Trial = InInput._ReachPaceTrial.GetValue();
+        const auto PlantOutside = FVector::Dist(InState._Plant._Position, Trial.Get_Hip()) > Limit
+            || (Trial.Get_PosedHip().IsSet()
+                && FVector::Dist(InState._Plant._Position, Trial.Get_PosedHip().GetValue()) > Limit);
+        const auto TargetFits = FVector::Dist(InInput._IdealTarget, Trial.Get_Hip()) <= Limit
+            && (NOT Trial.Get_PosedHip().IsSet()
+                || FVector::Dist(InInput._IdealTarget, Trial.Get_PosedHip().GetValue()) <= Limit);
+        return PlantOutside && TargetFits;
     }
 
     // --------------------------------------------------------------------------------------------------------------------

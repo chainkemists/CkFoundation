@@ -296,6 +296,24 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // The same full voluntary-motion trial that rejected this leg's trusted plant. Positions use the input's support
+    // frame. The caller supplies a fresh trial only for the unchanged live plant; it grants release only if the current
+    // trusted replacement fits every trial hip while the old plant does not. It never changes query or target geometry.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitReachPaceTrial
+    {
+        CK_GENERATED_BODY(FProceduralGaitReachPaceTrial);
+
+    private:
+        FVector _Hip = FVector::ZeroVector;
+        TOptional<FVector> _PosedHip;
+
+    public:
+        CK_PROPERTY(_Hip);
+        CK_PROPERTY(_PosedHip);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // _Hip is the simulation hip in the support frame like every other position. When set, _PosedHip
     // contributes only to planted reach urgency; target validity, query geometry and reach clamping keep using _Hip.
     // _Reach is the leg's chain length in centimetres; zero disables the reach clamp and the reach Emergency for that leg.
@@ -339,6 +357,7 @@ namespace ck
         bool _TargetTrusted = true;
         float _FootContactRadius = 0.0f;
         bool _PlantCrowded = false;
+        TOptional<FProceduralGaitReachPaceTrial> _ReachPaceTrial;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -359,6 +378,7 @@ namespace ck
         CK_PROPERTY(_TargetTrusted);
         CK_PROPERTY(_FootContactRadius);
         CK_PROPERTY(_PlantCrowded);
+        CK_PROPERTY(_ReachPaceTrial);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -681,6 +701,8 @@ namespace ck
             TArrayView<const FProceduralGaitLegInput> InInputs) const -> bool;
         static auto DoGet_PlantReachDistance(const FProceduralGaitLegState& InState,
             const FProceduralGaitLegInput& InInput) -> double;
+        static auto DoGet_IsReachPaceRelief(const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput) -> bool;
         auto DoGet_IsEmergency(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_IsHardOverstretched(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;

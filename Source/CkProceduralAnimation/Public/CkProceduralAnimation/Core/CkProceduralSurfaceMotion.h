@@ -185,6 +185,9 @@ namespace ck
     // AttemptedStanceSpeed is the maximum constrained hip displacement between the already-simulated full and zero
     // voluntary trials divided by the substep duration, not the requested travel speed. It is zero when no reach trial
     // was rejected. This includes a turn in place and excludes a command stopped equally in both trials by collision.
+    // RejectedFullBody and its anchor indices describe this substep's full trial only when voluntary motion was paced,
+    // time and attempted stance motion were positive, and zero motion could satisfy the authored reach bounds. Indices
+    // name every anchor whose simulation or optional posed hip exceeded its normal chain reach in that same trial.
     struct CKPROCEDURALANIMATION_API FProceduralSurfaceReachPaceOutcome
     {
         CK_GENERATED_BODY(FProceduralSurfaceReachPaceOutcome);
@@ -194,12 +197,16 @@ namespace ck
         bool _PhysicalOverride = false;
         int32 _Trials = 0;
         float _AttemptedStanceSpeed = 0.0f;
+        TOptional<FTransform> _RejectedFullBody;
+        TArray<int32, TInlineAllocator<64>> _RejectedAnchorIndices;
 
     public:
         CK_PROPERTY(_Scale);
         CK_PROPERTY(_PhysicalOverride);
         CK_PROPERTY(_Trials);
         CK_PROPERTY(_AttemptedStanceSpeed);
+        CK_PROPERTY(_RejectedFullBody);
+        CK_PROPERTY(_RejectedAnchorIndices);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
