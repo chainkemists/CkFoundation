@@ -6,6 +6,7 @@
 
 #include "CkCore/Ensure/CkEnsure.h"
 
+#include "CkEcs/EntityLifetime/CkEntityLifetime_Utils.h"
 #include "CkEcs/Scheduler/CkProcessorRegistration.h"
 
 #include "CkEcsExt/Transform/CkTransform_Utils.h"
@@ -200,6 +201,7 @@ namespace ck
         // The rotation spring's angular velocity lives in the offset's own frame (q' = q w / 2), so a rotation applied on
         // the body side of the offset leaves it unchanged: it already turns with the offset.
         const auto& Spring = InParams.Get_Spring();
+        const auto PreviousOffset = InPoseComp._Offset;
         const auto LagDegrees = FMath::RadiansToDegrees(InPoseComp._Offset.GetRotation().AngularDistance(TargetRotation));
         const auto Carried = FQuat::Slerp(FQuat::Identity, Transport,
             ck_procedural_body_pose_processor::Get_TransportShare(LagDegrees, Spring.Get_MaxAttitudeLag()));
@@ -214,7 +216,54 @@ namespace ck
         const auto Rotation = UKismetMathLibrary::QuaternionSpringInterp(InPoseComp._Offset.GetRotation(), TargetRotation,
             InPoseComp._RotationSpring, Spring.Get_Stiffness(), Spring.Get_CriticalDampingFactor(), DeltaSeconds, Spring.Get_Mass(),
             TargetVelocityAmount);
-        InPoseComp._Offset = FTransform{Rotation.GetNormalized(), Location};
+        const auto ProposedOffset = FTransform{Rotation.GetNormalized(), Location};
+
+        // Gait ran earlier in this group. Only its current, still-attached trusted plants can constrain presentation;
+        // SurfaceMotion already used the previous solve to constrain the simulation body in Physics.
+        auto ReachAnchors = TArray<FProceduralBodyPoseReachAnchor, TInlineAllocator<64>>{};
+        const auto& Stance = InGaitComp._ReachStance;
+        if (Stance.Get_HasSample() && Stance.Get_SolveSequence() == InGaitComp._SolveSequence
+            && Stance.Get_BodyAtSolve().Equals(Body, 1.0e-3))
+        {
+            ReachAnchors.Reserve(Stance.Get_Anchors().Num());
+            for (const auto& Anchor : Stance.Get_Anchors())
+            {
+                const auto& Leg = Anchor.Get_Leg();
+                if (ck::Is_NOT_Valid(Leg) || Leg.Has<FTag_DestroyEntity_Initiate>() || Leg.Has<FTag_ProceduralLeg_Disabled>()
+                    || UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Leg) != InHandle.ConvertToHandle()
+                    || NOT Leg.Has<FFragment_ProceduralLeg>())
+                { continue; }
+
+                const auto& Foot = Leg.Get<FFragment_ProceduralLeg>().Get_Foot();
+                if (Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted
+                    && Foot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted
+                    && Foot.Get_Position().Equals(Anchor.Get_FootWorld(), 1.0e-3))
+                {
+                    ReachAnchors.Emplace(Anchor.Get_HipLocal(), Anchor.Get_FootWorld(), Anchor.Get_Reach());
+                }
+            }
+        }
+
+        InPoseComp._Offset = ProposedOffset;
+        if (NOT ReachAnchors.IsEmpty())
+        {
+            const auto Projected = ProjectProceduralBodyPoseToReach(Body, PreviousOffset, ProposedOffset,
+                TArrayView<const FProceduralBodyPoseReachAnchor>{ReachAnchors});
+            CK_ENSURE_IF_NOT(Projected.IsSet(),
+                TEXT("Procedural body pose [{}] received malformed planted reach; feature is failed."), InHandle)
+            {
+                InHandle.Add<FFragment_ProceduralBodyPose_Failure>(ECk_ProceduralBodyPose_Failure::MalformedSupport);
+                return;
+            }
+            InPoseComp._Offset = Projected->Get_Offset();
+            if (Projected->Get_Fraction() < 1.0f)
+            {
+                // The spring's velocities are in offset-local translation and rotation frames. Retain the accepted
+                // fraction of both velocities so a blocked pose does not wind up through a planted chain.
+                InPoseComp._TranslationSpring.Velocity *= Projected->Get_Fraction();
+                InPoseComp._RotationSpring.AngularVelocity *= Projected->Get_Fraction();
+            }
+        }
 
         const auto Posed = InPoseComp._Offset * Body;
         UCk_Utils_Transform_UE::Request_SetTransform(Presentation, FCk_Request_Transform_SetTransform{Posed}, {});

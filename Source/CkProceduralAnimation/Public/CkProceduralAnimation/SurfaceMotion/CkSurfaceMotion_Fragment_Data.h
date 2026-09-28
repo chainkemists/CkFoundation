@@ -89,6 +89,19 @@ enum class ECk_SurfaceMotion_HeightSource : uint8
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_HeightSource);
 
+// A previous gait stance constrained this frame's voluntary motion. PhysicalOverride means the zero-voluntary-motion
+// outcome is already beyond a chain, whether inherited or caused by contact correction or falling; physical safety wins.
+UENUM(BlueprintType)
+enum class ECk_SurfaceMotion_ReachPaceState : uint8
+{
+    Free,
+    Pacing,
+    Blocked,
+    PhysicalOverride
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_SurfaceMotion_ReachPaceState);
+
 UENUM(BlueprintType)
 enum class ECk_SurfaceMotion_Failure : uint8
 {

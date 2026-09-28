@@ -101,6 +101,38 @@ namespace ck
             float InHalfSpan,
             FProceduralSurfaceRayCast InRayCast)
         -> FProceduralTouchdown;
+
+    // A confirmed surface is trusted only when both the simulation hip and, when supplied, the ready presentation hip can
+    // reach the hit with the leg's full physical chain. A rejected first hit still permits the validated-target ray.
+    // InSimulationHip and InPresentationHip are finite world positions; InReach is finite and positive.
+    CKPROCEDURALANIMATION_API auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast,
+            const FVector& InSimulationHip,
+            const TOptional<FVector>& InPresentationHip,
+            float InReach)
+        -> FProceduralTouchdown;
+
+    // Additional admission receives each actual trusted hit synchronously; it is never retained. A rejected original hit
+    // still permits the validated-target ray. If neither hit meets reach and admission, retain the original plant untrusted.
+    CKPROCEDURALANIMATION_API auto
+        ResolveProceduralTouchdown(
+            const FVector& InPlant,
+            const FVector& InValidatedTarget,
+            const FVector& InTargetNormal,
+            const FVector& InUp,
+            float InHalfSpan,
+            FProceduralSurfaceRayCast InRayCast,
+            const FVector& InSimulationHip,
+            const TOptional<FVector>& InPresentationHip,
+            float InReach,
+            TFunctionRef<bool(const FVector&)> InIsContactAvailable)
+        -> FProceduralTouchdown;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

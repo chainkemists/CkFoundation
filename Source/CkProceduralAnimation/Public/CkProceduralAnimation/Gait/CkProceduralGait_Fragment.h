@@ -30,12 +30,55 @@ namespace ck
     class FProcessor_ProceduralGait_Setup;
     class FProcessor_ProceduralGait_HandleRequests;
     class FProcessor_ProceduralGait_Update;
+    class FProcessor_SurfaceMotion_Update;
     class FProcessor_ProceduralBodyPose_Update;
     class FProcessor_ProceduralRig_Update;
 
     // --------------------------------------------------------------------------------------------------------------------
 
     CK_DEFINE_ECS_TAG(FTag_ProceduralGait_NeedsSetup);
+
+    // A world-space plant and its hip in the body's local frame. SurfaceMotion consumes the previous gait solve before
+    // the next gait update; it must never infer stance from a foothold target, which may differ from the planted foot.
+    struct CKPROCEDURALANIMATION_API FProceduralGaitReachAnchor
+    {
+        CK_GENERATED_BODY(FProceduralGaitReachAnchor);
+
+    private:
+        FCk_Handle_ProceduralLeg _Leg;
+        FVector _FootWorld = FVector::ZeroVector;
+        FVector _HipLocal = FVector::ZeroVector;
+        float _Reach = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_Leg);
+        CK_PROPERTY_GET(_FootWorld);
+        CK_PROPERTY_GET(_HipLocal);
+        CK_PROPERTY_GET(_Reach);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralGaitReachAnchor, _Leg, _FootWorld, _HipLocal, _Reach);
+    };
+
+    struct CKPROCEDURALANIMATION_API FProceduralGaitReachStance
+    {
+        CK_GENERATED_BODY(FProceduralGaitReachStance);
+
+    public:
+        friend class FProcessor_ProceduralGait_Update;
+
+    private:
+        FTransform _BodyAtSolve = FTransform::Identity;
+        TArray<FProceduralGaitReachAnchor, TInlineAllocator<8>> _Anchors;
+        uint64 _SolveSequence = 0;
+        bool _HasSample = false;
+
+    public:
+        CK_PROPERTY_GET(_BodyAtSolve);
+        CK_PROPERTY_GET(_Anchors);
+        CK_PROPERTY_GET(_SolveSequence);
+        CK_PROPERTY_GET(_HasSample);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -89,6 +132,7 @@ namespace ck
         friend class FProcessor_ProceduralGait_Setup;
         friend class FProcessor_ProceduralGait_HandleRequests;
         friend class FProcessor_ProceduralGait_Update;
+        friend class FProcessor_SurfaceMotion_Update;
         friend class FProcessor_ProceduralBodyPose_Update;
         friend class FProcessor_ProceduralRig_Update;
         friend class ::UCk_Utils_ProceduralGait_UE;
@@ -106,6 +150,7 @@ namespace ck
         FProceduralGaitYawRateTracker _YawRateTracker;
         FQuat _Basis = FQuat::Identity;
         uint64 _SolveSequence = 0;
+        FProceduralGaitReachStance _ReachStance;
     };
 
     // --------------------------------------------------------------------------------------------------------------------

@@ -268,8 +268,38 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // _Hip is in the support frame like every other position. _Reach is the leg's chain length in centimetres; zero
-    // disables the reach clamp and the reach Emergency for that leg. _LandingGround reports the ground under the swing's
+    struct CKPROCEDURALANIMATION_API FProceduralFootReservation
+    {
+        CK_GENERATED_BODY(FProceduralFootReservation);
+
+    private:
+        FVector _Position = FVector::ZeroVector;
+        float _Radius = 0.0f;
+        int32 _LegIndex = INDEX_NONE;
+
+    public:
+        CK_PROPERTY(_Position);
+        CK_PROPERTY(_Radius);
+        CK_PROPERTY(_LegIndex);
+        CK_DEFINE_CONSTRUCTORS(FProceduralFootReservation, _Position, _Radius, _LegIndex);
+    };
+
+    // Positions share one frame and radii are finite nonnegative centimetres. Radius zero opts out; only positive-radius
+    // reservations belonging to another leg obstruct a contact. Tangency is available. Malformed active records reject.
+    CKPROCEDURALANIMATION_API auto
+        Get_IsProceduralFootContactAvailable(
+            const FVector& InPosition,
+            float InRadius,
+            int32 InLegIndex,
+            TArrayView<const FProceduralFootReservation> InReservations)
+        -> bool;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // _Hip is the simulation hip in the support frame like every other position. When set, _PosedHip
+    // contributes only to planted reach urgency; target validity, query geometry and reach clamping keep using _Hip.
+    // _Reach is the leg's chain length in centimetres; zero disables the reach clamp and the reach Emergency for that leg.
+    // _LandingGround reports the ground under the swing's
     // landing point and _LandingGroundZ, meaningful only when it is Found, its support-frame height: a swing whose landing
     // ground lies above its target, within reach, lifts the rest of its arc onto it; a swing told None lands on the target
     // the caller validated instead of past it, and plants untrusted when None is still the report at touchdown. _PlantOccluded
@@ -281,6 +311,9 @@ namespace ck
     // ground: while it lies within the force-step reach of the hip it is not held to the target reach, and beyond the
     // force-step reach it counts as no target. At touchdown the plant is trusted when the landing ground is Found,
     // untrusted when it is None, and otherwise when the swing's recorded target was trusted (FProceduralGaitLegPlant::_Trusted).
+    // Positive _FootContactRadius reserves exact trusted landing geometry against other enabled positive-radius contacts.
+    // _PlantCrowded requests a budgeted Emergency toward a valid replacement without moving the existing plant. Radius zero
+    // retains displacement and reservation behavior of existing callers; radii must be finite and nonnegative.
     struct CKPROCEDURALANIMATION_API FProceduralGaitLegInput
     {
         CK_GENERATED_BODY(FProceduralGaitLegInput);
@@ -297,12 +330,15 @@ namespace ck
         float _ClearanceGroundZ = -FLT_MAX;
         bool _Enabled = true;
         FVector _Hip = FVector::ZeroVector;
+        TOptional<FVector> _PosedHip;
         float _Reach = 0.0f;
         EProceduralGaitLandingGround _LandingGround = EProceduralGaitLandingGround::Unknown;
         float _LandingGroundZ = 0.0f;
         bool _PlantOccluded = false;
         bool _TargetIsFoothold = false;
         bool _TargetTrusted = true;
+        float _FootContactRadius = 0.0f;
+        bool _PlantCrowded = false;
 
     public:
         CK_PROPERTY(_IdealTarget);
@@ -314,12 +350,15 @@ namespace ck
         CK_PROPERTY(_ClearanceGroundZ);
         CK_PROPERTY(_Enabled);
         CK_PROPERTY(_Hip);
+        CK_PROPERTY(_PosedHip);
         CK_PROPERTY(_Reach);
         CK_PROPERTY(_LandingGround);
         CK_PROPERTY(_LandingGroundZ);
         CK_PROPERTY(_PlantOccluded);
         CK_PROPERTY(_TargetIsFoothold);
         CK_PROPERTY(_TargetTrusted);
+        CK_PROPERTY(_FootContactRadius);
+        CK_PROPERTY(_PlantCrowded);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -437,6 +476,12 @@ namespace ck
         CK_PROPERTY(_TargetTrusted);
         CK_PROPERTY(_TargetNormal);
         CK_PROPERTY(_TargetOnAFace);
+
+        // The forecast landing XY and accepted lift height. A later admitted report may remove the lift but cannot lower
+        // the landing below its target. Its XY follows a pullback rather than retaining where a prior lift began.
+        auto
+            Get_CommittedLandingPoint() const
+            -> FVector;
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -576,9 +621,12 @@ namespace ck
         // Rejected input never changes state or the caller's output array. InInitialFootTrusted says, per foot, whether it
         // stands on ground the caller trusts; empty trusts every foot, any other count than the positions' is rejected.
         auto Reset(TArrayView<const FVector> InInitialFootPositions, TArrayView<const bool> InInitialFootTrusted = {}) -> bool;
+        // Optional cadence drive lets a body paced by planted reach keep opening phase windows. Pattern selection and
+        // at-rest settling still use measured InBodyPlanarSpeed; target prediction still uses InBodyPlanarVelocity.
         auto Step(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
             TArrayView<const FProceduralGaitLegInput> InInputs,
-            TArrayView<FProceduralGaitLegOutput> OutOutputs, bool InAirborne = false) -> bool;
+            TArrayView<FProceduralGaitLegOutput> OutOutputs, bool InAirborne = false,
+            TOptional<float> InCadenceDriveSpeed = {}) -> bool;
         auto NumLegs() const -> int32 { return _LegStates.Num(); }
         auto IsLegEnabled(int32 InLegIndex) const -> bool;
         auto NumEnabledLegs() const -> int32;
@@ -616,7 +664,8 @@ namespace ck
             const FVector& InUp, float InYawRate, FCk_Time InLeadTime, float InMaxLead) -> FVector;
 
     private:
-        auto DoStep(FCk_Time InDeltaTime, float InBodyPlanarSpeed, const FVector& InBodyPlanarVelocity,
+        auto DoStep(FCk_Time InDeltaTime, float InBodyPlanarSpeed, float InCadenceDriveSpeed,
+            const FVector& InBodyPlanarVelocity,
             TArrayView<const FProceduralGaitLegInput> InInputs, TArrayView<FProceduralGaitLegOutput> OutOutputs,
             bool InAirborne) -> bool;
         auto UpdatePatternSelection(FCk_Time InDeltaTime, float InBodyPlanarSpeed,
@@ -628,6 +677,10 @@ namespace ck
         auto DoGet_DisplacedTarget(const FProceduralGaitLegInput& InInput, const FVector& InTarget, const FVector& InDisplacement,
             bool InTrusted) const -> FVector;
         auto DoGet_EffectiveInput(const FProceduralGaitLegInput& InInput) const -> FProceduralGaitLegInput;
+        auto DoGet_IsContactAvailable(int32 InLegIndex, const FVector& InPosition,
+            TArrayView<const FProceduralGaitLegInput> InInputs) const -> bool;
+        static auto DoGet_PlantReachDistance(const FProceduralGaitLegState& InState,
+            const FProceduralGaitLegInput& InInput) -> double;
         auto DoGet_IsEmergency(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_IsHardOverstretched(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> bool;
         auto DoGet_EmergencyRatio(const FProceduralGaitLegState& InState, const FProceduralGaitLegInput& InInput) const -> double;
