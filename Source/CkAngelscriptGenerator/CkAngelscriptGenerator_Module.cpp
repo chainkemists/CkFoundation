@@ -143,6 +143,7 @@ namespace ck_angelscript_generator_module
 
     auto Has_DynamicHandleStubRecoveryFile_OnDisk() -> bool
     {
+#if WITH_ANGELSCRIPT_CK
         const auto JsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
         if (JsonPath.IsEmpty())
         { return false; }
@@ -150,6 +151,9 @@ namespace ck_angelscript_generator_module
         const auto StubPath = FPaths::GetPath(JsonPath) /
             (FString{TEXT("_StubRecovery_")} + FPaths::GetCleanFilename(JsonPath));
         return IFileManager::Get().FileExists(*StubPath);
+#else
+        return false;
+#endif
     }
 
     // Deferred to OnPostEngineInit because GEditor is unavailable at modal-tick time, where the
@@ -193,7 +197,9 @@ namespace ck_angelscript_generator_module
 
         // Replaces the stub's permissive validator with each data asset's strict one, in place —
         // this routes through the register-or-update path, so no editor restart is needed.
+#if WITH_ANGELSCRIPT_CK
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
+#endif
 
         ck::angelscriptgenerator::Log(
             TEXT("[Module] DynamicHandle JSON regenerated and in-memory bindings refreshed - strict validators active."));
@@ -386,7 +392,9 @@ namespace ck_angelscript_generator_module
                   TEXT("Firing GenerateHandleTypeRegistry + DiscoverAndRegisterAllDefinitions."));
 
         Subsystem->GenerateHandleTypeRegistry();
+#if WITH_ANGELSCRIPT_CK
         FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
+#endif
 
         ck::angelscriptgenerator::Log(
             TEXT("[Module] PostCompile DynamicHandle regen complete - strict validators active."));

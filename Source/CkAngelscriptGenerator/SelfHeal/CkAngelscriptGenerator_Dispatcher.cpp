@@ -179,6 +179,7 @@ namespace ck::angelscriptgenerator::self_heal
         auto Apply_DynamicHandleStrategy(
             const FCk_AsParsedError& InError) -> bool
         {
+#if WITH_ANGELSCRIPT_CK
             const auto CanonicalJsonPath = FCkDynamic_HandleTypeRegistry::GetRegistryFilePath();
             if (CanonicalJsonPath.IsEmpty())
             {
@@ -295,6 +296,9 @@ namespace ck::angelscriptgenerator::self_heal
             }
 
             return true;
+#else
+            return false;
+#endif
         }
 
         // ---- Strategy application --------------------------------------------------
