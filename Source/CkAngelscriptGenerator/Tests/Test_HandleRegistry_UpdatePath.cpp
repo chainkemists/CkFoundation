@@ -4,7 +4,7 @@
 
 #include "Misc/AutomationTest.h"
 
-#if WITH_DEV_AUTOMATION_TESTS
+#if WITH_DEV_AUTOMATION_TESTS && WITH_ANGELSCRIPT_CK
 
 namespace
 {
@@ -186,4 +186,4 @@ bool FCkTest_HandleRegistry_Update_PointerStability::RunTest(const FString&)
     return true;
 }
 
-#endif // WITH_DEV_AUTOMATION_TESTS
+#endif // WITH_DEV_AUTOMATION_TESTS && WITH_ANGELSCRIPT_CK
