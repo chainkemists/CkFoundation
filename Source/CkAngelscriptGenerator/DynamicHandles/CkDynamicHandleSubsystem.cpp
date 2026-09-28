@@ -83,7 +83,9 @@ auto
     ck::angelscriptgenerator::Log(
         TEXT("[DynamicHandleSubsystem] Live handle definitions differ from the canonical registry; regenerating."));
     GenerateHandleTypeRegistry();
+#if WITH_ANGELSCRIPT_CK
     FCkDynamic_HandleTypeRegistry::DiscoverAndRegisterAllDefinitions();
+#endif
 }
 
 // --------------------------------------------------------------------------------------------------------------------
