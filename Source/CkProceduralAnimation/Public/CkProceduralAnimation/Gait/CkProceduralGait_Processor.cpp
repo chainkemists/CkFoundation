@@ -1371,6 +1371,18 @@ namespace ck
 
         InGaitComp._Solver.TransformState(InverseBasis * InGaitComp._Basis);
 
+        const FFragment_SurfaceMotion_Support* PaceSupport = nullptr;
+        if (Dt > 0.0 && InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>()
+            && UCk_Utils_SurfaceMotion_UE::Get_Status(UCk_Utils_SurfaceMotion_UE::Cast(InHandle)) == ECk_ProceduralAnimation_Status::Ready)
+        {
+            const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>();
+            if (Support._EvaluatedFrame == GFrameCounter && Support._EvaluatedBody.Equals(Body, 1.0e-3)
+                && Support._State.Get_Grounded() && Support._AttemptedStanceSpeed > 0.0f
+                && (Support._ReachPaceState == ECk_SurfaceMotion_ReachPaceState::Pacing
+                    || Support._ReachPaceState == ECk_SurfaceMotion_ReachPaceState::Blocked))
+            { PaceSupport = &Support; }
+        }
+
         const auto LegCount = InGaitComp._Legs.Num();
         const auto Reservations = ck_procedural_gait::Get_FootReservations(InGaitComp._Legs, InGaitComp._Solver, Basis);
 
@@ -1496,6 +1508,21 @@ namespace ck
             {
                 Input.Set_PosedHip(TOptional<FVector>{InverseBasis.RotateVector(
                     PresentationBody.TransformPosition(Placement.Get_HipLocal()))});
+            }
+            if (PaceSupport && Planted && LegComp._Foot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted
+                && UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Leg) == InHandle.ConvertToHandle())
+            {
+                for (const auto& Feedback : PaceSupport->_ReachPaceFeedback)
+                {
+                    if (Feedback.Get_Leg() == Leg && Feedback.Get_FootWorld().Equals(LegComp._Foot.Get_Position(), 1.0e-3))
+                    {
+                        auto Trial = FProceduralGaitReachPaceTrial{}.Set_Hip(InverseBasis.RotateVector(Feedback.Get_TrialHipWorld()));
+                        if (HasPose && Feedback.Get_TrialPosedHipWorld().IsSet())
+                        { Trial.Set_PosedHip(TOptional<FVector>{InverseBasis.RotateVector(Feedback.Get_TrialPosedHipWorld().GetValue())}); }
+                        Input.Set_ReachPaceTrial(TOptional<FProceduralGaitReachPaceTrial>{Trial});
+                        break;
+                    }
+                }
             }
             auto RejectedReservation = false;
             const auto FootholdQuery = ck_procedural_gait::FFootholdQuery{

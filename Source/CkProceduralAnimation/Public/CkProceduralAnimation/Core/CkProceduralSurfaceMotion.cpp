@@ -848,6 +848,21 @@ namespace ck
         // voluntary scale; the bounded search only commits candidates it actually checked.
         InOutBody = AcceptedBody;
         InOutState = AcceptedState;
+        if (AcceptedScale < 1.0f && NOT PhysicalOverride && InStep > FCk_Time{} && AttemptedHipDistance > 0.0)
+        {
+            for (auto Index = 0; Index < InAnchors.Num(); ++Index)
+            {
+                const auto& Anchor = InAnchors[Index];
+                if (FVector::Dist(FullBody.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld())
+                        > Anchor.Get_Reach() + ReachTolerance
+                    || (InPoseOffset.IsSet()
+                        && FVector::Dist(FullPosed.TransformPosition(Anchor.Get_HipLocal()), Anchor.Get_FootWorld())
+                            > Anchor.Get_Reach() + ReachTolerance))
+                { Outcome.Get_RejectedAnchorIndices().Add(Index); }
+            }
+            if (NOT Outcome.Get_RejectedAnchorIndices().IsEmpty())
+            { Outcome.Set_RejectedFullBody(TOptional<FTransform>{FullBody}); }
+        }
         return Outcome.Set_Scale(AcceptedScale);
     }
 }
