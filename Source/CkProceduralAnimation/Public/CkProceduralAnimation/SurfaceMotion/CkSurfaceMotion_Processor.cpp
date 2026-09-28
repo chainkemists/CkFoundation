@@ -1,7 +1,10 @@
 #include "CkProceduralAnimation/SurfaceMotion/CkSurfaceMotion_Processor.h"
 
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Fragment.h"
+#include "CkProceduralAnimation/BodyPose/CkProceduralBodyPose_Utils.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
+#include "CkProceduralAnimation/Leg/CkProceduralLeg_Fragment.h"
 
 #include "CkCore/Ensure/CkEnsure.h"
 
@@ -152,8 +155,14 @@ namespace ck
 
         const auto Settings = ck_surface_motion::DoBuild_Settings(InParams);
         const auto& QueryFilter = InParams.Get_Contact().Get_QueryFilter();
+        InSupportComp._ReachPaceScale = 1.0f;
+        InSupportComp._ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Free;
+        InSupportComp._ReachPaceTrials = 0;
+        InSupportComp._ReachPaceRays = 0;
+        InSupportComp._AttemptedStanceSpeed = 0.0f;
         const auto RayCast = [&](const FVector& InStart, const FVector& InEnd) -> FProceduralSurfaceHit
         {
+            ++InSupportComp._ReachPaceRays;
             const auto Hit = UCk_Utils_JoltQuery_UE::Get_RayCast(World, InStart, InEnd, QueryFilter);
             return FProceduralSurfaceHit{}
                 .Set_Hit(Hit.Get_HasHit())
@@ -180,11 +189,69 @@ namespace ck
             { FeetSupport = FeetPlane.Get_Support(); }
         }
 
+        // The gait writes this after the previous physics pass. Changes since that solve invalidate the snapshot rather
+        // than making SurfaceMotion pace against a stale body transform or leg plant.
+        auto ReachAnchors = TArray<FProceduralGaitReachAnchor, TInlineAllocator<64>>{};
+        if (InHandle.Has<FFragment_ProceduralGait>()
+            && UCk_Utils_ProceduralGait_UE::Get_Status(UCk_Utils_ProceduralGait_UE::Cast(InHandle)) == ECk_ProceduralAnimation_Status::Ready)
+        {
+            const auto& Gait = InHandle.Get<FFragment_ProceduralGait>();
+            const auto& Stance = Gait._ReachStance;
+            if (Stance.Get_HasSample() && Stance.Get_SolveSequence() == Gait._SolveSequence
+                && Stance.Get_BodyAtSolve().Equals(Body, 1.0e-3))
+            {
+                for (const auto& Anchor : Stance.Get_Anchors())
+                {
+                    const auto& Leg = Anchor.Get_Leg();
+                    if (ck::Is_NOT_Valid(Leg) || Leg.Has<FTag_DestroyEntity_Initiate>() || Leg.Has<FTag_ProceduralLeg_Disabled>()
+                        || UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Leg) != InHandle.ConvertToHandle()
+                        || NOT Leg.Has<FFragment_ProceduralLeg>())
+                    { continue; }
+
+                    const auto& Foot = Leg.Get<FFragment_ProceduralLeg>().Get_Foot();
+                    if (Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted
+                        && Foot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted
+                        && Foot.Get_Position().Equals(Anchor.Get_FootWorld(), 1.0e-3))
+                    { ReachAnchors.Add(Anchor); }
+                }
+            }
+        }
+
+        const auto HasPose = InHandle.Has<FFragment_ProceduralBodyPose>()
+            && UCk_Utils_ProceduralBodyPose_UE::Get_Status(UCk_Utils_ProceduralBodyPose_UE::Cast(InHandle))
+                == ECk_ProceduralAnimation_Status::Ready;
+        const auto PoseOffset = HasPose
+            ? UCk_Utils_ProceduralBodyPose_UE::Get_Offset(UCk_Utils_ProceduralBodyPose_UE::CastChecked(InHandle))
+            : FTransform::Identity;
+        auto CoreAnchors = TArray<FProceduralSurfaceReachPaceAnchor, TInlineAllocator<64>>{};
+        CoreAnchors.Reserve(ReachAnchors.Num());
+        for (const auto& Anchor : ReachAnchors)
+        {
+            CoreAnchors.Add(FProceduralSurfaceReachPaceAnchor{
+                Anchor.Get_FootWorld(), Anchor.Get_HipLocal(), Anchor.Get_Reach()});
+        }
+        const auto CorePoseOffset = HasPose ? TOptional<FTransform>{PoseOffset} : TOptional<FTransform>{};
+        auto AttemptedStanceDistance = 0.0;
         for (auto Iteration = 0; Iteration < Substeps; ++Iteration)
         {
-            StepProceduralSurfaceMotion(Settings, InMotionComp._Direction, InMotionComp._Speed, Step, RayCast, FeetSupport, Body,
-                InSupportComp._State);
+            const auto Outcome = StepProceduralSurfaceMotionPaced(Settings, InMotionComp._Direction, InMotionComp._Speed,
+                Step, RayCast, FeetSupport, TArrayView<const FProceduralSurfaceReachPaceAnchor>{CoreAnchors},
+                CorePoseOffset, Body, InSupportComp._State);
+            InSupportComp._ReachPaceTrials += Outcome.Get_Trials();
+            AttemptedStanceDistance += Outcome.Get_AttemptedStanceSpeed() * Step.Get_Seconds();
+            InSupportComp._ReachPaceScale = FMath::Min(InSupportComp._ReachPaceScale, Outcome.Get_Scale());
+            if (Outcome.Get_PhysicalOverride())
+            { InSupportComp._ReachPaceState = ECk_SurfaceMotion_ReachPaceState::PhysicalOverride; }
+            else if (InSupportComp._ReachPaceState != ECk_SurfaceMotion_ReachPaceState::PhysicalOverride)
+            {
+                if (Outcome.Get_Scale() == 0.0f)
+                { InSupportComp._ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Blocked; }
+                else if (Outcome.Get_Scale() < 1.0f && InSupportComp._ReachPaceState != ECk_SurfaceMotion_ReachPaceState::Blocked)
+                { InSupportComp._ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Pacing; }
+            }
         }
+        InSupportComp._AttemptedStanceSpeed = static_cast<float>(AttemptedStanceDistance / Dt);
+        InSupportComp._EvaluatedBody = Body;
         InSupportComp._EvaluatedFrame = GFrameCounter;
         auto TransformHandle = UCk_Utils_Transform_UE::CastChecked(InHandle);
         UCk_Utils_Transform_UE::Request_SetTransform(TransformHandle, FCk_Request_Transform_SetTransform{Body}, {});

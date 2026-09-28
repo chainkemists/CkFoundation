@@ -137,6 +137,54 @@ namespace ck
             const FProceduralBodyConformSlewSettings& InSettings,
             FCk_Time InDeltaTime)
         -> TOptional<FTransform>;
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKPROCEDURALANIMATION_API FProceduralBodyPoseReachAnchor
+    {
+        CK_GENERATED_BODY(FProceduralBodyPoseReachAnchor);
+
+    private:
+        FVector _HipLocal = FVector::ZeroVector;
+        FVector _FootWorld = FVector::ZeroVector;
+        float _Reach = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_HipLocal);
+        CK_PROPERTY_GET(_FootWorld);
+        CK_PROPERTY_GET(_Reach);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralBodyPoseReachAnchor, _HipLocal, _FootWorld, _Reach);
+    };
+
+    struct CKPROCEDURALANIMATION_API FProceduralBodyPoseReachProjection
+    {
+        CK_GENERATED_BODY(FProceduralBodyPoseReachProjection);
+
+    private:
+        FTransform _Offset = FTransform::Identity;
+        float _Fraction = 1.0f;
+        bool _UsedIdentityBase = false;
+
+    public:
+        CK_PROPERTY(_Offset);
+        CK_PROPERTY(_Fraction);
+        CK_PROPERTY(_UsedIdentityBase);
+    };
+
+    // Keeps each trusted foot within max(its physical chain reach, its current simulation-hip distance). If the old
+    // presentation offset is outside that physical baseline, identity is the feasible base. Candidate offsets interpolate
+    // both rotation and translation, and only a checked candidate is returned. Empty anchors retain the proposed pose.
+    // Offsets are rigid (unit scale, normalized rotation). Unset on an invalid offset, a non-finite transform or
+    // anchor, or a non-positive reach.
+    CKPROCEDURALANIMATION_API auto
+        ProjectProceduralBodyPoseToReach(
+            const FTransform& InBody,
+            const FTransform& InPreviousOffset,
+            const FTransform& InProposedOffset,
+            TArrayView<const FProceduralBodyPoseReachAnchor> InAnchors)
+        -> TOptional<FProceduralBodyPoseReachProjection>;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

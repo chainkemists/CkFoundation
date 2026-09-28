@@ -135,10 +135,16 @@ private:
               meta = (AllowPrivateAccess = true))
     FCk_ProceduralLeg_ChainGeometry _Chain;
 
+    // World-space contact clearance. Zero preserves unrestricted legacy placement.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true, ClampMin = "0.0"))
+    float _FootContactRadius = 0.0f;
+
 public:
     CK_PROPERTY_GET(_Id);
     CK_PROPERTY(_Placement);
     CK_PROPERTY(_Chain);
+    CK_PROPERTY(_FootContactRadius);
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ProceduralLeg_Spec, _Id, _Placement, _Chain);
@@ -149,7 +155,9 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralLeg_Spec, IsValid_Policy_Default,
 {
     return NOT InParams.Get_Id().IsNone()
         && ck::IsValid(InParams.Get_Placement())
-        && ck::IsValid(InParams.Get_Chain());
+        && ck::IsValid(InParams.Get_Chain())
+        && FMath::IsFinite(InParams.Get_FootContactRadius())
+        && InParams.Get_FootContactRadius() >= 0.0f;
 });
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -200,7 +208,8 @@ enum class ECk_ProceduralLeg_FootholdVerdict : uint8
     TooSteep,
     Occluded,
     Inboard,
-    UnderBody
+    UnderBody,
+    Reserved
 };
 
 CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralLeg_FootholdVerdict);

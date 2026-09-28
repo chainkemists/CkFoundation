@@ -28,7 +28,8 @@ namespace ck
         TooSteep,
         Occluded,
         Inboard,
-        UnderBody
+        UnderBody,
+        Reserved
     };
 
     enum class EProceduralFootholdHold : uint8
@@ -78,11 +79,14 @@ namespace ck
         float _SlopeWeight = 0.5f;
         float _ContinuityWeight = 0.25f;
         float _MaxAngleDegrees = 90.0f;
+        // Support-frame reference for ranking admitted normals; does not change the +Z angle admission gate.
+        FVector _SlopeUp = FVector::UpVector;
 
     public:
         CK_PROPERTY(_SlopeWeight);
         CK_PROPERTY(_ContinuityWeight);
         CK_PROPERTY(_MaxAngleDegrees);
+        CK_PROPERTY(_SlopeUp);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -145,8 +149,9 @@ namespace ck
             float InMargin)
         -> bool;
 
-    // |p - ideal| / reach + SlopeWeight x (1 - dot(n, +Z)) + (planted ? ContinuityWeight x |p.Z - plant.Z| / reach : 0), in
-    // the support frame. A non-positive or non-finite reach costs the most a double holds.
+    // |p - ideal| / reach + SlopeWeight x (1 - dot(n, normalized SlopeUp)) +
+    // (planted ? ContinuityWeight x |p.Z - plant.Z| / reach : 0), in the support frame. SlopeUp must be finite and nonzero;
+    // its default +Z preserves existing ranking. Malformed inputs cost the most a double holds.
     CKPROCEDURALANIMATION_API auto
         ComputeProceduralFootholdCost(
             const FProceduralFootholdCandidate& InCandidate,
@@ -158,7 +163,7 @@ namespace ck
         -> double;
 
     // The index of the Usable candidate with the least cost, INDEX_NONE when none is Usable, the input is empty, InReach
-    // is not positive or any input is non-finite. Ties go to the lower index. Never mutates its inputs.
+    // is not positive, any input is non-finite or SlopeUp is zero. Ties go to the lower index. Never mutates its inputs.
     CKPROCEDURALANIMATION_API auto
         SelectProceduralFoothold(
             TArrayView<const FProceduralFootholdCandidate> InCandidates,

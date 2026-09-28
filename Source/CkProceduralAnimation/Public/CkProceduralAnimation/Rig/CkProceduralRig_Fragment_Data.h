@@ -61,8 +61,8 @@ CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_ProceduralRig_Clearance);
 
 // --------------------------------------------------------------------------------------------------------------------
 
-// Whether the posed chain's links are out of solids and its joints between hip and foot out of the body slab. A rig without a
-// clearance policy never tests its links and reads Clear.
+// Whether legacy solid/body clearance or opted-in sibling capsules overlap. None does not test solids, but supplied radii
+// still make its fixed pose participate in sibling avoidance.
 UENUM(BlueprintType)
 enum class ECk_ProceduralRig_ChainState : uint8
 {
@@ -99,7 +99,13 @@ private:
               meta = (AllowPrivateAccess = true))
     ECk_ProceduralRig_Clearance _Clearance = ECk_ProceduralRig_Clearance::None;
 
+    // Optional conservative capsule radius in world centimetres for each segment. Empty opts out of sibling avoidance and keeps legacy posing.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite,
+              meta = (AllowPrivateAccess = true))
+    TArray<float> _SegmentClearanceRadii;
+
 public:
+    CK_PROPERTY(_SegmentClearanceRadii);
     CK_PROPERTY(_Segments);
     CK_PROPERTY(_Foot);
     CK_PROPERTY(_Solver);
@@ -118,6 +124,15 @@ CK_DEFINE_CUSTOM_IS_VALID_INLINE(FCk_ProceduralRig_Spec, IsValid_Policy_Default,
 
     if (Segments.Num() == 1 && InParams.Get_Solver() != ECk_ProceduralRig_ChainSolver::Auto)
     { return false; }
+
+    const auto& Radii = InParams.Get_SegmentClearanceRadii();
+    if (NOT Radii.IsEmpty() && Radii.Num() != Segments.Num())
+    { return false; }
+    for (const auto Radius : Radii)
+    {
+        if (NOT FMath::IsFinite(Radius) || Radius < 0.0f)
+        { return false; }
+    }
 
     auto Parts = TSet<FCk_Handle>{};
     for (const auto& Segment : Segments)

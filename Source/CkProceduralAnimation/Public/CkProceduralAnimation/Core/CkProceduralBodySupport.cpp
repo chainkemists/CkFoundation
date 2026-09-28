@@ -233,6 +233,80 @@ namespace ck
 
         return FTransform{Rotation, Location};
     }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        ProjectProceduralBodyPoseToReach(
+            const FTransform& InBody,
+            const FTransform& InPreviousOffset,
+            const FTransform& InProposedOffset,
+            TArrayView<const FProceduralBodyPoseReachAnchor> InAnchors)
+        -> TOptional<FProceduralBodyPoseReachProjection>
+    {
+        if (InBody.ContainsNaN() || InPreviousOffset.ContainsNaN() || InProposedOffset.ContainsNaN()
+            || NOT InBody.GetRotation().IsNormalized()
+            || NOT InPreviousOffset.GetScale3D().Equals(FVector::OneVector, 1.0e-4)
+            || NOT InProposedOffset.GetScale3D().Equals(FVector::OneVector, 1.0e-4)
+            || NOT InPreviousOffset.GetRotation().IsNormalized()
+            || NOT InProposedOffset.GetRotation().IsNormalized())
+        { return {}; }
+        for (const auto& Anchor : InAnchors)
+        {
+            if (Anchor.Get_HipLocal().ContainsNaN() || Anchor.Get_FootWorld().ContainsNaN()
+                || NOT FMath::IsFinite(Anchor.Get_Reach()) || Anchor.Get_Reach() <= 0.0f)
+            { return {}; }
+        }
+
+        auto Result = FProceduralBodyPoseReachProjection{}.Set_Offset(InProposedOffset);
+        if (InAnchors.IsEmpty())
+        { return Result; }
+
+        constexpr auto ReachTolerance = 1.0e-3;
+        auto Limits = TArray<double, TInlineAllocator<64>>{};
+        Limits.Reserve(InAnchors.Num());
+        for (const auto& Anchor : InAnchors)
+        {
+            const auto SimHip = InBody.TransformPosition(Anchor.Get_HipLocal());
+            Limits.Add(FMath::Max(static_cast<double>(Anchor.Get_Reach()),
+                FVector::Dist(SimHip, Anchor.Get_FootWorld())));
+        }
+        const auto FitsReach = [&](const FTransform& InOffset) -> bool
+        {
+            const auto Posed = InOffset * InBody;
+            for (auto Index = 0; Index < InAnchors.Num(); ++Index)
+            {
+                if (FVector::Dist(Posed.TransformPosition(InAnchors[Index].Get_HipLocal()),
+                        InAnchors[Index].Get_FootWorld()) > Limits[Index] + ReachTolerance)
+                { return false; }
+            }
+            return true;
+        };
+        if (FitsReach(InProposedOffset))
+        { return Result; }
+
+        const auto PreviousFits = FitsReach(InPreviousOffset);
+        const auto Base = PreviousFits ? InPreviousOffset : FTransform::Identity;
+        Result.Set_Offset(Base).Set_Fraction(0.0f).Set_UsedIdentityBase(NOT PreviousFits);
+        auto Lower = 0.0f;
+        auto Upper = 1.0f;
+        constexpr auto ProjectionIterations = 8;
+        for (auto Iteration = 0; Iteration < ProjectionIterations; ++Iteration)
+        {
+            const auto Fraction = (Lower + Upper) * 0.5f;
+            const auto Candidate = FTransform{
+                FQuat::Slerp(Base.GetRotation(), InProposedOffset.GetRotation(), Fraction).GetNormalized(),
+                FMath::Lerp(Base.GetLocation(), InProposedOffset.GetLocation(), Fraction)};
+            if (FitsReach(Candidate))
+            {
+                Lower = Fraction;
+                Result.Set_Offset(Candidate).Set_Fraction(Fraction);
+            }
+            else
+            { Upper = Fraction; }
+        }
+        return Result;
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------

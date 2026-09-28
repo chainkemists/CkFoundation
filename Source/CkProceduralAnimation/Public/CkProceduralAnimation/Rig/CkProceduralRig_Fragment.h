@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CkProceduralAnimation/Rig/CkProceduralRig_Fragment_Data.h"
+#include "CkProceduralAnimation/Core/CkProceduralChainClearance.h"
 
 #include "CkCore/Macros/CkMacros.h"
 
@@ -63,6 +64,21 @@ namespace ck
         float _SwivelDegrees = 0.0f;
         ECk_ProceduralRig_ChainState _ChainState = ECk_ProceduralRig_ChainState::Clear;
         int32 _CrossingLinks = 0;
+        int32 _SiblingCrossingLinks = 0;
+    };
+
+    // Body-owned transient capacities; no input joint-array views survive an Update call.
+    struct CKPROCEDURALANIMATION_API FFragment_ProceduralRig_BodyClearance
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ProceduralRig_BodyClearance);
+        friend class FProcessor_ProceduralRig_Setup;
+        friend class FProcessor_ProceduralRig_Update;
+
+    private:
+        FProceduralChainAvoidanceScratch _Scratch;
+        TArray<int32> _Choices;
+        TArray<int32> _CrossingLinks;
     };
 }
 

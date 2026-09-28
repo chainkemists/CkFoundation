@@ -133,6 +133,8 @@ private:
     ECk_ProceduralRig_ChainState _ChainState = ECk_ProceduralRig_ChainState::Clear;
     float _SwivelDegrees = 0.0f;
     int32 _CrossingLinks = 0;
+    int32 _SiblingCrossingLinks = 0;
+    TArray<float> _SegmentClearanceRadii;
 
 public:
     CK_PROPERTY(_Composed);
@@ -144,6 +146,8 @@ public:
     CK_PROPERTY(_ChainState);
     CK_PROPERTY(_SwivelDegrees);
     CK_PROPERTY(_CrossingLinks);
+    CK_PROPERTY(_SiblingCrossingLinks);
+    CK_PROPERTY(_SegmentClearanceRadii);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -300,6 +304,7 @@ private:
     FVector _FeetPlanePoint = FVector::ZeroVector;
     FVector _FeetPlaneNormal = FVector::UpVector;
     ck::EProceduralGaitFeetPlane _FeetPlane = ck::EProceduralGaitFeetPlane::None;
+    ck::FProceduralSurfaceFeetSupport _FeetSupport;
 
 public:
     CK_PROPERTY(_BodyTransform);
@@ -318,6 +323,7 @@ public:
     CK_PROPERTY(_FeetPlanePoint);
     CK_PROPERTY(_FeetPlaneNormal);
     CK_PROPERTY(_FeetPlane);
+    CK_PROPERTY(_FeetSupport);
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -344,6 +350,10 @@ private:
     float _MaxStepHeight = 0.0f;
     ECk_SurfaceMotion_Obstruction _Obstruction = ECk_SurfaceMotion_Obstruction::None;
     FVector _ObstructionNormal = FVector::ZeroVector;
+    float _ReachPaceScale = 1.0f;
+    ECk_SurfaceMotion_ReachPaceState _ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Free;
+    int32 _ReachPaceTrials = 0;
+    int32 _ReachPaceRays = 0;
 
 public:
     CK_PROPERTY(_Velocity);
@@ -360,6 +370,10 @@ public:
     CK_PROPERTY(_MaxStepHeight);
     CK_PROPERTY(_Obstruction);
     CK_PROPERTY(_ObstructionNormal);
+    CK_PROPERTY(_ReachPaceScale);
+    CK_PROPERTY(_ReachPaceState);
+    CK_PROPERTY(_ReachPaceTrials);
+    CK_PROPERTY(_ReachPaceRays);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

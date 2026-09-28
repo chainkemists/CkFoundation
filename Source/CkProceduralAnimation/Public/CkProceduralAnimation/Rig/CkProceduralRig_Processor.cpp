@@ -5,6 +5,7 @@
 #include "CkProceduralAnimation/Core/CkProceduralLegCurve.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Fragment.h"
 #include "CkProceduralAnimation/Gait/CkProceduralGait_Utils.h"
+#include "CkProceduralAnimation/Leg/CkProceduralLeg_Utils.h"
 
 #include "CkCore/Algorithms/CkAlgorithms.h"
 #include "CkCore/Ensure/CkEnsure.h"
@@ -307,6 +308,8 @@ namespace ck_procedural_rig
         FVector Pole = FVector::ZeroVector;
         float SwivelDegrees = 0.0f;
         int32 CrossingLinks = 0;
+        float PoseDegrees = 0.0f;
+        FChainCrossings MeasuredCrossings;
     };
 
     // The fan, from the last clear angle on: the first pose whose every link is clear of solids and of the body slab is kept;
@@ -326,11 +329,25 @@ namespace ck_procedural_rig
             float InLastClearDegrees,
             UWorld* InWorld,
             const FCk_Jolt_QueryFilter& InFilter,
-            int32& InOutRayCount)
+            int32& InOutRayCount,
+            bool InRetainRefinedAngle = false)
         -> FClearedChain
     {
-        float Order[UE_ARRAY_COUNT(ck::ProceduralPoleSwivelFanDegrees)];
-        const auto OrderCount = ck::Get_ProceduralPoleSwivelOrder(InLastClearDegrees, MakeArrayView(Order));
+        float Order[UE_ARRAY_COUNT(ck::ProceduralPoleSwivelFanDegrees) + 1];
+        auto OrderCount = ck::Get_ProceduralPoleSwivelOrder(InLastClearDegrees, MakeArrayView(Order));
+        const auto CanRetain = InRetainRefinedAngle && FMath::IsFinite(InLastClearDegrees)
+            && FMath::Abs(InLastClearDegrees) <= 165.0f
+            && FMath::IsNearlyEqual(InLastClearDegrees / 15.0f, FMath::RoundToFloat(InLastClearDegrees / 15.0f), 1.0e-3f);
+        auto AlreadyOrdered = false;
+        for (auto Index = 0; Index < OrderCount; ++Index)
+        { AlreadyOrdered |= FMath::IsNearlyEqual(Order[Index], InLastClearDegrees, 1.0e-3f); }
+        if (CanRetain && NOT AlreadyOrdered)
+        {
+            for (auto Index = OrderCount; Index > 0; --Index)
+            { Order[Index] = Order[Index - 1]; }
+            Order[0] = InLastClearDegrees;
+            ++OrderCount;
+        }
 
         auto Candidate = FChainJoints{};
         Candidate.SetNumZeroed(OutJoints.Num());
@@ -355,7 +372,8 @@ namespace ck_procedural_rig
             for (auto JointIndex = 0; JointIndex < OutJoints.Num(); ++JointIndex)
             { OutJoints[JointIndex] = Candidate[JointIndex]; }
 
-            Kept = FClearedChain{.Posed = true, .Pole = Pole, .SwivelDegrees = Degrees, .CrossingLinks = Crossings};
+            Kept = FClearedChain{.Posed = true, .Pole = Pole, .SwivelDegrees = Degrees, .CrossingLinks = Crossings,
+                .PoseDegrees = Degrees, .MeasuredCrossings = ChainCrossings};
             KeptCrossings = Crossings;
             if (IsClear)
             { break; }
@@ -366,7 +384,70 @@ namespace ck_procedural_rig
 
         return Kept;
     }
+
+    struct FBodyCandidate
+    {
+        FChainJoints Joints;
+        FVector Pole = FVector::ZeroVector;
+        float Degrees = 0.0f;
+        int32 Crossings = 0;
+        FChainCrossings MeasuredCrossings;
+    };
+
+    struct FBodyChain
+    {
+        FCk_Handle_ProceduralLeg Leg;
+        uint32 StableId = 0;
+        FVector Hip = FVector::ZeroVector;
+        FVector Target = FVector::ZeroVector;
+        FVector AuthoredPole = FVector::ZeroVector;
+        EChainPose Pose = EChainPose::Aim;
+        FBox BodySlab = FBox{ForceInit};
+        TArray<FBodyCandidate, TInlineAllocator<24>> Candidates;
+        TArray<ck::FProceduralChainPoseCandidate, TInlineAllocator<24>> CandidateViews;
+        int32 Selected = 0;
+        int32 SiblingCrossings = 0;
+        bool CanSearch = false;
+    };
+
+    auto
+        DoAdd_BodyCandidate(
+            FBodyChain& InOutChain,
+            float InDegrees,
+            const FQuat& InBodyRotation,
+            const FTransform& InDrawnBody,
+            UWorld* InWorld,
+            const FCk_Jolt_QueryFilter& InFilter,
+            int32& InOutRayCount)
+        -> void
+    {
+        if (InOutChain.Candidates.Num() >= 24 || ck::algo::AnyOf(InOutChain.Candidates,
+            [&](const FBodyCandidate& InCandidate) -> bool
+            { return FMath::IsNearlyEqual(InCandidate.Degrees, InDegrees, 1.0e-3f); }))
+        { return; }
+
+        const auto& Lengths = InOutChain.Leg.Get<ck::FFragment_ProceduralLeg_Params>().Get_Chain().Get_SegmentLengths();
+        auto Candidate = FBodyCandidate{};
+        Candidate.Joints.SetNumZeroed(Lengths.Num() + 1);
+        Candidate.Pole = ck::ComputeProceduralPoleSwivel(InOutChain.Hip, InOutChain.Target, InOutChain.AuthoredPole, InDegrees);
+        Candidate.Degrees = InDegrees;
+        if (NOT DoPose_Chain(InOutChain.Pose, Candidate.Joints, Lengths, InOutChain.Hip, InOutChain.Target,
+                Candidate.Pole, InBodyRotation))
+        { return; }
+
+        Candidate.MeasuredCrossings = DoCount_CrossingLinks(InWorld, Candidate.Joints, InDrawnBody,
+            InOutChain.BodySlab, InFilter, InOutRayCount);
+        const auto& Baseline = InOutChain.Candidates[0].MeasuredCrossings;
+        if (Candidate.MeasuredCrossings.Links > Baseline.Links
+            || Candidate.MeasuredCrossings.LinksOrSlab > Baseline.LinksOrSlab)
+        { return; }
+
+        // Retain the legacy authored-pole exemption and diagnostic severity; sibling scoring is a separate measurement.
+        Candidate.Crossings = InDegrees == 0.0f ? Candidate.MeasuredCrossings.Links : Candidate.MeasuredCrossings.LinksOrSlab;
+        InOutChain.Candidates.Add(MoveTemp(Candidate));
+    }
 }
+
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -388,6 +469,8 @@ namespace ck
         { return; }
 
         InRigComp._Joints.SetNum(InParams.Get_Segments().Num() + 1);
+        if (NOT InParams.Get_SegmentClearanceRadii().IsEmpty())
+        { Body.AddOrGet<FFragment_ProceduralRig_BodyClearance>(); }
         InHandle.Remove<MarkedDirtyBy>();
     }
 
@@ -398,101 +481,223 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralRig_Params& InParams,
-            FFragment_ProceduralRig& InRigComp,
-            const FFragment_ProceduralLeg_Params& InLegParams,
-            const FFragment_ProceduralLeg& InLegComp)
+            const FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp)
         -> void
     {
-        auto Body = UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(InHandle);
-        auto Gait = UCk_Utils_ProceduralGait_UE::Cast(Body);
-        if (UCk_Utils_ProceduralGait_UE::Get_Status(Gait) != ECk_ProceduralAnimation_Status::Ready)
+        if (UCk_Utils_ProceduralGait_UE::Get_Status(InHandle) != ECk_ProceduralAnimation_Status::Ready)
         { return; }
 
+        const auto Body = InHandle.ConvertToHandle();
         const auto BodyTransform = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(Body));
-        // Bone lengths are authored in world centimetres; a scaled root requires explicitly
-        // reauthoring the rig, not a silent mismatch between IK lengths and visible geometry.
+        auto LiveLegs = TArray<FCk_Handle_ProceduralLeg, TInlineAllocator<16>>{};
+        for (const auto& Leg : InGaitComp._Legs)
+        {
+            if (ck::IsValid(Leg) && NOT Leg.Has<FTag_DestroyEntity_Initiate>()
+                && Leg.Has<FFragment_ProceduralLeg_Params>() && Leg.Has<FFragment_ProceduralLeg>()
+                && UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Leg) == Body)
+            { LiveLegs.Add(Leg); }
+        }
+
         const auto RootScaleValid = BodyTransform.GetScale3D().Equals(FVector::OneVector);
         CK_ENSURE_IF_NOT(RootScaleValid,
-            TEXT("Procedural rig [{}] root changed to unsupported non-unit scale; rig has failed."), InHandle)
+            TEXT("Procedural rig body [{}] root changed to unsupported non-unit scale; its rigs have failed."), InHandle)
         {
-            InHandle.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::InvalidRootScale);
-            return;
-        }
-
-        // The body pose update ran earlier this frame; the presentation entity's own transform is still a pending request.
-        const auto Posed = UCk_Utils_ProceduralBodyPose_UE::Get_Offset(UCk_Utils_ProceduralBodyPose_UE::Cast(Body)) * BodyTransform;
-
-        const auto& Segments = InParams.Get_Segments();
-        const auto HasFoot = InParams.Get_Foot() != FCk_Handle_Transform{};
-        const auto PartsValid = algo::AllOf(Segments, [](const FCk_Handle_Transform& InPart) -> bool
+            for (auto& Leg : LiveLegs)
             {
-                return ck_procedural_rig::Get_IsPartLive(InPart);
-            })
-            && (NOT HasFoot || ck_procedural_rig::Get_IsPartLive(InParams.Get_Foot()));
-        CK_ENSURE_IF_NOT(PartsValid,
-            TEXT("Procedural rig [{}] lost an authored part; rig has failed without partially posing its chain."), InHandle)
-        {
-            InHandle.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::MissingPart);
-            return;
-        }
-
-        const auto& Chain = InLegParams.Get_Chain();
-        const auto& Lengths = Chain.Get_SegmentLengths();
-        const auto& Foot = InLegComp.Get_Foot();
-        const auto Target = Foot.Get_Position();
-        const auto Hip = Posed.TransformPosition(InLegParams.Get_Placement().Get_HipLocal());
-        const auto Pole = Posed.TransformPosition(Chain.Get_PoleLocal());
-        const auto BodyRotation = BodyTransform.GetRotation();
-        const auto ChainPose = ck_procedural_rig::Get_ChainPose(Segments.Num(), InParams.Get_Solver());
-
-        auto& Joints = InRigComp._Joints;
-        auto PosedPole = Pole;
-        auto ChainPosed = false;
-        if (InParams.Get_Clearance() == ECk_ProceduralRig_Clearance::Swivel)
-        {
-            auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
-            if (ck::Is_NOT_Valid(World))
-            { return; }
-
-            // The gait update ran earlier this frame and reset the counter; the rig adds its link rays to that solve's.
-            auto RayCount = int32{0};
-            const auto& Placement = InLegParams.Get_Placement();
-            const auto RestDrop = static_cast<float>(FMath::Abs(Placement.Get_HipLocal().Z - Placement.Get_RestFootLocal().Z));
-            const auto BodySlab = ck_procedural_rig::Get_BodySlab(Gait.Get<FFragment_ProceduralGait>()._Legs, RestDrop);
-            const auto Cleared = ck_procedural_rig::DoPose_ClearChain(ChainPose, Joints, Lengths, Hip, Target, Pole, BodyRotation, Posed, BodySlab,
-                InRigComp._SwivelDegrees, World, Gait.Get<FFragment_ProceduralGait_Tunables>().Get_Probe().Get_QueryFilter(), RayCount);
-            Gait.Get<FFragment_ProceduralGait_Debug>()._RaysLastSolve += RayCount;
-
-            ChainPosed = Cleared.Posed;
-            if (ChainPosed)
-            {
-                PosedPole = Cleared.Pole;
-                InRigComp._SwivelDegrees = Cleared.SwivelDegrees;
-                InRigComp._CrossingLinks = Cleared.CrossingLinks;
-                InRigComp._ChainState = Cleared.CrossingLinks > 0 ? ECk_ProceduralRig_ChainState::Crossing : ECk_ProceduralRig_ChainState::Clear;
+                if (Leg.Has<FFragment_ProceduralRig>() && NOT Leg.Has<FFragment_ProceduralRig_Failure>())
+                { Leg.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::InvalidRootScale); }
             }
+            return;
         }
-        else
-        { ChainPosed = ck_procedural_rig::DoPose_Chain(ChainPose, Joints, Lengths, Hip, Target, Pole, BodyRotation); }
 
-        CK_ENSURE_IF_NOT(ChainPosed,
-            TEXT("Procedural rig [{}] could not pose its curve chain from hip [{}] to foot [{}]; the chain keeps its last pose this frame."),
-            InHandle, Hip, Target)
+        // Compute the whole body's legacy poses before issuing any part transform requests. Setup and BodyPose ran earlier.
+        const auto Posed = UCk_Utils_ProceduralBodyPose_UE::Get_Offset(UCk_Utils_ProceduralBodyPose_UE::Cast(Body)) * BodyTransform;
+        const auto BodyRotation = BodyTransform.GetRotation();
+        auto* World = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(InHandle);
+        const auto& Filter = InHandle.Get<FFragment_ProceduralGait_Tunables>().Get_Probe().Get_QueryFilter();
+        auto Chains = TArray<ck_procedural_rig::FBodyChain, TInlineAllocator<8>>{};
+        auto RayCount = int32{0};
+        for (auto StableId = 0; StableId < InGaitComp._Legs.Num(); ++StableId)
+        {
+            auto Leg = InGaitComp._Legs[StableId];
+            if (NOT LiveLegs.Contains(Leg) || NOT Leg.Has<FFragment_ProceduralRig_Params>()
+                || NOT Leg.Has<FFragment_ProceduralRig>() || Leg.Has<FTag_ProceduralRig_NeedsSetup>()
+                || Leg.Has<FFragment_ProceduralRig_Failure>())
+            { continue; }
+
+            const auto& Params = Leg.Get<FFragment_ProceduralRig_Params>();
+            const auto& LegParams = Leg.Get<FFragment_ProceduralLeg_Params>();
+            const auto& LegComp = Leg.Get<FFragment_ProceduralLeg>();
+            const auto& Rig = Leg.Get<FFragment_ProceduralRig>();
+            const auto HasFoot = Params.Get_Foot() != FCk_Handle_Transform{};
+            const auto PartsValid = algo::AllOf(Params.Get_Segments(), &ck_procedural_rig::Get_IsPartLive)
+                && (NOT HasFoot || ck_procedural_rig::Get_IsPartLive(Params.Get_Foot()));
+            CK_ENSURE_IF_NOT(PartsValid,
+                TEXT("Procedural rig [{}] lost an authored part; rig has failed without partially posing its chain."), Leg)
+            {
+                Leg.Add<FFragment_ProceduralRig_Failure>(ECk_ProceduralRig_Failure::MissingPart);
+                continue;
+            }
+
+            auto Chain = ck_procedural_rig::FBodyChain{};
+            Chain.Leg = Leg;
+            Chain.StableId = static_cast<uint32>(StableId);
+            Chain.Hip = Posed.TransformPosition(LegParams.Get_Placement().Get_HipLocal());
+            Chain.Target = LegComp.Get_Foot().Get_Position();
+            Chain.AuthoredPole = Posed.TransformPosition(LegParams.Get_Chain().Get_PoleLocal());
+            Chain.Pose = ck_procedural_rig::Get_ChainPose(Params.Get_Segments().Num(), Params.Get_Solver());
+            const auto RestDrop = static_cast<float>(FMath::Abs(LegParams.Get_Placement().Get_HipLocal().Z
+                - LegParams.Get_Placement().Get_RestFootLocal().Z));
+            Chain.BodySlab = ck_procedural_rig::Get_BodySlab(LiveLegs, RestDrop);
+            auto Legacy = ck_procedural_rig::FBodyCandidate{};
+            Legacy.Joints.SetNumZeroed(Params.Get_Segments().Num() + 1);
+            Legacy.Pole = Chain.AuthoredPole;
+            auto ChainPosed = false;
+            if (Params.Get_Clearance() == ECk_ProceduralRig_Clearance::Swivel)
+            {
+                if (ck::Is_NOT_Valid(World))
+                { continue; }
+                const auto Cleared = ck_procedural_rig::DoPose_ClearChain(Chain.Pose, Legacy.Joints,
+                    LegParams.Get_Chain().Get_SegmentLengths(), Chain.Hip, Chain.Target, Chain.AuthoredPole,
+                    BodyRotation, Posed, Chain.BodySlab, Rig._SwivelDegrees, World, Filter, RayCount,
+                    NOT Params.Get_SegmentClearanceRadii().IsEmpty());
+                ChainPosed = Cleared.Posed;
+                Legacy.Pole = Cleared.Pole;
+                Legacy.Degrees = Cleared.PoseDegrees;
+                Legacy.Crossings = Cleared.CrossingLinks;
+                Legacy.MeasuredCrossings = Cleared.MeasuredCrossings;
+            }
+            else
+            {
+                ChainPosed = ck_procedural_rig::DoPose_Chain(Chain.Pose, Legacy.Joints,
+                    LegParams.Get_Chain().Get_SegmentLengths(), Chain.Hip, Chain.Target, Chain.AuthoredPole, BodyRotation);
+            }
+            CK_ENSURE_IF_NOT(ChainPosed,
+                TEXT("Procedural rig [{}] could not pose its curve chain from hip [{}] to foot [{}]; its last pose is retained."),
+                Leg, Chain.Hip, Chain.Target)
+            { continue; }
+            Chain.Candidates.Add(MoveTemp(Legacy));
+            Chains.Add(MoveTemp(Chain));
+        }
+        InDebugComp._RaysLastSolve += RayCount;
+        RayCount = 0;
+        if (Chains.IsEmpty())
         { return; }
 
-        for (auto Index = 0; Index < Segments.Num(); ++Index)
+        auto AvoidanceChains = TArray<int32, TInlineAllocator<16>>{};
+        for (auto Index = 0; Index < Chains.Num(); ++Index)
         {
-            const auto& From = Joints[Index];
-            const auto& To = Joints[Index + 1];
-            ck_procedural_rig::Request_Pose(Segments[Index], (From + To) * 0.5,
-                ck_procedural_rig::Get_SegmentRotation(From, To, PosedPole));
+            if (NOT Chains[Index].Leg.Get<FFragment_ProceduralRig_Params>().Get_SegmentClearanceRadii().IsEmpty())
+            { AvoidanceChains.Add(Index); }
         }
 
-        if (HasFoot)
-        { ck_procedural_rig::Request_Pose(InParams.Get_Foot(), Joints.Last(), Foot.Get_Rotation()); }
+        if (AvoidanceChains.Num() > 1)
+        {
+            auto& Batch = InHandle.AddOrGet<FFragment_ProceduralRig_BodyClearance>();
+            Batch._Choices.Init(0, AvoidanceChains.Num());
+            Batch._CrossingLinks.Init(0, AvoidanceChains.Num());
+            const auto Select = [&]() -> bool
+            {
+                auto Legs = TArray<FProceduralChainAvoidanceLeg, TInlineAllocator<16>>{};
+                for (auto Slot = 0; Slot < AvoidanceChains.Num(); ++Slot)
+                {
+                    auto& Chain = Chains[AvoidanceChains[Slot]];
+                    Chain.CandidateViews.Reset();
+                    for (const auto& Candidate : Chain.Candidates)
+                    { Chain.CandidateViews.Emplace(MakeArrayView(Candidate.Joints)); }
+                    Legs.Emplace(Chain.StableId, MakeArrayView(Chain.CandidateViews),
+                        MakeArrayView(Chain.Leg.Get<FFragment_ProceduralRig_Params>().Get_SegmentClearanceRadii()), Batch._Choices[Slot]);
+                }
+                auto Outcome = FProceduralChainAvoidanceOutcome{};
+                return SelectProceduralChainPoses(Legs, Batch._Scratch, MakeArrayView(Batch._Choices),
+                    MakeArrayView(Batch._CrossingLinks), Outcome);
+            };
 
-        InRigComp._PosedSolveSequence = Gait.Get<FFragment_ProceduralGait>()._SolveSequence;
+            // First detect overlap on legacy poses. Empty radii never participate; None and disabled chains are fixed obstacles.
+            auto ValidSelection = Select();
+            CK_ENSURE_IF_NOT(ValidSelection, TEXT("Procedural rig body [{}] rejected its legacy avoidance inputs; poses retained."), InHandle)
+            { return; }
+            for (auto Slot = 0; Slot < AvoidanceChains.Num(); ++Slot)
+            {
+                auto& Chain = Chains[AvoidanceChains[Slot]];
+                const auto& Params = Chain.Leg.Get<FFragment_ProceduralRig_Params>();
+                const auto Enabled = UCk_Utils_ProceduralLeg_UE::Get_EnableDisable(Chain.Leg) == ECk_EnableDisable::Enable;
+                Chain.CanSearch = Batch._CrossingLinks[Slot] > 0 && Enabled
+                    && Params.Get_Clearance() == ECk_ProceduralRig_Clearance::Swivel;
+                if (NOT Chain.CanSearch)
+                { continue; }
+                for (const auto Degrees : ProceduralPoleSwivelFanDegrees)
+                { ck_procedural_rig::DoAdd_BodyCandidate(Chain, Degrees, BodyRotation, Posed, World, Filter, RayCount); }
+            }
+            InDebugComp._RaysLastSolve += RayCount;
+            RayCount = 0;
+            ValidSelection = Select();
+            CK_ENSURE_IF_NOT(ValidSelection, TEXT("Procedural rig body [{}] rejected its coarse avoidance inputs; poses retained."), InHandle)
+            { return; }
+
+            auto Refined = false;
+            for (auto Slot = 0; Slot < AvoidanceChains.Num(); ++Slot)
+            {
+                auto& Chain = Chains[AvoidanceChains[Slot]];
+                if (NOT Chain.CanSearch || Batch._CrossingLinks[Slot] == 0)
+                { continue; }
+                for (const auto Degrees : {15.0f, -15.0f, 45.0f, -45.0f, 75.0f, -75.0f,
+                    105.0f, -105.0f, 135.0f, -135.0f, 165.0f, -165.0f})
+                { ck_procedural_rig::DoAdd_BodyCandidate(Chain, Degrees, BodyRotation, Posed, World, Filter, RayCount); }
+                Refined = true;
+            }
+            if (Refined)
+            {
+                InDebugComp._RaysLastSolve += RayCount;
+                RayCount = 0;
+                ValidSelection = Select();
+                CK_ENSURE_IF_NOT(ValidSelection, TEXT("Procedural rig body [{}] rejected its refined avoidance inputs; poses retained."), InHandle)
+                { return; }
+            }
+            InDebugComp._RaysLastSolve += RayCount;
+            for (auto Slot = 0; Slot < AvoidanceChains.Num(); ++Slot)
+            {
+                auto& Chain = Chains[AvoidanceChains[Slot]];
+                Chain.Selected = Batch._Choices[Slot];
+                Chain.SiblingCrossings = Batch._CrossingLinks[Slot];
+            }
+        }
+
+        // All choices are final before any requests are queued. Validate every chain's lifetime again before publication.
+        for (auto& Chain : Chains)
+        {
+            if (ck::Is_NOT_Valid(Chain.Leg) || Chain.Leg.Has<FTag_DestroyEntity_Initiate>()
+                || UCk_Utils_EntityLifetime_UE::Get_LifetimeOwner(Chain.Leg) != Body)
+            { return; }
+            const auto& Params = Chain.Leg.Get<FFragment_ProceduralRig_Params>();
+            const auto HasFoot = Params.Get_Foot() != FCk_Handle_Transform{};
+            if (NOT algo::AllOf(Params.Get_Segments(), &ck_procedural_rig::Get_IsPartLive)
+                || (HasFoot && NOT ck_procedural_rig::Get_IsPartLive(Params.Get_Foot())))
+            { return; }
+        }
+        for (auto& Chain : Chains)
+        {
+            const auto& Chosen = Chain.Candidates[Chain.Selected];
+            const auto& Params = Chain.Leg.Get<FFragment_ProceduralRig_Params>();
+            auto& Rig = Chain.Leg.Get<FFragment_ProceduralRig>();
+            Rig._Joints = Chosen.Joints;
+            Rig._SwivelDegrees = Chosen.Crossings == 0 ? Chosen.Degrees : 0.0f;
+            Rig._CrossingLinks = Chosen.Crossings;
+            Rig._SiblingCrossingLinks = Chain.SiblingCrossings;
+            Rig._ChainState = Chosen.Crossings > 0 || Chain.SiblingCrossings > 0
+                ? ECk_ProceduralRig_ChainState::Crossing : ECk_ProceduralRig_ChainState::Clear;
+            for (auto Index = 0; Index < Params.Get_Segments().Num(); ++Index)
+            {
+                const auto& From = Chosen.Joints[Index];
+                const auto& To = Chosen.Joints[Index + 1];
+                ck_procedural_rig::Request_Pose(Params.Get_Segments()[Index], (From + To) * 0.5,
+                    ck_procedural_rig::Get_SegmentRotation(From, To, Chosen.Pole));
+            }
+            if (Params.Get_Foot() != FCk_Handle_Transform{})
+            { ck_procedural_rig::Request_Pose(Params.Get_Foot(), Chosen.Joints.Last(), Chain.Leg.Get<FFragment_ProceduralLeg>().Get_Foot().Get_Rotation()); }
+            Rig._PosedSolveSequence = InGaitComp._SolveSequence;
+        }
     }
 }
 

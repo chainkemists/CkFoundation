@@ -71,6 +71,18 @@ namespace ck
     private:
         FProceduralSurfaceMotionState _State;
         uint64 _EvaluatedFrame = 0;
+        FTransform _EvaluatedBody = FTransform::Identity;
+        float _ReachPaceScale = 1.0f;
+        ECk_SurfaceMotion_ReachPaceState _ReachPaceState = ECk_SurfaceMotion_ReachPaceState::Free;
+        int32 _ReachPaceTrials = 0;
+        int32 _ReachPaceRays = 0;
+        float _AttemptedStanceSpeed = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_ReachPaceScale);
+        CK_PROPERTY_GET(_ReachPaceState);
+        CK_PROPERTY_GET(_ReachPaceTrials);
+        CK_PROPERTY_GET(_ReachPaceRays);
     };
 
     // --------------------------------------------------------------------------------------------------------------------

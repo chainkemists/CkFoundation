@@ -13,6 +13,8 @@ namespace ck_procedural_leg_curve
     constexpr auto FootHandleFraction = 0.5;
     constexpr auto MinBendSine = 1.0e-3;
     constexpr auto PastEnd = 2.0;
+    constexpr auto ClosureTolerance = 0.01;
+    constexpr auto ClosureIterations = 64;
 
     using FPolyline = TArray<FVector, TInlineAllocator<SampleSegments + 1>>;
 
@@ -143,6 +145,109 @@ namespace ck_procedural_leg_curve
         { Remaining += FVector::Dist(InPoints[Point - 1], InPoints[Point]); }
         return Remaining;
     }
+
+    // The polyline's first sphere exit can switch branches while folded, leaving no arch whose walk ends on the foot.
+    // Keep the curve's proximal link when its remaining links can close the target; otherwise retry the whole chain.
+    auto
+        DoClose_FoldedChain(
+            const FVector& InHip,
+            const FVector& InFoot,
+            TArrayView<const float> InLengths,
+            TArrayView<FVector> InOutJoints)
+        -> void
+    {
+        const auto InitialError = FVector::Dist(InOutJoints.Last(), InFoot);
+        if (InitialError <= ClosureTolerance || InHip.Equals(InFoot, UE_DOUBLE_SMALL_NUMBER))
+        { return; }
+
+        auto TotalLength = 0.0;
+        auto LongestLink = 0.0;
+        for (const auto Link : InLengths)
+        {
+            TotalLength += Link;
+            LongestLink = FMath::Max(LongestLink, static_cast<double>(Link));
+        }
+        const auto InnerReach = FMath::Max(0.0, 2.0 * LongestLink - TotalLength);
+        if (FVector::Dist(InHip, InFoot) + ClosureTolerance < InnerReach)
+        { return; }
+
+        FVector SeedDirections[MaxLinks];
+        FVector Joints[MaxLinks + 1];
+        FVector Best[MaxLinks + 1];
+        for (auto Index = 0; Index < InLengths.Num(); ++Index)
+        {
+            const auto Link = InOutJoints[Index + 1] - InOutJoints[Index];
+            const auto LengthSquared = Link.SizeSquared();
+            if (LengthSquared <= UE_DOUBLE_SMALL_NUMBER)
+            { return; }
+            SeedDirections[Index] = Link / FMath::Sqrt(LengthSquared);
+        }
+        for (auto Index = 0; Index < InOutJoints.Num(); ++Index)
+        { Joints[Index] = InOutJoints[Index]; }
+
+        auto BestError = InitialError;
+        const auto DoAttempt = [&](int32 InFirstLink)
+        {
+            for (auto Index = 0; Index < InOutJoints.Num(); ++Index)
+            { Joints[Index] = InOutJoints[Index]; }
+
+            for (auto Iteration = 0; Iteration < ClosureIterations; ++Iteration)
+            {
+                Joints[InLengths.Num()] = InFoot;
+                for (auto Index = InLengths.Num() - 1; Index >= InFirstLink; --Index)
+                {
+                    const auto Delta = Joints[Index] - Joints[Index + 1];
+                    const auto LengthSquared = Delta.SizeSquared();
+                    const auto Direction = LengthSquared > UE_DOUBLE_SMALL_NUMBER
+                        ? Delta / FMath::Sqrt(LengthSquared) : -SeedDirections[Index];
+                    Joints[Index] = Joints[Index + 1] + Direction * InLengths[Index];
+                }
+                Joints[InFirstLink] = InOutJoints[InFirstLink];
+                for (auto Index = InFirstLink; Index < InLengths.Num(); ++Index)
+                {
+                    const auto Delta = Joints[Index + 1] - Joints[Index];
+                    const auto LengthSquared = Delta.SizeSquared();
+                    const auto Direction = LengthSquared > UE_DOUBLE_SMALL_NUMBER
+                        ? Delta / FMath::Sqrt(LengthSquared) : SeedDirections[Index];
+                    Joints[Index + 1] = Joints[Index] + Direction * InLengths[Index];
+                }
+
+                const auto Error = FVector::Dist(Joints[InLengths.Num()], InFoot);
+                if (Error < BestError)
+                {
+                    BestError = Error;
+                    for (auto Index = 0; Index < InOutJoints.Num(); ++Index)
+                    { Best[Index] = Joints[Index]; }
+                }
+                if (Error <= ClosureTolerance)
+                { break; }
+            }
+        };
+
+        if (InLengths.Num() > 1)
+        {
+            auto SuffixLength = 0.0;
+            auto SuffixLongest = 0.0;
+            for (auto Index = 1; Index < InLengths.Num(); ++Index)
+            {
+                SuffixLength += InLengths[Index];
+                SuffixLongest = FMath::Max(SuffixLongest, static_cast<double>(InLengths[Index]));
+            }
+            const auto SuffixInnerReach = FMath::Max(0.0, 2.0 * SuffixLongest - SuffixLength);
+            const auto SuffixDistance = FVector::Dist(InOutJoints[1], InFoot);
+            if (SuffixDistance + ClosureTolerance >= SuffixInnerReach && SuffixDistance <= SuffixLength + ClosureTolerance)
+            { DoAttempt(1); }
+        }
+
+        if (BestError > ClosureTolerance)
+        { DoAttempt(0); }
+
+        if (BestError < InitialError)
+        {
+            for (auto Index = 0; Index < InOutJoints.Num(); ++Index)
+            { InOutJoints[Index] = Best[Index]; }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -202,6 +307,7 @@ namespace ck
 
         DoBuild_Polyline(InHip, InFoot, BendNormal, HighArch, Points);
         DoWalk(Points, InLengths, OutJoints);
+        DoClose_FoldedChain(InHip, InFoot, InLengths, OutJoints);
         return true;
     }
 }

@@ -42,16 +42,14 @@ namespace ck
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Serial: a rig with a clearance policy casts Jolt rays, and the Jolt query API is game-thread-only.
+    // One serial batch per ready gait body: Jolt queries are game-thread-only and sibling choices precede publication.
     class CKPROCEDURALANIMATION_API FProcessor_ProceduralRig_Update : public ck_exp::TProcessor<
         FProcessor_ProceduralRig_Update,
-        FCk_Handle_ProceduralRig,
-        TReadOnly<FFragment_ProceduralRig_Params>,
-        TReadWrite<FFragment_ProceduralRig>,
-        TReadOnly<FFragment_ProceduralLeg_Params>,
-        TReadOnly<FFragment_ProceduralLeg>,
-        TExclude<FTag_ProceduralRig_NeedsSetup>,
-        TExclude<FFragment_ProceduralRig_Failure>,
+        FCk_Handle_ProceduralGait,
+        TReadOnly<FFragment_ProceduralGait>,
+        TReadWrite<FFragment_ProceduralGait_Debug>,
+        TExclude<FTag_ProceduralGait_NeedsSetup>,
+        TExclude<FFragment_ProceduralGait_Failure>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -67,10 +65,8 @@ namespace ck
         ForEachEntity(
             TimeType InDeltaT,
             HandleType InHandle,
-            const FFragment_ProceduralRig_Params& InParams,
-            FFragment_ProceduralRig& InRigComp,
-            const FFragment_ProceduralLeg_Params& InLegParams,
-            const FFragment_ProceduralLeg& InLegComp)
+            const FFragment_ProceduralGait& InGaitComp,
+            FFragment_ProceduralGait_Debug& InDebugComp)
             -> void;
     };
 }

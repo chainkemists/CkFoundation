@@ -4,6 +4,7 @@
 #include "CkCore/Time/CkTime.h"
 
 #include "CoreMinimal.h"
+#include "Containers/ArrayView.h"
 #include "Templates/Function.h"
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -161,6 +162,46 @@ namespace ck
         CK_PROPERTY(_FootprintMax);
     };
 
+    // An already validated, trusted planted foot from the previous gait solve. HipLocal belongs to the simulation body;
+    // the optional presentation offset is checked separately by the paced step.
+    struct CKPROCEDURALANIMATION_API FProceduralSurfaceReachPaceAnchor
+    {
+        CK_GENERATED_BODY(FProceduralSurfaceReachPaceAnchor);
+
+    private:
+        FVector _FootWorld = FVector::ZeroVector;
+        FVector _HipLocal = FVector::ZeroVector;
+        float _Reach = 0.0f;
+
+    public:
+        CK_PROPERTY_GET(_FootWorld);
+        CK_PROPERTY_GET(_HipLocal);
+        CK_PROPERTY_GET(_Reach);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralSurfaceReachPaceAnchor, _FootWorld, _HipLocal, _Reach);
+    };
+
+    // AttemptedStanceSpeed is the maximum constrained hip displacement between the already-simulated full and zero
+    // voluntary trials divided by the substep duration, not the requested travel speed. It is zero when no reach trial
+    // was rejected. This includes a turn in place and excludes a command stopped equally in both trials by collision.
+    struct CKPROCEDURALANIMATION_API FProceduralSurfaceReachPaceOutcome
+    {
+        CK_GENERATED_BODY(FProceduralSurfaceReachPaceOutcome);
+
+    private:
+        float _Scale = 1.0f;
+        bool _PhysicalOverride = false;
+        int32 _Trials = 0;
+        float _AttemptedStanceSpeed = 0.0f;
+
+    public:
+        CK_PROPERTY(_Scale);
+        CK_PROPERTY(_PhysicalOverride);
+        CK_PROPERTY(_Trials);
+        CK_PROPERTY(_AttemptedStanceSpeed);
+    };
+
     // --------------------------------------------------------------------------------------------------------------------
 
     // Returns the first hit on the segment from InStart to InEnd.
@@ -217,7 +258,10 @@ namespace ck
     //   pending turn with no room under the body coasts; a fall landing without room loses the velocity into its face and
     //   keeps falling, kept off the face like an obstruction. The feet contact is never checked. One ray per contact
     //   checked.
-    // The caller keeps the settings valid, InStep positive and the body finite.
+    // InVoluntaryScale in [0, 1] scales requested travel, support-frame turning and adopted-contact clearance correction.
+    // It does not scale contact queries, obstruction separation, real-time confirmation/grace, or gravity. InSpeed still
+    // describes steering intent for forward and fan probes even at scale zero. The caller keeps the settings valid, InStep
+    // positive, the body finite and the scale finite and within [0, 1].
     CKPROCEDURALANIMATION_API auto
         StepProceduralSurfaceMotion(
             const FProceduralSurfaceMotionSettings& InSettings,
@@ -227,8 +271,26 @@ namespace ck
             FProceduralSurfaceRayCast InRayCast,
             const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
-            FProceduralSurfaceMotionState& InOutState)
+            FProceduralSurfaceMotionState& InOutState,
+            float InVoluntaryScale = 1.0f)
         -> void;
+
+    // Replays the same substep from its original body and support state at bounded voluntary scales. Only a simulated
+    // Body+State pair is committed; zero scale still queries support, resolves obstruction and falls. A prior stance that
+    // cannot fit even at zero scale is reported as a physical override and is never worsened by voluntary travel.
+    CKPROCEDURALANIMATION_API auto
+        StepProceduralSurfaceMotionPaced(
+            const FProceduralSurfaceMotionSettings& InSettings,
+            const FVector& InSteerDirection,
+            float InSpeed,
+            FCk_Time InStep,
+            FProceduralSurfaceRayCast InRayCast,
+            const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
+            TArrayView<const FProceduralSurfaceReachPaceAnchor> InAnchors,
+            const TOptional<FTransform>& InPoseOffset,
+            FTransform& InOutBody,
+            FProceduralSurfaceMotionState& InOutState)
+        -> FProceduralSurfaceReachPaceOutcome;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
