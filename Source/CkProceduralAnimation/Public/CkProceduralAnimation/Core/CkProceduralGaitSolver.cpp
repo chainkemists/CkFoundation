@@ -34,6 +34,30 @@ namespace ck::procedural_gait_solver
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    // Flight geometry has no ground anchor to retain. Preserve its desired support-frame height as far as physical
+    // reach permits, then constrain XY to that sphere slice. Unlike the landing-target clamp, the vertical-pole limit
+    // stays continuous when authored lift reaches the full chain length. This bounds reach, not world clearance:
+    // changing XY cannot prove clearance against terrain from the input's single pre-solve ground-height report.
+    auto
+        Get_ReachableFlightPosition(
+            const FVector& InHip,
+            const FVector& InPosition,
+            float InReach)
+        -> FVector
+    {
+        const auto Reach = static_cast<double>(InReach);
+        const auto Offset = InPosition - InHip;
+        if (Reach <= 0.0 || Offset.SizeSquared() <= FMath::Square(Reach))
+        { return InPosition; }
+
+        const auto Height = FMath::Clamp(Offset.Z, -Reach, Reach);
+        const auto PlanarReach = FMath::Sqrt(FMath::Max(0.0, FMath::Square(Reach) - FMath::Square(Height)));
+        const auto Planar = FVector{Offset.X, Offset.Y, 0.0}.GetClampedToMaxSize(PlanarReach);
+        return InHip + Planar + FVector{0.0, 0.0, Height};
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
     // What the probe under the landing point last found decides a touchdown's trust; without a probe (a face target, a catch
     // step) the trust the swing recorded for its target does.
     auto
@@ -1322,6 +1346,8 @@ namespace ck
                     Out._Planted = true;
                 }
             }
+            if (NOT Out._Planted && In._Reach > 0.0f)
+            { Out._Position = procedural_gait_solver::Get_ReachableFlightPosition(In._Hip, Out._Position, In._Reach); }
         }
         return true;
     }
