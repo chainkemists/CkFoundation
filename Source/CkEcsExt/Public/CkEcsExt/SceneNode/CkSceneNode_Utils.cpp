@@ -465,6 +465,34 @@ auto
 
 auto
     UCk_Utils_SceneNode_UE::
+    Get_DriverWorldTransform(
+        const FCk_Handle_SceneNode& InSceneNode)
+    -> FTransform
+{
+    if (InSceneNode.Has<ck::FFragment_SceneNode_UnrealAnchor>())
+    {
+        const auto& Anchor = InSceneNode.Get<ck::FFragment_SceneNode_UnrealAnchor>();
+        const auto& Component = Anchor.Get_Component();
+
+        if (ck::Is_NOT_Valid(Component))
+        { return FTransform::Identity; }
+
+        // Same expression FProcessor_SceneNode_FollowUnrealAnchor composes against.
+        return Anchor.Get_Socket().IsNone()
+            ? Component->GetComponentTransform()
+            : Component->GetSocketTransform(Anchor.Get_Socket());
+    }
+
+    const auto Parent = Get_Parent(InSceneNode);
+
+    if (ck::Is_NOT_Valid(Parent))
+    { return FTransform::Identity; }
+
+    return UCk_Utils_Transform_UE::Get_EntityCurrentTransform(Parent);
+}
+
+auto
+    UCk_Utils_SceneNode_UE::
     Request_UpdateOffset(
         FCk_Handle_SceneNode& InSceneNode,
         const FCk_Request_SceneNode_UpdateRelativeTransform& InRequest,
