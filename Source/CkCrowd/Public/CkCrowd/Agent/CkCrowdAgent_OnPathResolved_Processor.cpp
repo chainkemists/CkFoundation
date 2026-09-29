@@ -317,6 +317,9 @@ namespace ck
                 InDesired._Velocity = FVector::ZeroVector;
                 InDesired._LastVelocity = FVector::ZeroVector;
 
+                // A failed markup escape can leave the corridor Ready.
+                FProcessor_CrowdAgent_HandleRequests::DoReleaseEndedEpisodeQuery(InHandle, InPathFollow);
+
                 UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                     InHandle,
                     MakePayload(InHandle,

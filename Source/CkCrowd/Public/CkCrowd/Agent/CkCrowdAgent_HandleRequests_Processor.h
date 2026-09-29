@@ -142,6 +142,12 @@ namespace ck
 		static auto
 		DoAbandonActiveProviderQuery(HandleType InHandle, FFragment_CrowdAgent_PathFollow& InPathFollow) -> int32;
 
+		// The same seam for an episode that ENDS IN PLACE (arrival, a block, a failed path). It keeps the
+		// revision, the installed polyline (Get_HasReachedActiveGoal reads it) and _ActiveGoal, and
+		// releases only the PathNetwork corridor, which the follower re-plans on every epoch change.
+		static auto
+		DoReleaseEndedEpisodeQuery(HandleType InHandle, FFragment_CrowdAgent_PathFollow& InPathFollow) -> void;
+
 		// Releases the PROVIDER's half of an episode without advancing the revision — for a terminal
 		// that must keep the current revision so its own result is still recognised as the answer
 		// (the pending watchdog's timeout). Ending an episode and leaving the provider's corridor

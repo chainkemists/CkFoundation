@@ -9,12 +9,9 @@
 
 #include "CkPhysics/Velocity/CkVelocity_Utils.h"
 
-#include "CkPathNetwork/Network/CkPathNetwork_Utils.h"
-
 #include "CkCrowd/CkCrowd_Log.h"
 #include "CkCrowd/CkCrowd_Stats.h"
 #include "CkCrowd/Agent/CkCrowdAgent_PathRefresh_Processor.h"
-#include "CkCrowd/AvoidanceVolume/CkCrowdAvoidanceVolume_Utils.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Settled_Algorithm.h"
 #include "CkCrowd/Agent/CkCrowdAgent_Utils.h"
 #include "CkCrowd/Settings/CkCrowd_ProjectSettings.h"
@@ -617,12 +614,16 @@ namespace ck
         -> void
     {
         auto NonConstHandle = InHandle;
+        auto& PathFollow = NonConstHandle.Get<FFragment_CrowdAgent_PathFollow>();
 
         // Idle is what actually halts the agent (AccelClamp's Idle branch ramps its velocity down);
         // GoalBlocked records that it still WANTS the goal, which is what lets BlockedRecheck resume it.
         NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
         NonConstHandle.AddOrGet<FTag_CrowdAgent_GoalBlocked>();
+
+        // A hold releases too: the resume re-paths from wherever the body was shoved and never reads it.
+        FProcessor_CrowdAgent_HandleRequests::DoReleaseEndedEpisodeQuery(NonConstHandle, PathFollow);
 
         InBlockDetect._BlockedBy = InBlocker;
         InBlockDetect._BlockedCause = InReason;
@@ -673,7 +674,6 @@ namespace ck
             InDesired._Velocity = FVector::ZeroVector;
             InDesired._LastVelocity = FVector::ZeroVector;
 
-            const auto& PathFollow = NonConstHandle.Get<FFragment_CrowdAgent_PathFollow>();
             UUtils_Signal_CrowdAgent_OnGoalFailed::Broadcast(
                 NonConstHandle,
                 MakePayload(NonConstHandle,
@@ -812,45 +812,16 @@ namespace ck
         // _BlockedSignalSent is deliberately NOT reset: same goal means same episode. Only an
         // external MoveTo/Stop starts a new one.
 
-        const auto Goal = InPathFollow.Get_ActiveGoal();
-        FProcessor_CrowdAgent_HandleRequests::AdvanceNavigationRequestRevision(InPathFollow);
+        // The resume itself is the new evidence - the recheck just saw the blocker gone - so the
+        // strict phase gets a fresh attempt.
         InPathFollow._StrictPlanFailed = false;
         InPathFollow._StrictStandingCrowdPlanFailed = false;
 
-        if (UCk_Utils_PathNetworkFollower_UE::Has(NonConstHandle))
-        {
-            FCk_Nav_Algorithm::MarkPathPending(
-                NonConstHandle, InPathFollow.Get_ActiveNavigationRequestRevision());
-            NonConstHandle.Try_Remove<FFragment_CrowdAgent_InstalledRoute>();
+        // Not a hand-rolled FindRoute: this records _ActiveProvider, which the next release reads.
+        FProcessor_CrowdAgent_HandleRequests::RequestPathForActiveGoal(NonConstHandle, InParams, InPathFollow);
 
-            auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(NonConstHandle);
-            auto Request = FCk_Request_PathNetworkFollower_FindRoute{Goal};
-            InPathFollow._PlanPhase =
-                FProcessor_CrowdAgent_HandleRequests::Get_ShouldPlanStrict(NonConstHandle, InPathFollow)
-                ? ECk_CrowdAgent_PlanPhase::Strict
-                : ECk_CrowdAgent_PlanPhase::Permissive;
-            InPathFollow._PlanUsesStrictStandingCrowdFilter = false;
-            Request.Set_NavQueryFilter(InParams.Get_NavQueryFilter());
-            Request.Set_QueryFilterOverlay(
-                UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                    InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
-                        ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
-                        : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive));
-            Request.Set_AgentRadiusUu(InParams.Get_Radius());
-            FProcessor_CrowdAgent_HandleRequests::ApplyMarkupEscapeStart(
-                NonConstHandle, InParams, Goal, Request);
-            Request.Set_RequestRevision(InPathFollow.Get_ActiveNavigationRequestRevision());
-            UCk_Utils_PathNetworkFollower_UE::Request_FindRoute(Follower, Request, {});
-        }
-        else
-        {
-            // The resume itself is the new evidence — the recheck just saw the blocker gone — so
-            // the strict phase gets a fresh attempt.
-            FProcessor_CrowdAgent_HandleRequests::Request_NavigationPath(
-                NonConstHandle, InParams, InPathFollow, Goal);
-        }
-
-        ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"), InHandle, Goal);
+        ck::crowd::Verbose(TEXT("CrowdAgent [{}] goal CLEARED — resuming to {}"),
+            InHandle, InPathFollow.Get_ActiveGoal());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -873,6 +844,8 @@ namespace ck
 
         InPathFollow._WaypointIndex = 0;
         InPathFollow._ProtectedLeadingWaypointCount = 0;
+
+        FProcessor_CrowdAgent_HandleRequests::DoReleaseEndedEpisodeQuery(NonConstHandle, InPathFollow);
 
         InBlockDetect._BlockedBy = FCk_Handle{};
         InBlockDetect._CrowdedGoalDepth = 0;

@@ -94,17 +94,19 @@ namespace ck
             // Dropping a result is not automatically a no-op. Ending an episode advances the
             // revision, so a SUPERSEDED result here is ordinary control flow and stays silent.
             // A result still carrying the CURRENT revision, with an actual answer in it and both
-            // movement tags gone, means an episode ended without releasing what it acquired —
-            // exactly the orphan this bare return used to hide for months.
+            // movement tags gone, means an episode end skipped the release.
             const auto CarriesAnAnswer = Result.Get_Status() == ECk_PathNetwork_RouteStatus::Ready
                 || Result.Get_Status() == ECk_PathNetwork_RouteStatus::Failed;
-            if (CarriesAnAnswer
-                && Result.Get_RequestRevision() == InPathFollow.Get_ActiveNavigationRequestRevision())
+            const auto IsOrphanedByAnEndedEpisode = CarriesAnAnswer
+                && Result.Get_RequestRevision() == InPathFollow.Get_ActiveNavigationRequestRevision();
+
+            CK_ENSURE_IF_NOT(NOT IsOrphanedByAnEndedEpisode,
+                TEXT("CrowdAgent [{}] holds a current-revision PathNetwork route ({}) with no active "
+                     "movement tags - an episode end bypassed DoReleaseEndedEpisodeQuery. Releasing it."),
+                InHandle, Result.Get_Status())
             {
-                ck::crowd::Log(
-                    TEXT("CrowdAgent [{}] dropped a current-revision PathNetwork route ({}) with no "
-                         "active movement tags — its episode ended without releasing the query"),
-                    InHandle, Result.Get_Status());
+                auto NonConstHandle = InHandle;
+                FProcessor_CrowdAgent_HandleRequests::DoReleaseEndedEpisodeQuery(NonConstHandle, InPathFollow);
             }
             return;
         }

@@ -694,6 +694,32 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_HandleRequests::
+        DoReleaseEndedEpisodeQuery(
+            HandleType InHandle,
+            FFragment_CrowdAgent_PathFollow& InPathFollow)
+        -> void
+    {
+        if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::PathNetwork)
+        { InPathFollow._ActiveProvider = ECk_CrowdAgent_PathProvider::None; }
+
+        // Keyed on the corridor, not _ActiveProvider: a CkNavigation fallback can leave one Ready.
+        if (NOT UCk_Utils_PathNetworkFollower_UE::Has(InHandle))
+        { return; }
+
+        const auto Follower = UCk_Utils_PathNetworkFollower_UE::CastChecked(InHandle);
+        if (UCk_Utils_PathNetworkFollower_UE::Get_RouteStatus(Follower) == ECk_PathNetwork_RouteStatus::None)
+        { return; }
+
+        DoReleaseProviderQuery(
+            InHandle,
+            ECk_CrowdAgent_PathProvider::PathNetwork,
+            InPathFollow.Get_ActiveNavigationRequestRevision());
+    }
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    auto
+        FProcessor_CrowdAgent_HandleRequests::
         DoReleaseProviderQuery(
             HandleType InHandle,
             ECk_CrowdAgent_PathProvider InProvider,
