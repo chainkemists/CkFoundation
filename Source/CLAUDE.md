@@ -54,6 +54,7 @@ Before writing any code, navigate the documentation in this order:
 | distance-based range culling + fade, with an independent explicit show/hide override | `CkVisibleRange` (composable onto any entity; zero knowledge of Poi/consumers) |
 | per-consumer presentation config (icon/priority/offscreen policy per projector) + parent→child visibility cascade | `CkPoiDisplayDefinition` |
 | ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
+| a chain of followers behind a driven transform (train / tail / conga line) | `CkChain` |
 | ECS typed attributes (health/mana) | `CkAttribute` |
 | ECS audio tracks | `CkAudio` |
 | ECS Niagara VFX | `CkVfx` |
@@ -128,7 +129,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **80 non-editor modules** (CkVat added 2026-07-09; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **81 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -190,6 +191,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkAttribute | Core,Ecs,EcsExt,Label,Log,Provider,Record |
 | CkAudio | ActorRelay,Core,Cue,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Timer |
 | CkCamera | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
+| CkChain | Core,Ecs,EcsExt,Label,Log,Record,Settings |
 | CkChaos | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
 | CkCompass | Camera,Core,Ecs,EcsExt,EntityTag,Log,Poi,PoiDisplayDefinition,Record,UICore,VisibleRange (UI→UICore 2026-08-14 — needs only the widget base) |
 | CkCompositeAlgos | Core,Ecs,EcsExt |
