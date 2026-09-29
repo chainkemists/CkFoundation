@@ -274,6 +274,8 @@ namespace ck
             NonConstHandle.Try_Remove<FTag_CrowdAgent_Walking>();
             NonConstHandle.AddOrGet<FTag_CrowdAgent_Idle>();
 
+            FProcessor_CrowdAgent_HandleRequests::DoReleaseEndedEpisodeQuery(NonConstHandle, InPathFollow);
+
             // A partial path's final waypoint is the closest REACHABLE point, not the goal —
             // reaching it is a FAILURE to reach the goal (verdict computed at install).
             if (InPathFollow.Get_ActivePathEndsShortOfGoal())

@@ -138,6 +138,36 @@ revision (superseding any late result) and abandons whichever provider owned the
 re-derived, because `RequestPathForActiveGoal`'s provider choice reads mutable state the teardown
 has already changed.
 
+**The seam has two entry points, and every episode end takes one of them.**
+
+| entry point | who | what it keeps |
+|---|---|---|
+| `DoAbandonActiveProviderQuery` | `Request_Stop` (and so Disable); every dispatch through `RequestPathForActiveGoal` — MoveTo, FollowTarget, `DoForceReplan`, `BlockDetect`'s stall and off-path re-paths, and `BlockedRecheck`'s resume | `_ActiveGoal` only; the revision advances, the nav slot is abandoned, a link crossing is cancelled, the provider is released |
+| `DoReleaseEndedEpisodeQuery` | an episode that ends IN PLACE: `Steering`'s arrival (and a partial path walked to its end), `BlockDetect::DoBlock` (a `HoldAndRetry` hold and the `FailMove` policy alike), `BlockedRecheck::DoFailMove`, `OnPathResolved`'s failure terminal | the revision, the nav slot's installed polyline (`Get_HasReachedActiveGoal` reads it), `_ActiveGoal`; it releases the PathNetwork corridor, the one provider answer that keeps working after the walk |
+
+Why the in-place ends cannot take the abandon: advancing the revision and abandoning the nav slot
+on arrival would make `Get_HasReachedActiveGoal` false for an agent that has arrived. Why they must
+still release the corridor: the follower re-plans a Ready corridor on every network epoch change,
+and `OnRouteResolved` reads a Ready corridor at the current revision on an agent with no movement
+tags as an orphan. Until 2026-09-29 none of the in-place ends released it. One NPC in the field
+logged that orphan every frame for 22 minutes (55,835 lines), while every rebuild re-planned routes
+for agents that were standing still. The other providers' retained answers are inert (GroundNav only
+latches `FTag_GroundNavPath_RepathRequired`, which the next dispatch clears), so they stay for their
+readers until the next dispatch's abandon releases them.
+
+**A `HoldAndRetry` hold releases the corridor too.** The resume never reads the held route — it is
+a full re-path through `RequestPathForActiveGoal` from wherever the body was shoved while it waited —
+so a held corridor could only be re-planned for a body that is standing still. The resume used to
+send its own FindRoute, skipping the nav-slot abandon and the link-crossing cancel and never recording
+`_ActiveProvider`, so the terminal that followed could not know what to release. It now goes through
+the sanctioned re-path.
+
+**`OnRouteResolved` reconciles an orphan once.** A current-revision corridor on an agent with no
+movement tags fires an ensure naming the agent and is released on the spot, rather than logged every
+frame for the life of the agent. The ensure means an episode end bypassed both entry points: find it
+and route it through the seam. Coverage: `CkAutoTest_Crowd_EpisodeEnd_ReleasesSidewalkRoute` (arrival,
+`FailMove`, `NoProgress` retries spent) and `CkAutoTest_Crowd_Stop_ReleasesSidewalkRoute`.
+
 The watchdog is keyed on the **slot**, not on `FTag_CrowdAgent_PathPending`, and that is
 deliberate: a tag-keyed watchdog is structurally blind to the exact state this defect produced
 (slot Pending, tag gone), so it could never have caught it. Two rows — a live episode past
