@@ -126,6 +126,27 @@ namespace ck_crowd_agent_handle_requests
         ck::UUtils_Signal_Nav_OnPathFailed::Broadcast(BaseHandle, ck::MakePayload(BaseHandle));
     }
 
+    auto Get_PlanQueryFilterOverlay(
+        ECk_CrowdAgent_PlanPhase    InPhase,
+        bool                        InUsesStrictStandingCrowdFilter,
+        ECk_CrowdAgent_PathProvider InProvider) -> FCk_Nav_QueryFilterOverlay
+    {
+        auto Overlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
+            InPhase == ECk_CrowdAgent_PlanPhase::Strict
+                ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
+                : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
+
+        // GroundNav prices standing-crowd markup per plate. Its strict verdict is applied to the
+        // returned route at install, because denying a coarse plate over-denies the field.
+        if (NOT InUsesStrictStandingCrowdFilter || InProvider == ECk_CrowdAgent_PathProvider::GroundNav)
+        { return Overlay; }
+
+        auto ExcludedAreaTags = Overlay.Get_ExcludedAreaTags();
+        ExcludedAreaTags.AddUnique(TAG_Nav_Area_Crowd_Agent.GetTag());
+        Overlay.Set_ExcludedAreaTags(MoveTemp(ExcludedAreaTags));
+        return Overlay;
+    }
+
     auto Get_PlanPhaseFilter(
         FCk_Handle_CrowdAgent                      InHandle,
         const ck::FFragment_CrowdAgent_Params&     InParams,
@@ -133,8 +154,6 @@ namespace ck_crowd_agent_handle_requests
         ECk_CrowdAgent_PathProvider                InProvider,
         bool                                       InForcePermissive) -> FCk_CrowdAgent_PlanPhaseFilter
     {
-        auto Filter = FCk_CrowdAgent_PlanPhaseFilter{};
-
         const auto StationaryStrictWanted =
             UCk_Utils_Crowd_Settings_UE::Get_PlanAroundStandingCrowds() ==
                 ECk_CrowdPlanAroundStandingCrowdsMode::Enabled &&
@@ -144,42 +163,12 @@ namespace ck_crowd_agent_handle_requests
         const auto StrictWanted = NOT InForcePermissive &&
             ck::FProcessor_CrowdAgent_HandleRequests::Get_ShouldPlanStrict(InHandle, InPathFollow);
 
-        if (NOT StrictWanted)
-        {
-            Filter._Phase = ECk_CrowdAgent_PlanPhase::Permissive;
-            Filter._UsesStrictStandingCrowdFilter = false;
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
-            Filter._QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
-            return Filter;
-        }
-
-        Filter._Phase = ECk_CrowdAgent_PlanPhase::Strict;
-        Filter._UsesStrictStandingCrowdFilter = StationaryStrictWanted;
-        Filter._QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-            ECk_CrowdAvoidanceVolume_QueryPhase::Strict);
-
-        if (NOT StationaryStrictWanted)
-        {
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
-            return Filter;
-        }
-
-        if (InProvider == ECk_CrowdAgent_PathProvider::GroundNav)
-        {
-            // GroundNav prices standing-crowd markup per plate. Its strict verdict is applied to
-            // the returned route at install, because denying a coarse plate over-denies the field.
-            Filter._QueryFilter = InParams.Get_NavQueryFilter();
-            return Filter;
-        }
-
-        if (InParams.Get_NavQueryFilterStrict().IsValid())
-        {
-            Filter._QueryFilter = InParams.Get_NavQueryFilterStrict();
-            return Filter;
-        }
-
-        Filter._QueryFilterOverride = TAG_Nav_Filter_Crowd_AvoidStandingCrowds;
+        auto Filter = FCk_CrowdAgent_PlanPhaseFilter{};
+        Filter._Phase = StrictWanted ? ECk_CrowdAgent_PlanPhase::Strict : ECk_CrowdAgent_PlanPhase::Permissive;
+        Filter._UsesStrictStandingCrowdFilter = StrictWanted && StationaryStrictWanted;
+        Filter._QueryFilter = InParams.Get_NavQueryFilter();
+        Filter._QueryFilterOverlay = Get_PlanQueryFilterOverlay(
+            Filter._Phase, Filter._UsesStrictStandingCrowdFilter, InProvider);
         return Filter;
     }
 }
@@ -284,22 +273,14 @@ namespace ck
 
     auto
         FProcessor_CrowdAgent_HandleRequests::
-        GetPlanQueryFilterTag(
-            const FFragment_CrowdAgent_Params& InParams,
+        GetPlanQueryFilterOverlay(
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
-        -> FGameplayTag
+        -> FCk_Nav_QueryFilterOverlay
     {
-        if (InPathFollow.Get_PlanUsesStrictStandingCrowdFilter())
-        {
-            if (InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::GroundNav)
-            { return InParams.Get_NavQueryFilter(); }
-
-            if (InParams.Get_NavQueryFilterStrict().IsValid())
-            { return InParams.Get_NavQueryFilterStrict(); }
-
-            return TAG_Nav_Filter_Crowd_AvoidStandingCrowds;
-        }
-        return InParams.Get_NavQueryFilter();
+        return ck_crowd_agent_handle_requests::Get_PlanQueryFilterOverlay(
+            InPathFollow.Get_PlanPhase(),
+            InPathFollow.Get_PlanUsesStrictStandingCrowdFilter(),
+            InPathFollow.Get_ActiveProvider());
     }
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -492,7 +473,7 @@ namespace ck
             Request.Set_DeniedLinkIds(InParams.Get_DeniedLinkIds());
             Request.Set_DeniedLinkUserTypeTags(InParams.Get_DeniedLinkUserTypeTags());
             Request.Set_LinkCostMultipliers(InParams.Get_LinkCostMultipliers());
-            Request.Set_QueryFilter(PlanFilter.Get_EffectiveQueryFilter());
+            Request.Set_QueryFilter(PlanFilter._QueryFilter);
             Request.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
 
             if (PlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
@@ -599,7 +580,7 @@ namespace ck
             // the identical filter/overlay so the A/B comparison stays like for like.
             const auto ShadowPlanFilter = ck_crowd_agent_handle_requests::Get_PlanPhaseFilter(
                 InHandle, InParams, InPathFollow, ECk_CrowdAgent_PathProvider::GroundNav, InForcePermissivePlan);
-            ShadowRequest.Set_QueryFilter(ShadowPlanFilter.Get_EffectiveQueryFilter());
+            ShadowRequest.Set_QueryFilter(ShadowPlanFilter._QueryFilter);
             ShadowRequest.Set_QueryFilterOverlay(ShadowPlanFilter._QueryFilterOverlay);
             if (ShadowPlanFilter._Phase == ECk_CrowdAgent_PlanPhase::Strict)
             {
@@ -661,10 +642,7 @@ namespace ck
         InPathFollow._PlanPhase = PlanFilter._Phase;
         InPathFollow._PlanUsesStrictStandingCrowdFilter = PlanFilter._UsesStrictStandingCrowdFilter;
 
-        // All three stamped unconditionally: an unset half of the decision is an empty tag, which is
-        // what the request already carries, so a branch here would only be a second way to say that.
         InOutRequest.Set_QueryFilter(PlanFilter._QueryFilter);
-        InOutRequest.Set_QueryFilterOverride(PlanFilter._QueryFilterOverride);
         InOutRequest.Set_QueryFilterOverlay(PlanFilter._QueryFilterOverlay);
     }
 
