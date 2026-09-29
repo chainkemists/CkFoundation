@@ -188,15 +188,9 @@ namespace ck
                 if (NOT QueryFilterIsResolved)
                 {
                     QueryFilterIsResolved = true;
-                    QueryFilterTag =
-                        InPathFollow.Get_ActiveProvider() == ECk_CrowdAgent_PathProvider::PathNetwork
-                        ? InParams.Get_NavQueryFilter()
-                        : FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(
-                            InParams, InPathFollow);
-                    QueryFilterOverlay = UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                        InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
-                            ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
-                            : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
+                    // A PathNetwork plan never carries the standing-crowd exclusion, so one helper serves all.
+                    QueryFilterTag = InParams.Get_NavQueryFilter();
+                    QueryFilterOverlay = FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterOverlay(InPathFollow);
                 }
 
                 const auto ChordRaycast = FCk_NavSurface_RaycastQuery{

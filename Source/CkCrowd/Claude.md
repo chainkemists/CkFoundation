@@ -262,11 +262,19 @@ strict phase with `_StrictPlanFailed` false, so its OnGoalFailed payload reads s
 crowd-blocked. Strict is retried only on NEW evidence
 (fresh MoveTo, BlockedRecheck resume, PathRefresh trigger, caller ForceReplan); the stall ladder's
 re-paths carry none, and retrying strict there doubles every rung's Pending stop-start cycle into
-a measurable facing whip. The strict filter composes with a host's own filter through the params'
-`_NavQueryFilterStrict` tag (register a strict VARIANT of the permissive filter — definitions do
-not compose at query time); unset, the framework's `Nav.Filter.Crowd.AvoidStandingCrowds`
-definition (excludes `Nav.Area.Crowd.Agent`; registered in `CkCrowd_NavGameplayTags.cpp`) rides
-the FindPath request's `_QueryFilterOverride` tag. `_StrictPlanFailed` on PathFollow records "no
+a measurable facing whip. **The strict phase is DERIVED from the agent's own filter, never swapped
+for another one:** it plans under `_NavQueryFilter` with `Nav.Area.Crowd.Agent` added to the query
+overlay (`ck_crowd_agent_handle_requests::Get_PlanQueryFilterOverlay`, which the dispatch and both
+chord gates - OnPathResolved's install skip and Steering's retirement - read, so a chord is judged
+under the filter its route was planned under). Overlays compose with any filter at query time on
+both providers, so there is no per-host strict variant to register. Until 2026-09-29 the strict
+phase swapped in the params' `_NavQueryFilterStrict` tag, or the crowd-only
+`Nav.Filter.Crowd.AvoidStandingCrowds` definition when unset; either way the agent's own exclusions
+could be lost for the strict attempt, and a standing crowd then routed agents straight through them
+(BusterBlock shoppers left through one door and came back in the next, around a crowd between the
+doors). `CkAutoTest_Crowd_StrictPhase_KeepsHostExclusions` pins it. The
+`Nav.Filter.Crowd.AvoidStandingCrowds` definition stays registered as a portable crowd-only filter.
+`_StrictPlanFailed` on PathFollow records "no
 crowd-free route existed this episode" and surfaces in the OnGoalFailed payload. Coverage:
 `CkAutoTest_Crowd_NarrowGap_BlockedDetours`, `CkAutoTest_Crowd_QueueCross_RoutesAround`; gyms
 `Crowd NarrowGap`, `Crowd QueueCross`.

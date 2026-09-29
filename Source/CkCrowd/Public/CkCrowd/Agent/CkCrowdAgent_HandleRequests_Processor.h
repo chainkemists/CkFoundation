@@ -23,6 +23,9 @@ namespace ck_crowd_agent_handle_requests
     /**
      * What ONE planning phase decides about the filter a route is planned under.
      *
+     * Every phase plans under the agent's own _NavQueryFilter; the strict phase only adds exclusions
+     * through the overlay, so the host filter's own exclusions hold in both phases.
+     *
      * The phase is the crowd's own idea, but strict standing-crowd treatment differs at the provider
      * boundary: Recast excludes its per-polygon area while GroundNav prices the area and verifies the
      * returned geometry at install. Keep that decision here so every GroundNav dispatch agrees.
@@ -33,19 +36,19 @@ namespace ck_crowd_agent_handle_requests
 
         FGameplayTag _QueryFilter;
 
-        // Outranks _QueryFilter where it is set, which is the precedence Recast's own resolver applies.
-        FGameplayTag _QueryFilterOverride;
-
         FCk_Nav_QueryFilterOverlay _QueryFilterOverlay;
 
         bool _UsesStrictStandingCrowdFilter = false;
-
-        /** The ONE tag a provider carrying a single filter field is planned under. */
-        auto Get_EffectiveQueryFilter() const -> FGameplayTag
-        {
-            return _QueryFilterOverride.IsValid() ? _QueryFilterOverride : _QueryFilter;
-        }
     };
+
+    /**
+     * The plan overlay: the phase's avoidance-volume exclusions, plus the standing-crowd area for a
+     * strict plan on any provider but GroundNav. The dispatch and both chord gates read it from here.
+     */
+    auto Get_PlanQueryFilterOverlay(
+        ECk_CrowdAgent_PlanPhase    InPhase,
+        bool                        InUsesStrictStandingCrowdFilter,
+        ECk_CrowdAgent_PathProvider InProvider) -> FCk_Nav_QueryFilterOverlay;
 
     /**
      * The phase decision every FRESH dispatch makes: strict first, because a crowd-free route may
@@ -61,8 +64,8 @@ namespace ck_crowd_agent_handle_requests
      *
      * Declared here rather than kept .cpp-local because every FRESH path dispatch — the two
      * providers' plans and the A/B shadow that has to mirror whichever one ran — derives its filter
-     * from this one decision, and a site that hardcodes the agent's base filter instead plans
-     * straight THROUGH painted standing-crowd markup: the base filter prices an agent disc, while
+     * from this one decision, and a site that stamps the agent's base filter without the plan overlay
+     * plans straight THROUGH painted standing-crowd markup: the base filter prices an agent disc, while
      * GroundNav applies the strict geometric verdict at install and Recast excludes it. The PathNetwork route requests deliberately
      * do NOT come through here — that provider announces a strict route MISS as a route FAILURE at
      * resolution, so it has no strict-then-permissive retry and must plan under the base filter,
@@ -193,11 +196,11 @@ namespace ck
             const FVector& InGoal,
             FCk_Request_PathNetworkFollower_FindRoute& InOutRequest) -> void;
 
+        // Get_PlanQueryFilterOverlay for the installed plan.
         static auto
-        GetPlanQueryFilterTag(
-            const FFragment_CrowdAgent_Params& InParams,
+        GetPlanQueryFilterOverlay(
             const FFragment_CrowdAgent_PathFollow& InPathFollow)
-            -> FGameplayTag;
+            -> FCk_Nav_QueryFilterOverlay;
 
     private:
         static auto

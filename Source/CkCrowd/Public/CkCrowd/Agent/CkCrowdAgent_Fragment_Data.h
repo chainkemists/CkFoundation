@@ -194,15 +194,6 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
     FGameplayTag _NavQueryFilter;
 
-    // Filter for the STRICT phase of two-phase planning, where stationary-crowd markup is
-    // impassable rather than a toll. A host whose agents plan with a custom _NavQueryFilter maps a
-    // strict VARIANT of that filter here (same areas plus the UCk_NavArea_CrowdAgent exclusion) —
-    // filter classes cannot compose at query time, so the permissive filter's own exclusions would
-    // otherwise be lost for the strict attempt. Empty tag -> the framework's
-    // UCk_NavQueryFilter_AvoidStandingCrowds, which excludes only the crowd area.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true))
-    FGameplayTag _NavQueryFilterStrict;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta=(AllowPrivateAccess=true, ClampMin="1.0"))
     float _ArrivalRadius = 30.0f;
 
@@ -288,7 +279,6 @@ public:
     CK_PROPERTY(_MaxAcceleration);
     CK_PROPERTY(_MaxTurnRate);
     CK_PROPERTY(_NavQueryFilter);
-    CK_PROPERTY(_NavQueryFilterStrict);
     CK_PROPERTY(_ArrivalRadius);
     CK_PROPERTY(_CloseGoalStrafe);
     CK_PROPERTY(_CloseGoalStrafeDistanceUu);

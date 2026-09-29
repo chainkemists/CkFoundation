@@ -260,13 +260,9 @@ namespace ck
                 // the planner routed around.
                 auto* WorldForGate =
                     ck_crowd_agent_on_path_resolved_processor::Get_WorldForChordGate(InHandle);
-                const auto ChordQueryFilterTag =
-                    FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterTag(InParams, InPathFollow);
+                const auto ChordQueryFilterTag = InParams.Get_NavQueryFilter();
                 const auto ChordQueryFilterOverlay =
-                    UCk_Utils_CrowdAvoidanceVolume_UE::Get_NavQueryFilterOverlay(
-                        InPathFollow.Get_PlanPhase() == ECk_CrowdAgent_PlanPhase::Strict
-                            ? ECk_CrowdAvoidanceVolume_QueryPhase::Strict
-                            : ECk_CrowdAvoidanceVolume_QueryPhase::Permissive);
+                    FProcessor_CrowdAgent_HandleRequests::GetPlanQueryFilterOverlay(InPathFollow);
 
                 auto IsChordNavigable = [&](const FVector& InFrom, const FVector& InTo) -> bool
                 {
