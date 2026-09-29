@@ -38,7 +38,7 @@ Binds an `AActor`'s lifetime to an entity. When the actor is destroyed, the enti
 
 ### SceneNode
 
-Parent/child scene tree composed of ECS entities. Lets you parent entities to other entities (not actors) with relative transform support. Used by `CkIsmRenderer`, multi-part entities, and procedural hierarchies.
+Parent/child scene tree composed of ECS entities. Lets you parent entities to other entities (not actors) with relative transform support. Used by `CkIsmRenderer`, multi-part entities, and procedural hierarchies. `UCk_Utils_SceneNode_UE::Get_DriverWorldTransform` returns the world frame a node composes against (the anchor component/socket world for an anchor-driven node, otherwise the parent's current world), for features that derive motion from whatever drives a node (CkSway).
 
 ### Transform
 

@@ -136,6 +136,17 @@ public:
     Get_Parent(
             const FCk_Handle_SceneNode& InSceneNode);
 
+    // The world frame this node composes against: the anchor component/socket world for an anchor-driven
+    // node (CreateAndAttachToUnreal*), otherwise the scene-node parent's current world transform. Identity
+    // when the anchor component is gone. Read-only; a feature that derives motion from "whatever drives this
+    // node" (CkSway) reads this instead of guessing the parent.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Utils|SceneNode",
+        DisplayName = "[Ck][SceneNode] Get Driver World Transform")
+    static FTransform
+    Get_DriverWorldTransform(
+        const FCk_Handle_SceneNode& InSceneNode);
+
 public:
     UFUNCTION(BlueprintCallable,
         Category = "Ck|Utils|SceneNode",
