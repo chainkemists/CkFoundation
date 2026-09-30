@@ -3,6 +3,21 @@
 #include "CkEcsExt/CkEcsExt_Log.h"
 
 #include <Components/MeshComponent.h>
+#include <Components/PrimitiveComponent.h>
+
+namespace
+{
+    auto DetermineTeleportType(const USceneComponent* InComponent) -> ETeleportType
+    {
+        if (const auto PrimitiveComponent = Cast<const UPrimitiveComponent>(InComponent);
+            ck::IsValid(PrimitiveComponent) && PrimitiveComponent->IsSimulatingPhysics())
+        {
+            return ETeleportType::TeleportPhysics;
+        }
+
+        return ETeleportType::None;
+    }
+}
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -68,6 +83,8 @@ auto
     { return {}; }
 
     InHandle.Add<ck::FFragment_Transform_RootComponent>(InAttachTo);
+    InHandle.AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
+        ck::FFragment_Transform_RootComponentTeleportType{DetermineTeleportType(InAttachTo)};
 
     if (InHandle.Has<ck::FFragment_Transform>())
     { return Cast(InHandle); }

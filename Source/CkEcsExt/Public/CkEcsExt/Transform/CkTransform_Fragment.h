@@ -12,6 +12,7 @@
 
 #include <variant>
 #include <Components/MeshComponent.h>
+#include <Engine/EngineTypes.h>
 
 #include "CkTransform_Fragment.generated.h"
 
@@ -47,6 +48,23 @@ namespace ck
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Transform_RootComponent, _RootComponent);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    struct CKECSEXT_API FFragment_Transform_RootComponentTeleportType
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Transform_RootComponentTeleportType);
+
+    private:
+        ETeleportType _TeleportType = ETeleportType::None;
+
+    public:
+        CK_PROPERTY_GET(_TeleportType);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Transform_RootComponentTeleportType, _TeleportType);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
