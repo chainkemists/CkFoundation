@@ -117,6 +117,16 @@ auto
     });
 }
 
+auto
+    UCk_RichTextBlockWidgetDecorator::
+    BeginDestroy()
+    -> void
+{
+    _LastInjectedCustomParams.Reset();
+    _CreatedWidgets.Reset();
+    Super::BeginDestroy();
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
