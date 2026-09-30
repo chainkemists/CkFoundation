@@ -9,6 +9,14 @@ namespace ck::chain
     struct CKCHAIN_API FPathHistory
     {
     public:
+        FPathHistory() = default;
+        FPathHistory(const FPathHistory&) = default;
+        auto operator=(const FPathHistory&) -> FPathHistory& = default;
+        /** The moved-from history is empty and reusable; its ring metadata never outlives its buffer. */
+        FPathHistory(FPathHistory&& InOther) noexcept;
+        auto operator=(FPathHistory&& InOther) noexcept -> FPathHistory&;
+
+    public:
         /** Replaces the logical history with two seed samples while retaining allocated capacity. */
         auto Reseed(const FTransform& InHeadPose, float InSpacingCm) -> void;
         /** Requires seeded history; appends at most one sample and overwrites the oldest when full. */
@@ -28,7 +36,7 @@ namespace ck::chain
         /** Requires at least one sample. */
         auto Get_OldestArcDistance() const -> float;
         auto Get_NumSamples() const -> int32;
-        /** InIndex must lie in [0, Get_NumSamples()). References expire on reserve or overwrite. */
+        /** Checked precondition: InIndex must lie in [0, Get_NumSamples()). References expire on reserve or overwrite. */
         auto Get_Sample(int32 InIndex) const -> const FCk_Chain_PathSample&;
         auto Get_Samples() const -> TArray<FCk_Chain_PathSample>;
         auto Get_AllocatedSize() const -> SIZE_T;
@@ -44,7 +52,7 @@ namespace ck::chain
 
     // Arc position of the head itself: the newest recorded sample's arc distance plus the chord the head has
     // travelled since that sample (below the spacing threshold, so not yet a sample of its own). Zero-sample
-    // histories return 0.
+    // histories return 0. An arc outside the float domain diagnoses and returns the newest sample's arc.
     CKCHAIN_API auto Get_LeadingArcDistance(
         const FPathHistory& InHistory,
         const FTransform& InHeadPose) -> float;
@@ -58,7 +66,8 @@ namespace ck::chain
         ECk_Chain_HistorySeed InSeed,
         const FTransform& InLinkCurrentPose) -> TOptional<FTransform>;
 
-    /** Zero-length segments are placed at their predecessor and retain their input rotation. */
+    /** Zero-length segments are placed at their predecessor and retain their input rotation. Every derived pose is
+        validated before the first write, so a rejected solve leaves InOutLinkPoses untouched. */
     CKCHAIN_API auto Solve_DistanceConstraint(
         const FTransform& InHeadPose,
         TArrayView<const float> InSegmentLengthsCm,
