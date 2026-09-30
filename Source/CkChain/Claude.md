@@ -22,6 +22,9 @@ Distances are cumulative centimetres behind the head. The roster is stable on eq
 `Request_SetLinkDistance` resorts it. `Request_DetachLink` releases a link's chain fragments and
 leaves its pose intact. Destroying the chain releases every link. Destroying the head destroys its
 chains through normal child-entity lifetime.
+`ck::FFragment_ChainLink_TargetPose` holds the pose the chain last drove a link to: it is added on the link's first
+publish and removed on detach, split reassignment and chain destruction, so its absence means the link has not been
+driven yet (`Get_HasTargetPose`).
 
 `Request_Split` returns a new, initially empty chain synchronously, headed by the selected link.
 On drain the selected link leaves the source roster, later links move to the new chain with rebased
