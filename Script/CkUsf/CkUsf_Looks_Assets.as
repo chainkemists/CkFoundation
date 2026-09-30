@@ -539,6 +539,57 @@ namespace CkUsf
         _Parameters.Add(ShiftY);
     }
 
+    // ProtoGrid in mesh UV space: locked to the object, for props that move (see ProtoGridUV.ush).
+    asset ProtoGridUV of UCkUsf_LookDefinition
+    {
+        _UshIncludePath  = "/CkUsf/Looks/ProtoGridUV.ush";
+        _UshFunctionName = n"CkUsf_Look_ProtoGridUV";
+        _Domain          = ECk_Usf_Domain::SurfaceLit;
+        _LookName        = n"ProtoGridUV";
+
+        FCk_Usf_ParamDesc PrimaryColor;
+        PrimaryColor._Name = n"PrimaryColor";
+        PrimaryColor._Type = ECk_Usf_ParamType::Vector;
+        PrimaryColor._DefaultVector = FLinearColor(0.109, 0.16, 0.23, 1.0);
+        _Parameters.Add(PrimaryColor);
+
+        FCk_Usf_ParamDesc SecondaryColor;
+        SecondaryColor._Name = n"SecondaryColor";
+        SecondaryColor._Type = ECk_Usf_ParamType::Vector;
+        SecondaryColor._DefaultVector = FLinearColor(0.148, 0.216, 0.31, 1.0);
+        _Parameters.Add(SecondaryColor);
+
+        FCk_Usf_ParamDesc LineColor;
+        LineColor._Name = n"LineColor";
+        LineColor._Type = ECk_Usf_ParamType::Vector;
+        LineColor._DefaultVector = FLinearColor(0.766, 0.922, 1.0, 1.0);
+        _Parameters.Add(LineColor);
+
+        FCk_Usf_ParamDesc CellsU;
+        CellsU._Name = n"CellsU";
+        CellsU._Type = ECk_Usf_ParamType::Scalar;
+        CellsU._DefaultScalar = 2.0;
+        _Parameters.Add(CellsU);
+
+        FCk_Usf_ParamDesc CellsV;
+        CellsV._Name = n"CellsV";
+        CellsV._Type = ECk_Usf_ParamType::Scalar;
+        CellsV._DefaultScalar = 2.0;
+        _Parameters.Add(CellsV);
+
+        FCk_Usf_ParamDesc SubCells;
+        SubCells._Name = n"SubCells";
+        SubCells._Type = ECk_Usf_ParamType::Scalar;
+        SubCells._DefaultScalar = 4.0;
+        _Parameters.Add(SubCells);
+
+        FCk_Usf_ParamDesc LineWidth;
+        LineWidth._Name = n"LineWidth";
+        LineWidth._Type = ECk_Usf_ParamType::Scalar;
+        LineWidth._DefaultScalar = 0.03;
+        _Parameters.Add(LineWidth);
+    }
+
     asset ProtoGridOrientation of UCkUsf_LookDefinition
     {
         _UshIncludePath  = "/CkUsf/Looks/ProtoGridOrientation.ush";
