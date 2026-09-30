@@ -76,6 +76,12 @@ public:
     Get_TargetPose(
         const FCk_Handle_ChainLink& InLink) -> FTransform;
 
+    // True once the chain has driven this link at least once (Get_TargetPose then returns the driven pose, not the live transform).
+    UFUNCTION(BlueprintPure, Category = "Ck|Utils|ChainLink", DisplayName = "[Ck][ChainLink] Get Has Target Pose")
+    static bool
+    Get_HasTargetPose(
+        const FCk_Handle_ChainLink& InLink);
+
     // True while a HoldUntilCovered link's arc target lies behind the oldest recorded sample. C++/debugger only.
     static auto
     Get_IsHeld(

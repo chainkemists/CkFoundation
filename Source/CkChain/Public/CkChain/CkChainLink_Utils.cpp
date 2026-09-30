@@ -47,11 +47,19 @@ auto
         const FCk_Handle_ChainLink& InLink)
     -> FTransform
 {
-    const auto& LinkState = InLink.Get<ck::FFragment_ChainLink>();
-    if (LinkState.Get_HasTargetPose())
-    { return LinkState.Get_LastTargetPose().GetValue(); }
+    if (InLink.Has<ck::FFragment_ChainLink_TargetPose>())
+    { return InLink.Get<ck::FFragment_ChainLink_TargetPose>().Get_Pose(); }
 
     return UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(InLink));
+}
+
+auto
+    UCk_Utils_ChainLink_UE::
+    Get_HasTargetPose(
+        const FCk_Handle_ChainLink& InLink)
+    -> bool
+{
+    return InLink.Has<ck::FFragment_ChainLink_TargetPose>();
 }
 
 auto

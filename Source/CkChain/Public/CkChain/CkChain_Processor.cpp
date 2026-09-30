@@ -182,6 +182,7 @@ auto
     InCurrent._Links.RemoveAt(Index);
     Link.Try_Remove<FFragment_ChainLink_Params>();
     Link.Try_Remove<FFragment_ChainLink>();
+    Link.Try_Remove<FFragment_ChainLink_TargetPose>();
     InHandle.AddOrGet<FTag_Chain_RosterDirty>();
     UUtils_Signal_OnChainLinkDetached::Broadcast(InHandle, MakePayload(InHandle,
         FCk_Chain_Payload_LinkDetached{Link, ECk_Chain_LinkDetachReason::Requested}));
@@ -308,12 +309,13 @@ auto
         auto& LinkState = Link.Get<FFragment_ChainLink>();
         LinkState._DistanceFromHeadCm -= SplitDistance;
         LinkState._Chain = NewChain;
-        LinkState._LastTargetPose.Reset();
+        Link.Try_Remove<FFragment_ChainLink_TargetPose>();
         NewCurrent._Links.Add(Link);
     }
     auto SplitHead = AtLink;
     SplitHead.Try_Remove<FFragment_ChainLink_Params>();
     SplitHead.Try_Remove<FFragment_ChainLink>();
+    SplitHead.Try_Remove<FFragment_ChainLink_TargetPose>();
     ck_chain_processor::DoReserveHistory(NewCurrent._History, NewCurrent._Links, InParams);
     InHandle.AddOrGet<FTag_Chain_RosterDirty>();
     NewChain.AddOrGet<FTag_Chain_RosterDirty>();
@@ -368,6 +370,7 @@ auto
         { continue; }
         Link.Try_Remove<FFragment_ChainLink_Params, ck::IsValid_Policy_IncludePendingKill>();
         Link.Try_Remove<FFragment_ChainLink, ck::IsValid_Policy_IncludePendingKill>();
+        Link.Try_Remove<FFragment_ChainLink_TargetPose, ck::IsValid_Policy_IncludePendingKill>();
         UUtils_Signal_OnChainLinkDetached::Broadcast(InHandle, MakePayload(InHandle,
             FCk_Chain_Payload_LinkDetached{Link, ECk_Chain_LinkDetachReason::ChainDestroyed}));
     }
@@ -405,13 +408,12 @@ auto
     const auto PathPose = FTransform{InTargetPose.GetRotation(), InTargetPose.GetLocation()};
     auto Target = InParams.Get_LocalOffset() * PathPose;
     Target.SetScale3D(InTargetPose.GetScale3D());
-    auto& Current = InLink.Get<FFragment_ChainLink>();
-    if (Current.Get_HasTargetPose() && Target.Equals(Current.Get_LastTargetPose().GetValue()))
+    if (InLink.Has<FFragment_ChainLink_TargetPose>() && Target.Equals(InLink.Get<FFragment_ChainLink_TargetPose>().Get_Pose()))
     { return; }
     auto Transform = UCk_Utils_Transform_UE::CastChecked(InLink);
     UCk_Utils_Transform_UE::Request_SetLocationAndRotation(Transform,
         FCk_Request_Transform_SetLocationAndRotation{Target.GetLocation(), Target.Rotator()}, {});
-    Current._LastTargetPose = Target;
+    InLink.AddOrGet<FFragment_ChainLink_TargetPose>() = FFragment_ChainLink_TargetPose{Target};
 }
 
 auto

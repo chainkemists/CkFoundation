@@ -127,17 +127,37 @@ namespace ck
     private:
         FCk_Handle_Chain _Chain;
         float _DistanceFromHeadCm = 0.0f;
-        TOptional<FTransform> _LastTargetPose;
 
     public:
         CK_PROPERTY_GET(_Chain);
         CK_PROPERTY_GET(_DistanceFromHeadCm);
-        CK_PROPERTY_GET(_LastTargetPose);
-
-        auto Get_HasTargetPose() const -> bool { return _LastTargetPose.IsSet(); }
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_ChainLink, _Chain, _DistanceFromHeadCm);
+    };
+
+    // --------------------------------------------------------------------------------------------------------------------
+
+    // The pose the link was last driven to. Present from the link's first publish; removed when the link is detached,
+    // reassigned by a split, or its chain is destroyed (FFragment_Transform_Previous shape). Absence means "not yet driven".
+    struct CKCHAIN_API FFragment_ChainLink_TargetPose
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_ChainLink_TargetPose);
+
+    public:
+        friend class FProcessor_Chain_HandleRequests;
+        friend class FProcessor_Chain_Update;
+        friend class UCk_Utils_ChainLink_UE;
+
+    private:
+        FTransform _Pose = FTransform::Identity;
+
+    public:
+        CK_PROPERTY_GET(_Pose);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_ChainLink_TargetPose, _Pose);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
