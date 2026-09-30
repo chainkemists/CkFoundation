@@ -22,11 +22,11 @@ auto
     const auto IsValidHead = ck::IsValid(InHead) && UCk_Utils_Transform_UE::Has(InHead);
     CK_ENSURE_IF_NOT(IsValidHead, TEXT("Chain Add rejected invalid head [{}]"), InHead)
     { return {}; }
-    const auto IsValidParams = FMath::IsFinite(InParams.Get_SampleSpacingCm()) && InParams.Get_SampleSpacingCm() >= 1.0f
-        && NOT InParams.Get_UpVector().ContainsNaN() && NOT InParams.Get_UpVector().IsNearlyZero()
-        && FMath::IsFinite(InParams.Get_TeleportDistanceCm()) && InParams.Get_TeleportDistanceCm() >= 0.0f;
+
+    const auto IsValidParams = InParams.Get_IsValid();
     CK_ENSURE_IF_NOT(IsValidParams, TEXT("Chain Add rejected invalid parameters"))
     { return {}; }
+
     const auto CanCreate = UCk_Utils_EntityLifetime_UE::Get_CanCreateEntity(InHead);
     CK_ENSURE_IF_NOT(CanCreate, TEXT("Chain Add cannot create a child of head [{}]"), InHead)
     { return {}; }
@@ -39,7 +39,12 @@ auto
         else
         { UCk_Utils_Handle_UE::Set_DebugName(InNewEntity, "Chain: No Name Specified"); }
 #endif
-        InNewEntity.Add<ck::FFragment_Chain_Params>(InParams);
+
+        InNewEntity.Add<ck::FFragment_Chain_Params>(InParams.Get_Solver(), InParams.Get_SampleSpacingCm(), InParams.Get_HistorySeed(),
+            InParams.Get_TeleportDistanceCm(), InParams.Get_UpVector().GetSafeNormal(), InParams.Get_NetPolicy());
+        if (InParams.Get_StartingState() == ECk_EnableDisable::Disable)
+        { InNewEntity.Add<ck::FTag_Chain_Disabled>(); }
+
         InNewEntity.Add<ck::FFragment_Chain>(InHead);
         InNewEntity.Add<ck::FTag_Chain_NeedsSetup>();
     });
@@ -197,22 +202,37 @@ auto
     Get_PoseAtDistance(
         const FCk_Handle_Chain& InChain,
         float InDistanceFromHeadCm)
-    -> FTransform
+    -> FCk_Chain_PoseAtDistance_Result
 {
-    const auto& Current = InChain.Get<ck::FFragment_Chain>();
-    const auto& Params = InChain.Get<ck::FFragment_Chain_Params>();
-    const auto HeadPose = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(Current.Get_Head());
-    const auto IsPathHistory = Params.Get_Solver() == ECk_Chain_Solver::PathHistory;
+    const auto IsValidChain = ck::IsValid(InChain) && Has(InChain);
+    CK_ENSURE_IF_NOT(IsValidChain, TEXT("Chain Get Pose At Distance requires a valid chain [{}]"), InChain)
+    { return {}; }
+
+    const auto IsPathHistory = Get_Solver(InChain) == ECk_Chain_Solver::PathHistory;
     CK_ENSURE_IF_NOT(IsPathHistory, TEXT("Chain Get Pose At Distance requires PathHistory solver"))
-    { return HeadPose; }
+    { return {}; }
+
     const auto IsValidDistance = FMath::IsFinite(InDistanceFromHeadCm) && InDistanceFromHeadCm >= 0.0f;
     CK_ENSURE_IF_NOT(IsValidDistance, TEXT("Chain Get Pose At Distance requires a finite nonnegative distance"))
-    { return HeadPose; }
+    { return {}; }
+
+    const auto& Current = InChain.Get<ck::FFragment_Chain>();
+    const auto IsValidHead = ck::IsValid(Current.Get_Head());
+    CK_ENSURE_IF_NOT(IsValidHead, TEXT("Chain Get Pose At Distance requires a valid head [{}]"), InChain)
+    { return {}; }
+
     if (Current.Get_History().Get_NumSamples() == 0)
-    { return HeadPose; }
+    { return {}; }
+
+    const auto& Params = InChain.Get<ck::FFragment_Chain_Params>();
+    const auto HeadPose = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(Current.Get_Head());
     const auto Pose = ck::chain::Solve_PathHistoryPose(Current.Get_History(), HeadPose, InDistanceFromHeadCm,
-        ECk_Chain_LinkOrientation::FollowPath, Params.Get_UpVector().GetSafeNormal(), Params.Get_HistorySeed(), HeadPose);
-    return Pose.IsSet() ? Pose.GetValue() : HeadPose;
+        ECk_Chain_LinkOrientation::FollowPath, Params.Get_UpVectorNormalized(), Params.Get_HistorySeed(), HeadPose);
+    if (NOT Pose.IsSet())
+    { return {}; }
+
+    constexpr auto IsValidPose = true;
+    return FCk_Chain_PoseAtDistance_Result{Pose.GetValue(), IsValidPose};
 }
 
 auto
@@ -242,13 +262,11 @@ auto
         return InChain;
     }
     const auto& Link = InRequest.Get_Link();
-    const auto& Params = InChain.Get<ck::FFragment_Chain_Params>();
-    const auto Distance = InRequest.Get_LinkSpec().Get_DistanceFromHeadCm();
     const auto IsAttachable = Link != Get_Head(InChain) && NOT UCk_Utils_ChainLink_UE::Has(Link)
         && NOT UCk_Utils_SceneNode_UE::Has(Link)
         && (NOT Link.Has<ck::FFragment_Transform_RootComponent>() || Link.Has<ck::FTag_Transform_Movable>())
-        && (Params.Get_NetPolicy() != ECk_Chain_NetPolicy::Everywhere || NOT Link.Has<ck::FFragment_ContainerRef_Location>())
-        && FMath::IsFinite(Distance) && Distance > 0.0f;
+        && (Get_NetPolicy(InChain) != ECk_Chain_NetPolicy::Everywhere || NOT Link.Has<ck::FFragment_ContainerRef_Location>())
+        && InRequest.Get_LinkSpec().Get_IsValid();
     CK_ENSURE_IF_NOT(IsAttachable, TEXT("Chain AttachLink rejected incompatible link or parameters"))
     {
         InDelegate.ExecuteIfBound(InChain, ECk_Request_OperationResult::Failed_NotEnqueued);
@@ -370,12 +388,14 @@ auto
     }
     auto Request = InRequest;
     auto NewHead = UCk_Utils_Transform_UE::CastChecked(InRequest.Get_AtLink());
-    Request._NewChain = Add(NewHead, InChain.Get<ck::FFragment_Chain_Params>());
+    Request._NewChain = Add(NewHead, DoGet_Spec(InChain));
     if (ck::Is_NOT_Valid(Request.Get_NewChain()))
     {
         InDelegate.ExecuteIfBound(InChain, ECk_Request_OperationResult::Failed_NotEnqueued);
         return {};
     }
+
+    Request._NewChain.Add<ck::FTag_Chain_SplitPending>();
     CK_CALLSTACK_RECORD(ck::FFragment_Chain_Requests, InChain);
     if (InDelegate.IsBound())
     { Request.Set_CompletionDelegate(InDelegate); }
@@ -533,4 +553,23 @@ auto
 {
     CK_SIGNAL_UNBIND(ck::UUtils_Signal_OnChainHeadTeleported, InChain, InDelegate);
     return InChain;
+}
+
+auto
+    UCk_Utils_Chain_UE::
+    DoGet_Spec(
+        const FCk_Handle_Chain& InChain)
+    -> FCk_Chain_Spec
+{
+    const auto& Params = InChain.Get<ck::FFragment_Chain_Params>();
+    auto Spec = FCk_Chain_Spec{Params.Get_Solver()};
+    Spec.Set_SampleSpacingCm(Params.Get_SampleSpacingCm());
+    Spec.Set_TeleportDistanceCm(Params.Get_TeleportDistanceCm());
+    Spec.Set_UpVector(Params.Get_UpVectorNormalized());
+    Spec.Set_HistorySeed(Params.Get_HistorySeed());
+    Spec.Set_NetPolicy(Params.Get_NetPolicy());
+    if (UCk_Utils_GameplayLabel_UE::Has(InChain))
+    { Spec.Set_ChainName(UCk_Utils_GameplayLabel_UE::Get_Label(InChain)); }
+
+    return Spec;
 }

@@ -12,8 +12,17 @@ smooth poses, or resolve collisions.
 
 `UCk_Utils_Chain_UE::Add(HeadTransform, FCk_Chain_Spec)` creates a lifetime child of the head. Attach existing
 Transforms using `Request_AttachLink(Chain, FCk_Request_Chain_AttachLink{Link, FCk_ChainLink_Spec}, Delegate)`.
-`ck::FFragment_Chain_Params` aliases `FCk_Chain_Spec` wholesale (CkTween precedent) because Update reads six of
-its eight fields every frame.
+`Add` unpacks the Spec (`FCk_Chain_Spec::Get_IsValid` gates it): the name becomes the GameplayLabel, a disabled
+starting state becomes `FTag_Chain_Disabled` (the one mode a processor view filters on), and `ck::FFragment_Chain_Params`
+retains solver, spacing, seed, teleport distance, the normalized up vector and net policy. `FFragment_ChainLink_Params`
+retains the link's offset and orientation. `Request_Split` composes the new chain from the source's Params and label; the
+new chain takes the source's enable state when the split drains, so an EnableDisable queued ahead of it applies to both.
+Until that drain the new chain carries `FTag_Chain_SplitPending`: requests queued on it wait and apply after the split.
+
+`Get_PoseAtDistance` returns `FCk_Chain_PoseAtDistance_Result`: check `Get_IsValid` before reading `Get_Pose`. An
+empty history or an uncovered HoldUntilCovered distance is invalid without a diagnostic; an invalid chain, head or
+distance, or a DistanceConstraint chain, diagnoses and is invalid. There is no head-pose fallback.
+
 Requests drain in Transform Derived; location/rotation requests then settle through the local
 Transform barrier, including each link's SceneNode children. A link cannot be a parent-driven
 SceneNode, a static actor root, the head itself, or a member of another chain.
