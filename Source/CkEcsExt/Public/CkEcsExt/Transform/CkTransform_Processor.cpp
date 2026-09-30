@@ -10,6 +10,52 @@
 
 #include "CkEcs/Net/CkNet_Utils.h"
 
+#include "Components/SceneComponent.h"
+#include "Components/PrimitiveComponent.h"
+#include "Engine/EngineTypes.h"
+
+namespace
+{
+    auto
+        CalculateTeleportType(
+            const USceneComponent* InComponent)
+        -> ETeleportType
+    {
+        if (const auto PrimitiveComponent = Cast<const UPrimitiveComponent>(InComponent);
+            ck::IsValid(PrimitiveComponent) && PrimitiveComponent->IsSimulatingPhysics())
+        {
+            return ETeleportType::TeleportPhysics;
+        }
+
+        return ETeleportType::None;
+    }
+
+    template <typename THandle>
+    auto
+        ResolveTeleportType(
+            THandle& InHandle,
+            const ck::FFragment_Transform_RootComponent& InRootComponent)
+        -> ETeleportType
+    {
+        if (InHandle.template Has<ck::FFragment_Transform_RootComponentTeleportType>())
+        {
+            return InHandle.template Get<ck::FFragment_Transform_RootComponentTeleportType>().Get_TeleportType();
+        }
+
+        const auto RootComponent = InRootComponent.Get_RootComponent().Get();
+        if (ck::Is_NOT_Valid(RootComponent))
+        {
+            return ETeleportType::None;
+        }
+
+        const auto TeleportType = CalculateTeleportType(RootComponent);
+        InHandle.template AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
+            ck::FFragment_Transform_RootComponentTeleportType{TeleportType};
+
+        return TeleportType;
+    }
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 namespace ck
@@ -190,17 +236,18 @@ namespace ck
             { return; }
 
             constexpr auto Sweep = false;
+            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             switch (InRequest.Get_LocalWorld())
             {
                 case ECk_LocalWorld::Local:
                 {
-                    RootComponent->SetRelativeLocation(NewLocation, Sweep);
+                    RootComponent->SetRelativeLocation(NewLocation, Sweep, nullptr, TeleportType);
                     break;
                 }
                 case ECk_LocalWorld::World:
                 {
-                    RootComponent->SetWorldLocation(NewLocation, Sweep);
+                    RootComponent->SetWorldLocation(NewLocation, Sweep, nullptr, TeleportType);
                     break;
                 }
             }
@@ -235,6 +282,7 @@ namespace ck
             { return; }
 
             constexpr auto Sweep = false;
+            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             const auto NewLocation = DeltaLocation + RootComponent->GetComponentLocation();
 
@@ -242,12 +290,12 @@ namespace ck
             {
                 case ECk_LocalWorld::Local:
                 {
-                    RootComponent->SetRelativeLocation(NewLocation, Sweep);
+                    RootComponent->SetRelativeLocation(NewLocation, Sweep, nullptr, TeleportType);
                     break;
                 }
                 case ECk_LocalWorld::World:
                 {
-                    RootComponent->SetWorldLocation(NewLocation, Sweep);
+                    RootComponent->SetWorldLocation(NewLocation, Sweep, nullptr, TeleportType);
                     break;
                 }
             }
@@ -278,17 +326,18 @@ namespace ck
             { return; }
 
             constexpr auto Sweep = false;
+            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             switch (InRequest.Get_LocalWorld())
             {
                 case ECk_LocalWorld::Local:
                 {
-                    RootComponent->SetRelativeRotation(NewRotation, Sweep);
+                    RootComponent->SetRelativeRotation(NewRotation, Sweep, nullptr, TeleportType);
                     break;
                 }
                 case ECk_LocalWorld::World:
                 {
-                    RootComponent->SetWorldRotation(NewRotation, Sweep);
+                    RootComponent->SetWorldRotation(NewRotation, Sweep, nullptr, TeleportType);
                     break;
                 }
             }
@@ -323,6 +372,7 @@ namespace ck
             { return; }
 
             constexpr auto Sweep = false;
+            const auto TeleportType = ResolveTeleportType(InHandle, RootComponentFragment);
 
             const auto NewQuat = DeltaRotation.Quaternion() * RootComponent->GetComponentRotation().Quaternion();
             const auto& NewRotation = NewQuat.Rotator();
@@ -331,12 +381,12 @@ namespace ck
             {
                 case ECk_LocalWorld::Local:
                 {
-                    RootComponent->SetRelativeRotation(NewRotation, Sweep);
+                    RootComponent->SetRelativeRotation(NewRotation, Sweep, nullptr, TeleportType);
                     break;
                 }
                 case ECk_LocalWorld::World:
                 {
-                    RootComponent->SetWorldRotation(NewRotation, Sweep);
+                    RootComponent->SetWorldRotation(NewRotation, Sweep, nullptr, TeleportType);
                     break;
                 }
             }
@@ -409,7 +459,8 @@ namespace ck
         { return; }
 
         constexpr auto Sweep = false;
-        RootComponent->SetWorldTransform(InComp.Get_Transform(), Sweep);
+        const auto TeleportType = ResolveTeleportType(InHandle, InTransformRootComp);
+        RootComponent->SetWorldTransform(InComp.Get_Transform(), Sweep, nullptr, TeleportType);
     }
 
     // --------------------------------------------------------------------------------------------------------------------
