@@ -120,8 +120,11 @@ public:
     Get_NumHistorySamples(
         const FCk_Handle_Chain& InChain);
 
+    /** The pose a FollowPath link at this distance would take. Invalid, without a diagnostic, while the history is
+        empty or a HoldUntilCovered history does not yet cover the distance; an invalid chain, head or distance, or a
+        DistanceConstraint chain, diagnoses and returns invalid. */
     UFUNCTION(BlueprintPure, Category = "Ck|Utils|Chain", DisplayName = "[Ck][Chain] Get Pose At Distance")
-    static FTransform
+    static FCk_Chain_PoseAtDistance_Result
     Get_PoseAtDistance(
         const FCk_Handle_Chain& InChain,
         float InDistanceFromHeadCm);
@@ -226,4 +229,6 @@ public:
         UPARAM(ref) FCk_Handle_Chain& InChain,
         const FCk_Delegate_Chain_OnHeadTeleported& InDelegate);
 
+private:
+    static auto DoGet_Spec(const FCk_Handle_Chain& InChain) -> FCk_Chain_Spec;
 };

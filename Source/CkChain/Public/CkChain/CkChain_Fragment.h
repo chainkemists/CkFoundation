@@ -23,13 +23,37 @@ namespace ck
     CK_DEFINE_ECS_TAG(FTag_Chain_NeedsSetup);
     CK_DEFINE_ECS_TAG(FTag_Chain_Disabled);
     CK_DEFINE_ECS_TAG(FTag_Chain_RosterDirty);
+    // On a Request_Split product until the source drains the split: its own requests wait so they apply after the split.
+    CK_DEFINE_ECS_TAG(FTag_Chain_SplitPending);
 
     // --------------------------------------------------------------------------------------------------------------------
 
-    // Wholesale alias (CkTween precedent): six of the eight fields are read by Update every frame.
-    // _ChainName lives in the GameplayLabel and _StartingState in FTag_Chain_Disabled after Add; nothing
-    // reads those two from here.
-    using FFragment_Chain_Params = FCk_Chain_Spec;
+    // Immutable residue of FCk_Chain_Spec. The name is the GameplayLabel and the starting state FTag_Chain_Disabled.
+    struct CKCHAIN_API FFragment_Chain_Params
+    {
+    public:
+        CK_GENERATED_BODY(FFragment_Chain_Params);
+
+    private:
+        ECk_Chain_Solver _Solver = ECk_Chain_Solver::PathHistory;
+        float _SampleSpacingCm = 10.0f;
+        ECk_Chain_HistorySeed _HistorySeed = ECk_Chain_HistorySeed::StraightBehindHead;
+        float _TeleportDistanceCm = 0.0f;
+        FVector _UpVectorNormalized = FVector::UpVector;
+        ECk_Chain_NetPolicy _NetPolicy = ECk_Chain_NetPolicy::AuthorityOnly;
+
+    public:
+        CK_PROPERTY_GET(_Solver);
+        CK_PROPERTY_GET(_SampleSpacingCm);
+        CK_PROPERTY_GET(_HistorySeed);
+        CK_PROPERTY_GET(_TeleportDistanceCm);
+        CK_PROPERTY_GET(_UpVectorNormalized);
+        CK_PROPERTY_GET(_NetPolicy);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FFragment_Chain_Params, _Solver, _SampleSpacingCm, _HistorySeed, _TeleportDistanceCm,
+            _UpVectorNormalized, _NetPolicy);
+    };
 
     // --------------------------------------------------------------------------------------------------------------------
 
@@ -52,14 +76,12 @@ namespace ck
         TArray<FCk_Handle_ChainLink> _Links;
         chain::FPathHistory _History;
         FTransform _LastHeadTransform = FTransform::Identity;
-        FVector _UpVectorNormalized = FVector::UpVector;
 
     public:
         CK_PROPERTY_GET(_Head);
         CK_PROPERTY_GET(_Links);
         CK_PROPERTY_GET(_History);
         CK_PROPERTY_GET(_LastHeadTransform);
-        CK_PROPERTY_GET(_UpVectorNormalized);
 
     public:
         CK_DEFINE_CONSTRUCTORS(FFragment_Chain, _Head);

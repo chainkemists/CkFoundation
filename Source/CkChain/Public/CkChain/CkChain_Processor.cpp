@@ -34,7 +34,7 @@ namespace ck_chain_processor
         DoReserveHistory(
             ck::chain::FPathHistory& InHistory,
             const TArray<FCk_Handle_ChainLink>& InLinks,
-            const FCk_Chain_Spec& InParams) -> void
+            const ck::FFragment_Chain_Params& InParams) -> void
     {
         if (InParams.Get_Solver() != ECk_Chain_Solver::PathHistory)
         { return; }
@@ -77,7 +77,6 @@ auto
     const auto IsValidHead = ck::IsValid(InCurrent.Get_Head());
     CK_ENSURE_IF_NOT(IsValidHead, TEXT("Chain [{}] has an invalid head"), InHandle)
     { return; }
-    InCurrent._UpVectorNormalized = InParams.Get_UpVector().GetSafeNormal();
     const auto HeadPose = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(InCurrent.Get_Head());
     if (InParams.Get_Solver() == ECk_Chain_Solver::PathHistory)
     {
@@ -85,8 +84,6 @@ auto
         ck_chain_processor::DoReserveHistory(InCurrent._History, InCurrent._Links, InParams);
     }
     InCurrent._LastHeadTransform = HeadPose;
-    if (InParams.Get_StartingState() == ECk_EnableDisable::Disable)
-    { InHandle.AddOrGet<FTag_Chain_Disabled>(); }
     InHandle.Remove<MarkedDirtyBy>();
 }
 
@@ -288,6 +285,14 @@ auto
         FProcessor_Chain_Setup::ForEachEntity(TimeType{}, NewChain,
             NewChain.Get<FFragment_Chain_Params>(), NewCurrent);
     }
+
+    // Taken at drain, not at Request_Split: an EnableDisable queued ahead of the split has already applied to the source,
+    // and the new chain's own requests are still held by FTag_Chain_SplitPending, so they apply after this.
+    if (InHandle.Has<FTag_Chain_Disabled>())
+    { NewChain.AddOrGet<FTag_Chain_Disabled>(); }
+
+    NewChain.Try_Remove<FTag_Chain_SplitPending>();
+
     const auto SplitDistance = UCk_Utils_ChainLink_UE::Get_DistanceFromHeadCm(AtLink);
     const auto SourceLinks = InCurrent._Links;
     const auto MovedCount = SourceLinks.Num() - AtIndex - 1;
@@ -462,7 +467,7 @@ auto
             const auto Distance = UCk_Utils_ChainLink_UE::Get_DistanceFromHeadCm(Link);
             const auto LinkPose = UCk_Utils_Transform_UE::Get_EntityCurrentTransform(UCk_Utils_Transform_UE::CastChecked(Link));
             const auto Pose = chain::Solve_PathHistoryPose(InCurrent._History, HeadPose, Distance, Params.Get_Orientation(),
-                InCurrent.Get_UpVectorNormalized(), InParams.Get_HistorySeed(), LinkPose);
+                InParams.Get_UpVectorNormalized(), InParams.Get_HistorySeed(), LinkPose);
             if (Pose.IsSet())
             { DoPublishPose(Link, Params, Pose.GetValue()); }
         }
@@ -484,7 +489,7 @@ auto
             Orientations.Add(Link.Get<FFragment_ChainLink_Params>().Get_Orientation());
             PreviousDistance = Distance;
         }
-        chain::Solve_DistanceConstraint(HeadPose, Lengths, Orientations, InCurrent.Get_UpVectorNormalized(), Poses);
+        chain::Solve_DistanceConstraint(HeadPose, Lengths, Orientations, InParams.Get_UpVectorNormalized(), Poses);
         for (auto Index = 0; Index < InCurrent._Links.Num(); ++Index)
         {
             auto Link = InCurrent._Links[Index];
