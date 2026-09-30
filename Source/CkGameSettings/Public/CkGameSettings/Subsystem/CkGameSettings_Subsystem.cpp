@@ -1144,6 +1144,16 @@ auto
     return _PendingSessionActive && _PendingPriorValues.Contains(InKey);
 }
 
+auto
+    UCk_GameSettings_Subsystem_UE::
+    Get_HasPendingCVarApply(
+        FName InKey) const
+    -> bool
+{
+    return _DeferredCVarApplies.ContainsByPredicate(
+        [InKey](const FDeferredCVarApply& InEntry) { return InEntry._Key == InKey; });
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto
@@ -1559,6 +1569,8 @@ auto
         const auto TimedOut = NowSeconds - Entry._EnqueuedAtSeconds > TimeoutSeconds;
         CK_ENSURE_IF_NOT(NOT TimedOut, TEXT("GameSettings deferred apply for key [{}] timed out, CVar [{}] never registered within [{}] seconds. The stored value is retained and will apply next boot."),
             Entry._Key, Entry._CVar.Get_Name(), TimeoutSeconds)
+        {}
+        if (TimedOut)
         { _DeferredCVarApplies.RemoveAt(Index); }
     }
 

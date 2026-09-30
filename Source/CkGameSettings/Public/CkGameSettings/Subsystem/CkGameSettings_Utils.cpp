@@ -523,6 +523,21 @@ auto
     return Subsystem->Get_HasUnappliedChange(InKey);
 }
 
+auto
+    UCk_Utils_GameSettings_UE::
+    Get_HasPendingCVarApply(
+        const UObject* InWorldContextObject,
+        FName InKey)
+    -> bool
+{
+    TObjectPtr<UCk_GameSettings_Subsystem_UE> Subsystem = DoGet_Subsystem(InWorldContextObject);
+
+    if (ck::Is_NOT_Valid(Subsystem))
+    { return false; }
+
+    return Subsystem->Get_HasPendingCVarApply(InKey);
+}
+
 // --------------------------------------------------------------------------------------------------------------------
 
 auto

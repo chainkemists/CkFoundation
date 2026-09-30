@@ -306,6 +306,14 @@ public:
     Get_HasUnappliedChange(
         FName InKey) const;
 
+    /** Read-only diagnostic for a CVar apply still awaiting registration or timeout. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|GameSettings",
+              DisplayName = "[Ck][GameSettings] Get Has Pending CVar Apply")
+    bool
+    Get_HasPendingCVarApply(
+        FName InKey) const;
+
 public:
     /** Registers the Audio pack from the project-settings config (SoundMix + categories). Idempotent per key. Returns how many categories were newly registered. */
     UFUNCTION(BlueprintCallable,
