@@ -123,6 +123,10 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Chain_Spec, _Solver);
+
+public:
+    /** Spacing of at least 1 cm, a finite nonnegative teleport distance, an up vector that normalizes, and in-range modes. */
+    auto Get_IsValid() const -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -152,6 +156,10 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_ChainLink_Spec, _DistanceFromHeadCm);
+
+public:
+    /** A finite positive distance from the head and an in-range orientation. */
+    auto Get_IsValid() const -> bool;
 };
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -181,6 +189,33 @@ public:
 
 public:
     CK_DEFINE_CONSTRUCTORS(FCk_Chain_PathSample, _Location, _Rotation, _ArcDistanceCm);
+};
+
+// --------------------------------------------------------------------------------------------------------------------
+
+/** Invalid by default. An uncovered HoldUntilCovered distance or an empty history is ordinary unavailability, never a
+    fallback pose; read _Pose only when _IsValid. */
+USTRUCT(BlueprintType)
+struct CKCHAIN_API FCk_Chain_PoseAtDistance_Result
+{
+    GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(FCk_Chain_PoseAtDistance_Result);
+
+private:
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    FTransform _Pose = FTransform::Identity;
+
+    UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = true))
+    bool _IsValid = false;
+
+public:
+    CK_PROPERTY_GET(_Pose);
+    CK_PROPERTY_GET(_IsValid);
+
+public:
+    CK_DEFINE_CONSTRUCTORS(FCk_Chain_PoseAtDistance_Result, _Pose, _IsValid);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

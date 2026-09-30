@@ -36,6 +36,7 @@ namespace ck
         TReadWrite<FFragment_Chain>,
         TReadWrite<FFragment_Chain_Requests>,
         TExclude<FTag_Chain_NeedsSetup>,
+        TExclude<FTag_Chain_SplitPending>,
         TExclude<FTag_DestroyEntity_Initiate>,
         CK_IGNORE_PENDING_KILL>
     {
@@ -105,6 +106,7 @@ namespace ck
         TReadOnly<FFragment_Chain_Params>,
         TReadWrite<FFragment_Chain>,
         TExclude<FTag_Chain_NeedsSetup>,
+        TExclude<FTag_Chain_SplitPending>,
         TExclude<FTag_Chain_Disabled>,
         CK_IGNORE_PENDING_KILL>
     {
