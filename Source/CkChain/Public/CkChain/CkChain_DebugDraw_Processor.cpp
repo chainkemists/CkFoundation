@@ -63,11 +63,10 @@ namespace ck
             if (ck::Is_NOT_Valid(Link))
             { continue; }
 
-            const auto& LinkState = Link.Get<FFragment_ChainLink>();
             const auto Held = UCk_Utils_ChainLink_UE::Get_IsHeld(Link);
             const auto Location = UCk_Utils_Transform_UE::Get_EntityCurrentLocation(
                 UCk_Utils_Transform_UE::CastChecked(Link));
-            if (Held || NOT LinkState.Get_HasTargetPose())
+            if (Held || NOT UCk_Utils_ChainLink_UE::Get_HasTargetPose(Link))
             {
                 UCk_Utils_DebugDraw_UE::DrawDebugPoint(World, Location, 12.0f, FLinearColor::Gray, 0.0f);
                 continue;
