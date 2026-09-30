@@ -56,6 +56,7 @@ Before writing any code, navigate the documentation in this order:
 | ECS interpolation / follow a spline | `CkTween` (+ `CkSpline` for path data) |
 | a chain of followers behind a driven transform (train / tail / conga line) | `CkChain` |
 | a scene node that lags its parent with a damped spring (hand/weapon sway, accessory inertia) | CkSway |
+| turn a transform entity to face another entity at a bounded rate, per-axis locks and angular ranges (turrets, heads, facing) | CkRotateTowards |
 | ECS typed attributes (health/mana) | `CkAttribute` |
 | ECS audio tracks | `CkAudio` |
 | ECS Niagara VFX | `CkVfx` |
@@ -130,7 +131,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **82 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **83 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29; CkRotateTowards added 2026-09-29), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -235,6 +236,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkRelationship | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkRenderTarget | ActorRelay,Core,Ecs,EcsExt,Label,Log,Profile,Record,ResourceLoader,Settings,Timer |
 | CkResolver | Attribute,Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings,Targeting |
+| CkRotateTowards | Core,Ecs,EcsExt,Log,Settings |
 | CkShapes | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkSnapshot | Core,Ecs,EcsExt,Log,ThirdParty |
 | CkSpatialQuery | Core,Ecs,EcsExt,Jolt,Label,Log,Physics,Provider,Record,Settings,Shapes,ThirdParty |
