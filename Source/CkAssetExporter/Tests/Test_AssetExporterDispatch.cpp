@@ -271,7 +271,7 @@ bool FCk_AssetExporter_Dispatch_SiblingSidecarPath_Test::RunTest(const FString& 
 }
 
 // --------------------------------------------------------------------------------------------------------------------
-// Needs no env gating: /Game/BusterBlock/MembershipBoard is a tiny content dir that is always present.
+// Use content shipped by this plugin so the fixture works in every development host.
 // --------------------------------------------------------------------------------------------------------------------
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
@@ -281,7 +281,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 
 bool FCk_AssetExporter_Dispatch_GraphDumpShape_Test::RunTest(const FString& InParameters)
 {
-    const auto Graph = FCk_AssetExporter_GraphDump::DumpGraph(TEXT("/Game/BusterBlock/MembershipBoard"));
+    const auto Graph = FCk_AssetExporter_GraphDump::DumpGraph(TEXT("/CkFoundation/WorldSettings"));
     TestTrue(TEXT("graph object is valid"), Graph.IsValid());
     if (NOT Graph.IsValid())
     { return false; }
@@ -313,8 +313,8 @@ bool FCk_AssetExporter_Dispatch_GraphDumpShape_Test::RunTest(const FString& InPa
         const auto HasDisk = Row->TryGetStringField(TEXT("diskPath"), DiskPath);
         TestTrue(TEXT("row has diskPath"), HasDisk);
 
-        const auto HasDriveLetterPrefix = DiskPath.Len() >= 2 && FChar::IsAlpha(DiskPath[0]) && DiskPath[1] == TEXT(':');
-        TestTrue(TEXT("diskPath is absolute (drive-letter prefixed)"), HasDriveLetterPrefix);
+        TestTrue(TEXT("diskPath is a non-empty absolute path"),
+            NOT DiskPath.IsEmpty() && NOT FPaths::IsRelative(DiskPath));
 
         const TArray<TSharedPtr<FJsonValue>>* HardDeps = nullptr;
         if (Row->TryGetArrayField(TEXT("hardDeps"), HardDeps) && HardDeps != nullptr)
