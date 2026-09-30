@@ -100,11 +100,6 @@ namespace ck_transform
             const ck::FFragment_Transform_RootComponent& InRootComponent)
         -> ETeleportType
     {
-        if (InHandle.template Has<ck::FFragment_Transform_RootComponentTeleportType>())
-        {
-            return InHandle.template Get<ck::FFragment_Transform_RootComponentTeleportType>().Get_TeleportType();
-        }
-
         const auto RootComponent = InRootComponent.Get_RootComponent().Get();
         if (ck::Is_NOT_Valid(RootComponent))
         {
@@ -112,6 +107,16 @@ namespace ck_transform
         }
 
         const auto TeleportType = CalculateTeleportType(RootComponent);
+        if (InHandle.template Has<ck::FFragment_Transform_RootComponentTeleportType>())
+        {
+            auto& CachedTeleportType = InHandle.template Get<ck::FFragment_Transform_RootComponentTeleportType>();
+            if (CachedTeleportType.Get_TeleportType() != TeleportType)
+            {
+                CachedTeleportType = ck::FFragment_Transform_RootComponentTeleportType{TeleportType};
+            }
+            return TeleportType;
+        }
+
         InHandle.template AddOrGet<ck::FFragment_Transform_RootComponentTeleportType>() =
             ck::FFragment_Transform_RootComponentTeleportType{TeleportType};
 
