@@ -55,7 +55,7 @@ UCkWatermark_Panel_UWidget_UE::UCkWatermark_Panel_UWidget_UE()
 {
     // Prevent the overlay from intercepting game input; SynchronizeProperties()
     // propagates this UMG-level property to the Slate widget on every sync.
-    Visibility = ESlateVisibility::HitTestInvisible;
+    SetVisibility(ESlateVisibility::HitTestInvisible);
 
     _StatsGroupPlacement.Anchor      = ECk_Watermark_GroupAnchor::BottomRight;
     _StatsGroupPlacement.EdgePadding = FMargin(0.f, 0.f, 8.f, 8.f);
