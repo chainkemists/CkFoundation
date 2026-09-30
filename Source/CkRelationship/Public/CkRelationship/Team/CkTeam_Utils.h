@@ -241,6 +241,10 @@ auto
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Six>();
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Seven>();
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Eight>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Nine>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Ten>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Eleven>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Twelve>();
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Unassigned>();
 }
 
@@ -273,6 +277,10 @@ auto
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Six>();
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Seven>();
     ForEachEntityOnTeam.template operator()<ECk_Team_ID::Eight>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Nine>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Ten>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Eleven>();
+    ForEachEntityOnTeam.template operator()<ECk_Team_ID::Twelve>();
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -330,6 +338,10 @@ auto
         case ECk_Team_ID::Six: { ForEachEntity<ECk_Team_ID::Six>(InRegistry, InFunc); break; }
         case ECk_Team_ID::Seven: { ForEachEntity<ECk_Team_ID::Seven>(InRegistry, InFunc); break; }
         case ECk_Team_ID::Eight: { ForEachEntity<ECk_Team_ID::Eight>(InRegistry, InFunc); break; }
+        case ECk_Team_ID::Nine: { ForEachEntity<ECk_Team_ID::Nine>(InRegistry, InFunc); break; }
+        case ECk_Team_ID::Ten: { ForEachEntity<ECk_Team_ID::Ten>(InRegistry, InFunc); break; }
+        case ECk_Team_ID::Eleven: { ForEachEntity<ECk_Team_ID::Eleven>(InRegistry, InFunc); break; }
+        case ECk_Team_ID::Twelve: { ForEachEntity<ECk_Team_ID::Twelve>(InRegistry, InFunc); break; }
         case ECk_Team_ID::Unassigned: { ForEachEntity<ECk_Team_ID::Unassigned>(InRegistry, InFunc); break; }
         default:
         {
