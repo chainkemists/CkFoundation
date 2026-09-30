@@ -364,6 +364,16 @@ public:
         const UObject* InWorldContextObject,
         FName InKey);
 
+    /** Read-only diagnostic for a CVar apply still awaiting registration or timeout. */
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|GameSettings",
+              DisplayName = "[Ck][GameSettings] Get Has Pending CVar Apply",
+              meta = (WorldContext = "InWorldContextObject"))
+    static bool
+    Get_HasPendingCVarApply(
+        const UObject* InWorldContextObject,
+        FName InKey);
+
 public:
     /** Registers the Audio pack from the project-settings config (SoundMix + categories). Idempotent per key. Returns how many categories were newly registered. */
     UFUNCTION(BlueprintCallable,
