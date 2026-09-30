@@ -26,6 +26,9 @@ class CKECS_API UCk_EntityScript_Subsystem_UE : public UEngineSubsystem
     GENERATED_BODY()
 
     friend class FCkEntityScriptSpawnParamsDiscovery;
+#if WITH_DEV_AUTOMATION_TESTS
+    friend class FCkTest_EntityScript_EditorServices;
+#endif
 
 public:
     CK_GENERATED_BODY(UCk_EntityScript_Subsystem_UE);
@@ -58,9 +61,31 @@ private:
         TArray<TWeakPtr<TPromise<UUserDefinedStruct*>>> Promises;
     };
 
+    struct FPendingStructAssetOperation
+    {
+        FString SourcePath;
+        FString TargetPath;
+        FName SourceName;
+        FName TargetName;
+        bool bDelete = false;
+        uint32 Revision = 0;
+        FString RemovedRenameSourcePath;
+    };
+
     TArray<FPendingSpawnParamsRequest> _PendingSpawnParamsRequests;
     TWeakObjectPtr<UBlueprint> _ActiveCompilation;
     FTSTicker::FDelegateHandle _CompilationCheckTickerHandle;
+    TArray<FPendingStructAssetOperation> _PendingStructAssetOperations;
+    bool _bProcessingStructAssetOperations = false;
+
+    auto
+    ProcessPendingStructAssetOperations() -> void;
+
+    auto
+    QueueStructAssetOperation(FPendingStructAssetOperation&& InOperation) -> void;
+
+    auto
+    TrySavePendingStruct(TObjectPtr<UUserDefinedStruct> InStruct) -> bool;
 
     auto
     Request_ProcessPendingSpawnParamsRequests() -> void;
@@ -135,7 +160,7 @@ private:
 
     static auto
     SaveStruct(
-        UUserDefinedStruct* InStructToSave) -> void;
+        UUserDefinedStruct* InStructToSave) -> bool;
 
 #if WITH_EDITOR
     static auto
@@ -155,6 +180,12 @@ private:
 
     UPROPERTY()
     TSet<UUserDefinedStruct*> _EntitySpawnParams_StructsToSave;
+
+    UPROPERTY()
+    TSet<TObjectPtr<UUserDefinedStruct>> _StructsBeingSaved;
+
+    UPROPERTY()
+    TSet<TObjectPtr<UUserDefinedStruct>> _StructsDirtyDuringSave;
 
 private:
     FDelegateHandle _OnFilesLoaded_DelegateHandle;
