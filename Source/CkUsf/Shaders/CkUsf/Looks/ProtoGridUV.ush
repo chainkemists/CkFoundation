@@ -1,0 +1,49 @@
+// /CkUsf/Looks/ProtoGridUV.ush
+#pragma once
+#include "/CkUsf/Common.ush"
+
+#ifndef CKUSF_PROTOGRIDUV_ROUGH_BASE
+#define CKUSF_PROTOGRIDUV_ROUGH_BASE 0.5
+#endif
+#ifndef CKUSF_PROTOGRIDUV_ROUGH_LINE
+#define CKUSF_PROTOGRIDUV_ROUGH_LINE 0.25
+#endif
+#ifndef CKUSF_PROTOGRIDUV_BEVEL_STRENGTH
+#define CKUSF_PROTOGRIDUV_BEVEL_STRENGTH 0.35
+#endif
+// Bevel height amplitude; ProtoGrid's equivalent is its LineWidth in cm, which a UV-space width cannot stand in for.
+#ifndef CKUSF_PROTOGRIDUV_BEVEL_HEIGHT
+#define CKUSF_PROTOGRIDUV_BEVEL_HEIGHT 1.5
+#endif
+
+// Params: PrimaryColor (Vector), SecondaryColor (Vector), LineColor (Vector),
+//         CellsU (Scalar, cells per UV unit), CellsV (Scalar, cells per UV unit), SubCells (Scalar),
+//         LineWidth (Scalar, fraction of a cell).
+// ProtoGrid laid out in mesh UV space (TexCoord0) instead of world space: the pattern is locked to the
+// mesh, so it does not slide while the object moves or rotates (held/thrown props). Cells follow the
+// mesh's unwrap — one grid per face on the engine cube, latitude/longitude on the engine sphere — so the
+// cell size in cm varies per mesh; CellsU/CellsV retune it per material instance.
+FCkUsf_SurfaceOutput CkUsf_Look_ProtoGridUV(FCkUsf_SurfaceInput In, float3 PrimaryColor, float3 SecondaryColor,
+                                            float3 LineColor, float CellsU, float CellsV, float SubCells,
+                                            float LineWidth)
+{
+    FCkUsf_SurfaceOutput O = CkUsf_DefaultSurface();
+
+    // One unit of P is one cell, so the major grid is spaced 1.0 apart and LineWidth reads as a cell fraction.
+    float2 P = In.UV * float2(max(CellsU, 0.01), max(CellsV, 0.01));
+
+    float Checker = CkUsf_CheckerParity(P, 1.0);
+    float3 Col = lerp(PrimaryColor, SecondaryColor, Checker);
+
+    float MinorCell = 1.0 / max(SubCells, 1.0);
+    float Minor = CkUsf_GridLineCoverage(P, MinorCell, LineWidth * 0.35);
+    float Major = CkUsf_GridLineCoverage(P, 1.0, LineWidth);
+
+    Col = lerp(Col, LineColor * 0.5, Minor * 0.35);
+    Col = lerp(Col, LineColor, Major);
+
+    O.BaseColor = Col;
+    O.Roughness = lerp(CKUSF_PROTOGRIDUV_ROUGH_BASE, CKUSF_PROTOGRIDUV_ROUGH_LINE, max(Major, Minor));
+    O.Normal = CkUsf_NormalFromHeight(-Major * CKUSF_PROTOGRIDUV_BEVEL_HEIGHT, CKUSF_PROTOGRIDUV_BEVEL_STRENGTH);
+    return O;
+}
