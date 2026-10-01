@@ -25,7 +25,8 @@ namespace ck::usf
         SHADER_PARAMETER(uint32, StencilMin)
         SHADER_PARAMETER(uint32, WorldSpace)
         SHADER_PARAMETER(uint32, SquareCorners)
-        SHADER_PARAMETER(float, Thickness)
+        SHADER_PARAMETER_ARRAY(FVector4f, Thicknesses, [4])
+        SHADER_PARAMETER(float, MaxThickness)
         SHADER_PARAMETER(uint32, DebugMode)
     END_SHADER_PARAMETER_STRUCT()
 
@@ -131,12 +132,13 @@ namespace ck::usf
             Scene.StencilMin = State.StencilMin;
             Scene.WorldSpace = State.WorldSpace ? 1 : 0;
             Scene.SquareCorners = State.SquareCorners ? 1 : 0;
-            Scene.Thickness = State.Thickness;
+            Scene.MaxThickness = State.MaxThickness;
             Scene.DebugMode = CVarOutlineDebug.GetValueOnRenderThread();
             for (auto Index = 0; Index != 16; ++Index)
             {
                 Scene.OutlineColors[Index] = State.Outline[Index];
                 Scene.FillColors[Index] = State.Fill[Index];
+                Scene.Thicknesses[Index / 4][Index % 4] = State.Thickness[Index];
             }
 
             const auto* ShaderMap = GetGlobalShaderMap(InView.GetFeatureLevel());

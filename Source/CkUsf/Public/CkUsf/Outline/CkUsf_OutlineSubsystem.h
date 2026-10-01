@@ -148,4 +148,5 @@ private:
     TMap<TWeakObjectPtr<UPrimitiveComponent>, TArray<FResolvedOwner>> _ResolvedOwners;
 
     TArray<FFloat16Color> _LutData;
+    TStaticArray<float, kLutWidth> _SlotThicknessScales{};
 };

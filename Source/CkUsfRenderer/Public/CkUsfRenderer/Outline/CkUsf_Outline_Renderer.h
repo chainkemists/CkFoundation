@@ -17,7 +17,10 @@ namespace ck::usf
         uint32 StencilMin = 240;
         bool WorldSpace = true;
         bool SquareCorners = true;
-        float Thickness = 5.0f;
+        // Per stencil slot: the global width times that slot's preset scale. MaxThickness spans the ACTIVE
+        // slots only and bounds the search, so it must never be smaller than any active slot's width.
+        TStaticArray<float, 16> Thickness{};
+        float MaxThickness = 0.0f;
     };
 
     class FOutlineViewExtension;
