@@ -57,6 +57,7 @@ Before writing any code, navigate the documentation in this order:
 | a chain of followers behind a driven transform (train / tail / conga line) | `CkChain` |
 | a scene node that lags its parent with a damped spring (hand/weapon sway, accessory inertia) | CkSway |
 | turn a transform entity to face another entity at a bounded rate, per-axis locks and angular ranges (turrets, heads, facing) | CkRotateTowards |
+| a character's stride clock (phase/amount/landings) and a procedural locomotion bob on any scene node (head bob, hand bob) | CkGait |
 | ECS typed attributes (health/mana) | `CkAttribute` |
 | ECS audio tracks | `CkAudio` |
 | ECS Niagara VFX | `CkVfx` |
@@ -131,7 +132,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **83 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29; CkRotateTowards added 2026-09-29), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **84 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29; CkRotateTowards added 2026-09-29; CkGait added 2026-10-01), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -209,6 +210,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkEntityTag | Core,Ecs,EcsExt,Label,Log,Provider,Record,Settings |
 | CkEqs | Core,Ecs,EcsExt,EntityTag,Label,Log,Record,Settings,Shapes,SpatialQuery,ThirdParty |
 | CkFx | Core,Ecs,EcsExt,Label,Log,Record,ResourceLoader,Settings |
+| CkGait | Core,Ecs,EcsExt,Log,Settings |
 | CkGameSession | Core,Ecs,Label,Log,Record,Settings |
 | CkGoap | AStar,Core,Ecs,EcsExt,Label,Log,Record |
 | CkGraphics | Core,Ecs,Log,Variables |
