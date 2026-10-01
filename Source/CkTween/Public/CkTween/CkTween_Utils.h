@@ -399,6 +399,17 @@ public:
     Get_CurvesMaxTime(
         const FCk_TweenCurveChannels& InChannels);
 
+    // The eased progress of one ECk_TweenEasing at InProgress - the same table the tween processor evaluates,
+    // exposed for callers that drive their own time (a hand reach, a UI blend) and only want the shape. The 0to1
+    // range clamps the input; the output is the raw easing value, so Back/Elastic/Bounce overshoot as authored.
+    UFUNCTION(BlueprintPure,
+        Category = "Ck|Tween",
+        DisplayName = "[Ck][Tween] Get Eased Progress")
+    static float
+    Get_EasedProgress(
+        ECk_TweenEasing InEasing,
+        FCk_FloatRange_0to1 InProgress);
+
     // --------------------------------------------------------------------------------------------------------------------
 
     UFUNCTION(BlueprintCallable,

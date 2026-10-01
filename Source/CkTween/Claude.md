@@ -9,7 +9,10 @@
 
 ## Key API
 
-- `UCk_Utils_TweenEasing_UE` — easing curve queries.
+- `UCk_Utils_TweenEasing_UE` — easing curve queries (C++ only).
+- `UCk_Utils_Tween_UE::Get_EasedProgress(ECk_TweenEasing, FCk_FloatRange_0to1)` — the same easing table for
+  callers that drive their own time (AS: `utils_tween::Get_EasedProgress`). Input clamped by the range type, output
+  raw (Back/Elastic/Bounce overshoot). Added 2026-10-01; pinned by `Ck.Tween.Utils.GetEasedProgress.MatchesTable`.
 - Tween entities specify From/To values and an easing function; the tween processor writes the current interpolated value each tick.
 
 ---
