@@ -176,21 +176,6 @@ auto
                 && CurrentShapeBlobFreshness == ECk_Jolt_MeshShapeCurrentBlobFreshness::UpToDate)
             { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
         }
-
-        // A pre-winding-fix (v2) blob shares the current encoding, and only its TRI-MESH content is
-        // wrong (inverted by the bake's pre-fix b/c swap). Peek the blob: a convex v2 blob is
-        // declared up to date rather than rewritten, keeping the fix's re-cook — and its Git LFS
-        // lock footprint — to the blobs that are actually defective. Mirrors the runtime rule in
-        // TryGet_ScaleOneShape.
-        if (NOT InForceRebuild && SourceMatches
-            && Existing->Get_CookVersion() == mesh_shape_utils::PreWindingFixMeshShapeCookVersion)
-        {
-            const auto Restored = mesh_shape_utils::TryRestore_ShapeBlob(
-                Existing->Get_ShapeBlob(), MeshPackagePath);
-
-            if (ck::IsValid(Restored) && Restored->GetSubType() != JPH::EShapeSubType::Mesh)
-            { return ECk_Jolt_MeshShapeCookResult::UpToDate; }
-        }
     }
 
     auto Blob = TArray<uint8>{};

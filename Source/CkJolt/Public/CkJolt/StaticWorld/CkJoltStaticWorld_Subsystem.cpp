@@ -1633,11 +1633,15 @@ auto
     const auto CookVersionMatches = _CookedIndex->Get_CookVersion() == ck::jolt::WorldCookVersion_Current;
     const auto JoltVersionMatches = _CookedIndex->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
-    CK_ENSURE_IF_NOT(CookVersionMatches && JoltVersionMatches,
+    const auto VersionsMatch = CookVersionMatches && JoltVersionMatches;
+
+    CK_ENSURE_IF_NOT(VersionsMatch,
         TEXT("Cooked Jolt index for [{}] is STALE (cook version [{}] vs [{}], Jolt version [{}] vs [{}]) — "
              "the entire map's cooked Jolt data is SKIPPED. Re-cook the map."),
         MapPackageName, _CookedIndex->Get_CookVersion(), ck::jolt::WorldCookVersion_Current,
         _CookedIndex->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID))
+    { }
+    if (NOT VersionsMatch)
     {
         _CookedIndex = nullptr;
         return false;
@@ -1687,10 +1691,14 @@ auto
     const auto CookVersionMatches = CellAsset->Get_CookVersion() == ck::jolt::WorldCookVersion_Current;
     const auto JoltVersionMatches = CellAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
-    CK_ENSURE_IF_NOT(CookVersionMatches && JoltVersionMatches,
+    const auto VersionsMatch = CookVersionMatches && JoltVersionMatches;
+
+    CK_ENSURE_IF_NOT(VersionsMatch,
         TEXT("Cooked Jolt cell [{}] is STALE (cook version [{}] vs [{}], Jolt version [{}] vs [{}]) — skipped"),
         InCellIndex, CellAsset->Get_CookVersion(), ck::jolt::WorldCookVersion_Current,
         CellAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID))
+    { }
+    if (NOT VersionsMatch)
     { return nullptr; }
 
     const auto& Blob = CellAsset->Get_ShapeBlob();

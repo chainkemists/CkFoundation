@@ -255,9 +255,12 @@ namespace ck_jolt_bake_extraction
         -> JPH::Ref<JPH::Shape>
     {
         const auto Result = InSettings.Create();
+        const auto ShapeIsValid = Result.IsValid();
 
-        CK_ENSURE_IF_NOT(Result.IsValid(), TEXT("Jolt shape creation FAILED for [{}]: [{}]"),
+        CK_ENSURE_IF_NOT(ShapeIsValid, TEXT("Jolt shape creation FAILED for [{}]: [{}]"),
             InDebugName, FString{Result.GetError().c_str()})
+        { }
+        if (NOT ShapeIsValid)
         { return {}; }
 
         return Result.Get();
@@ -369,23 +372,59 @@ namespace ck_jolt_bake_extraction
 
         for (const auto& ConvexElem : AggGeom.ConvexElems)
         {
-            const auto& ElemTransform = ConvexElem.GetTransform();
+            const auto HasEnoughVertices = ConvexElem.VertexData.Num() >= 3;
+            CK_ENSURE_IF_NOT(HasEnoughVertices,
+                TEXT("Jolt convex collision for [{}] requires at least three vertices"), InDebugName)
+            { }
+            if (NOT HasEnoughVertices)
+            { return false; }
 
+            const auto& ElemTransform = ConvexElem.GetTransform();
+            auto Bounds = FBox{ForceInit};
+            for (const auto& Vertex : ConvexElem.VertexData)
+            {
+                const auto Position = ElemTransform.TransformPosition(Vertex) * InScale;
+                const auto PositionIsFinite = FMath::IsFinite(Position.X)
+                    && FMath::IsFinite(Position.Y) && FMath::IsFinite(Position.Z);
+                CK_ENSURE_IF_NOT(PositionIsFinite,
+                    TEXT("Jolt convex collision for [{}] contains a non-finite transformed vertex"), InDebugName)
+                { }
+                if (NOT PositionIsFinite)
+                { return false; }
+                Bounds += Position;
+            }
+
+            // Center in UE double precision before narrowing to Jolt floats. Quickhull's plane
+            // calculations otherwise lose precision on small hulls far from the mesh origin.
+            const auto Center = Bounds.GetCenter();
+            const auto CenterFitsFloatRange = FMath::Abs(Center.X) <= MAX_flt
+                && FMath::Abs(Center.Y) <= MAX_flt && FMath::Abs(Center.Z) <= MAX_flt;
+            CK_ENSURE_IF_NOT(CenterFitsFloatRange,
+                TEXT("Jolt convex collision for [{}] exceeds float coordinate range"), InDebugName)
+            { }
+            if (NOT CenterFitsFloatRange)
+            { return false; }
             auto Points = JPH::Array<JPH::Vec3>{};
             Points.reserve(ConvexElem.VertexData.Num());
             for (const auto& Vertex : ConvexElem.VertexData)
             {
-                // Baked into the points so non-uniform scale composes correctly with elem rotation.
-                const auto TransformedVertex = ElemTransform.TransformPosition(Vertex) * InScale;
-                Points.push_back(jolt::Conv(TransformedVertex));
+                const auto Position = ElemTransform.TransformPosition(Vertex) * InScale - Center;
+                const auto PointFitsFloatRange = FMath::Abs(Position.X) <= MAX_flt
+                    && FMath::Abs(Position.Y) <= MAX_flt && FMath::Abs(Position.Z) <= MAX_flt;
+                CK_ENSURE_IF_NOT(PointFitsFloatRange,
+                    TEXT("Jolt convex collision for [{}] exceeds float coordinate range"), InDebugName)
+                { }
+                if (NOT PointFitsFloatRange)
+                { return false; }
+                Points.push_back(jolt::Conv(Position));
             }
 
             const auto Settings = JPH::ConvexHullShapeSettings{Points};
             auto Shape = Create_ShapeFromSettings(Settings, InDebugName);
             if (ck::Is_NOT_Valid(Shape))
-            { continue; }
+            { return false; }
 
-            OutLeaves.Emplace(FLeafShape{Shape, FVector::ZeroVector, FQuat::Identity});
+            OutLeaves.Emplace(FLeafShape{Shape, Center, FQuat::Identity});
         }
 
         return true;

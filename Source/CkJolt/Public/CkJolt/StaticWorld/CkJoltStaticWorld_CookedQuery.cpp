@@ -156,6 +156,8 @@ namespace ck::jolt
         CK_ENSURE_IF_NOT(IndexIsCurrent,
             TEXT("Cooked Jolt index [{}] is stale, was baked under different bake-filter settings, or names "
                  "a different map"), IndexPath)
+        { }
+        if (NOT IndexIsCurrent)
         {
             _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::StaleIndex,
                 FString::Printf(TEXT("Cooked Jolt index [%s] is stale or names a different map"), *IndexPath));
@@ -189,6 +191,8 @@ namespace ck::jolt
                                             CellAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
 
             CK_ENSURE_IF_NOT(CellMatchesVersion, TEXT("Cooked Jolt query cell [{}] is stale"), CellRef.Get_CellId())
+            { }
+            if (NOT CellMatchesVersion)
             {
                 _Impl->_Result = Make_Result(ECk_Jolt_CookedWorldQueryLoadStatus::StaleCell,
                     FString::Printf(TEXT("Cooked Jolt cell [%d,%d] is stale"), CellRef.Get_CellId().X, CellRef.Get_CellId().Y));

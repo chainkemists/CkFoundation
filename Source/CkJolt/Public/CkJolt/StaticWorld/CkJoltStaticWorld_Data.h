@@ -22,13 +22,14 @@ namespace ck::jolt
     /// format actually moved.
 
     /// Per-mesh Jolt shape blobs under <CookedRoot>/Meshes. Staleness is ALSO guarded per-asset by the
-    /// source BodySetup GUID, so this only needs to move when the blob encoding itself changes.
+    /// source BodySetup GUID, so this also moves when extraction changes the collision represented by a blob.
     /// v2: current shape blob encoding.
     /// v3: tri-mesh winding corrected (the bake's extra b/c swap flipped Chaos's already-right-handed
     ///     stored triangles back to left-handed, so every v2 tri-mesh blob is INSIDE-OUT — one-sided
     ///     Jolt collision facing inward). v2 is unsafe for runtime tri-mesh collision, but shares the
     ///     v3 encoding and may be decoded read-only by editor diagnostics.
-    constexpr uint32 MeshShapeCookVersion_Current = 3;
+    /// v4: convex hulls are centered before float conversion; prior blobs may omit required hulls.
+    constexpr uint32 MeshShapeCookVersion_Current = 4;
 
     /// The per-map JoltIndex + JoltCell assets.
     /// v2: settings-driven bake filter (mobility policy + exclusions) changed the baked population.
@@ -42,7 +43,8 @@ namespace ck::jolt
     ///     components. Existing v4 cells can retain source-matching inverted blobs, so they must rebake.
     /// v6: cooked actor groups persist their canonical data-layer instance names, so a runtime geometry
     ///     query can enforce a GroundNav data-layer selector without depending on a live editor actor.
-    constexpr uint32 WorldCookVersion_Current = 6;
+    /// v7: centered convex extraction preserves required hulls; prior cells may hold partial collision.
+    constexpr uint32 WorldCookVersion_Current = 7;
 }
 
 // --------------------------------------------------------------------------------------------------------------------

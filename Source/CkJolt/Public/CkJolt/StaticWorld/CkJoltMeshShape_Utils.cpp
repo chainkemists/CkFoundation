@@ -181,14 +181,8 @@ namespace ck::jolt::bake::mesh_shape_utils
             return Memoize({});
         }
 
-        // A pre-winding-fix (v2) blob shares the current ENCODING — the version moved to record a
-        // semantic defect that only affects tri-meshes. Restoring it is safe, and whether it is
-        // actually stale is judged AFTER restore by shape subtype, so convex v2 blobs stay
-        // consumable instead of forcing an LFS-locked rewrite of every shape asset in the project.
-        const auto CookVersionIsCurrent =
-            ShapeAsset->Get_CookVersion() == ck::jolt::MeshShapeCookVersion_Current;
-        const auto VersionsMatch = (CookVersionIsCurrent
-                || ShapeAsset->Get_CookVersion() == PreWindingFixMeshShapeCookVersion)
+        const auto VersionsMatch =
+            ShapeAsset->Get_CookVersion() == ck::jolt::MeshShapeCookVersion_Current
             && ShapeAsset->Get_JoltVersionId() == static_cast<uint32>(JPH_VERSION_ID);
         const auto SourceMatches = ShapeAsset->Get_BodySetupGuid() == BodySetup->BodySetupGuid
             && ShapeAsset->Get_TraceFlag() == static_cast<uint8>(BodySetup->GetCollisionTraceFlag());
@@ -206,6 +200,8 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "so the mesh cook SKIPS it and will never refresh this blob. DELETE the cooked asset; "
                  "re-running the cook does NOT help. The shape is built at runtime meanwhile."),
             AssetPath, MeshPackagePath)
+        { }
+        if (NOT IsNotOrphaned)
         { return Memoize({}); }
 
         CK_ENSURE_IF_NOT(BlobIsUsable,
@@ -214,6 +210,8 @@ namespace ck::jolt::bake::mesh_shape_utils
                  "runtime. Re-run the Jolt mesh cook."),
             MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current,
             ShapeAsset->Get_JoltVersionId(), static_cast<uint32>(JPH_VERSION_ID), NOT SourceMatches)
+        { }
+        if (NOT BlobIsUsable)
         { return Memoize({}); }
 
         const auto RestoreResult = Restore_SingleShapeFromBlob(ShapeAsset->Get_ShapeBlob());
@@ -222,27 +220,11 @@ namespace ck::jolt::bake::mesh_shape_utils
         CK_ENSURE_IF_NOT(BlobRestored,
             TEXT("Cooked mesh shape for [{}] failed to restore: [{}] — falling back to a runtime build"),
             MeshPackagePath, RestoreResult._Failure)
+        { }
+        if (NOT BlobRestored)
         { return Memoize({}); }
 
         auto RestoredShape = RestoreResult._Shape;
-
-        // The one thing a v2 blob can be wrong about: its tri-mesh winding is inverted by
-        // construction (the bake's pre-fix b/c swap). Convex v2 content is untouched by the fix and
-        // passes through below. A Warning, not an ensure, on purpose: the runtime fallback build is
-        // CORRECT collision post-fix, so the only consequence is a skipped optimization — and every
-        // checkout hits this on every pre-fix blob until the cook re-runs, so an ensure here would
-        // red every map-loading automation test project-wide over a migration, not a defect. The
-        // winding AUDIT below stays the hard detector for genuinely inverted current content.
-        if (ck::IsValid(RestoredShape) && NOT CookVersionIsCurrent
-            && RestoredShape->GetSubType() == JPH::EShapeSubType::Mesh)
-        {
-            ck::jolt::Warning(
-                TEXT("Cooked Jolt shape for mesh [{}] predates the tri-mesh WINDING FIX (cook version [{}] "
-                     "vs [{}]) — its baked collision is inside-out by construction, so the blob is skipped "
-                     "and the shape is built (correctly) at runtime. Re-run the Jolt mesh cook to refresh it."),
-                MeshPackagePath, ShapeAsset->Get_CookVersion(), ck::jolt::MeshShapeCookVersion_Current);
-            return Memoize({});
-        }
 
         if (ck::IsValid(RestoredShape))
         {
