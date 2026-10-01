@@ -26,6 +26,7 @@ namespace ck_procedural_surface_motion
     // A ray that starts on the contact's own surface can report that surface at fraction 0, so a contact's free ray starts
     // this far off it.
     constexpr auto RoomRayStartOffset = 1.0;
+    constexpr auto PlantedFaceDistanceTolerance = 1.0;
     // A free ray that meets the surface the body stands on within this share of the clearance leaves a concave corner, a
     // legitimate adoption.
     constexpr auto RoomCornerClearances = 0.25;
@@ -59,6 +60,7 @@ namespace ck_procedural_surface_motion
         TOptional<FContact> Proposal;
         TOptional<FContact> Down;
         bool SupportHolds = false;
+        TOptional<ck::FProceduralSurfaceHit> ClimbAcquisition;
         FVector Travel = FVector::ZeroVector;
         FVector Candidate = FVector::ZeroVector;
         TOptional<FObstruction> Obstruction;
@@ -304,13 +306,39 @@ namespace ck_procedural_surface_motion
         return FContact{OnPlane, ck::EProceduralSurfaceContactSource::Feet};
     }
 
+    auto
+        Get_HasClimbPlant(
+            const FContact& InFace,
+            const FVector& InUp,
+            const TOptional<TArrayView<const ck::FProceduralSurfacePlantedContact>>& InPlantedContacts)
+        -> bool
+    {
+        if (NOT InPlantedContacts.IsSet() || Get_AngleDegrees(InFace.Hit.Get_Normal(), InUp) <= SameSurfaceMaxDegrees)
+        { return true; }
+
+        const auto Normal = InFace.Hit.Get_Normal().GetSafeNormal();
+        for (const auto& Plant : InPlantedContacts.GetValue())
+        {
+            if (Plant.Get_Position().ContainsNaN() || Plant.Get_Normal().ContainsNaN() || Plant.Get_Normal().IsNearlyZero())
+            { continue; }
+
+            const auto OnFace = FMath::Abs(FVector::DotProduct(Plant.Get_Position() - InFace.Hit.Get_Position(), Normal))
+                <= PlantedFaceDistanceTolerance;
+            if (OnFace && Get_AngleDegrees(Plant.Get_Normal(), Normal) <= SameSurfaceMaxDegrees)
+            { return true; }
+        }
+
+        return false;
+    }
+
     // Forward contact is used only within the body's clearance, so a distant wall cannot pull a creature off its floor.
     // Every candidate is a current query; held feet never masquerade as newly observed support normals. The forward ray and
     // the fan look where the body is going, so they are cast only while it moves; the down ray and the look-ahead hold the
     // surface it stands at, so a body stopped just past a crest keeps the top. A body kept off a wall on the last substep
     // and still steered into it follows the wall with one ray along its normal. A face the forward ray meets is a step when
     // its top lies within the max step height, and the step's top becomes the down contact; otherwise it is a wall, which
-    // Climb proposes when the body has room on it; a wall under Slide, or without room, obstructs the body, and the down ray
+    // Climb proposes when the body has room on it and any required face plant; a wall under Slide, or without room or a
+    // required plant, obstructs the body, and the down ray
     // is cast again from where the obstruction left it. The planted feet's contact stands in for the down contact when it
     // lies higher, and keeps the support holding over a down miss. It carries the down contact's normal when there is one,
     // so a crease the feet span still turns the body onto the facet under it, and the feet plane's normal over a miss, where
@@ -322,6 +350,7 @@ namespace ck_procedural_surface_motion
             const ck::FProceduralSurfaceMotionSettings& InSettings,
             ck::FProceduralSurfaceRayCast InRayCast,
             const TOptional<ck::FProceduralSurfaceFeetSupport>& InFeetSupport,
+            const TOptional<TArrayView<const ck::FProceduralSurfacePlantedContact>>& InPlantedContacts,
             const ck::FProceduralSurfaceMotionState& InState,
             FCk_Time InStep,
             const FVector& InOldPosition,
@@ -343,13 +372,22 @@ namespace ck_procedural_surface_motion
         const auto& FollowedNormal = InState.Get_ObstructionNormal();
         const auto FollowsWall = InMoving && InState.Get_Obstruction() == ck::EProceduralSurfaceObstruction::Wall
             && FVector::DotProduct(InForward, FollowedNormal) < 0.0;
+        auto FollowedFace = TOptional<FContact>{};
         if (FollowsWall)
         {
             const auto Wall = DoCast(InRayCast, Contacts.Candidate, Contacts.Candidate - FollowedNormal * Reach, ESource::None);
             if (Wall.IsSet())
             {
+                const auto WithinForwardReach = FVector::Dist(Contacts.Candidate, Wall->Hit.Get_Position()) <= Clearance;
+                const auto SameFace = Get_AngleDegrees(Wall->Hit.Get_Normal(), FollowedNormal) <= SameSurfaceMaxDegrees;
                 DoKeep_Standoff(InSettings, FObstruction{Wall->Hit.Get_Position(), Wall->Hit.Get_Normal().GetSafeNormal(),
                     InState.Get_ObstructionStandoff()}, InOldPosition, StepSeconds, Contacts);
+                if (InSettings.Get_WallPolicy() == ck::EProceduralSurfaceWallPolicy::Climb && InPlantedContacts.IsSet()
+                    && WithinForwardReach && SameFace && Get_HasClimbPlant(*Wall, InUp, InPlantedContacts))
+                {
+                    FollowedFace = Wall;
+                    FollowedFace->Source = ESource::Forward;
+                }
             }
         }
 
@@ -366,6 +404,8 @@ namespace ck_procedural_surface_motion
         if (InMoving)
         {
             auto Face = DoCast(InRayCast, Contacts.Candidate, Contacts.Candidate + InForward * Clearance, ESource::Forward);
+            if (NOT Face.IsSet() && FollowedFace.IsSet())
+            { Face = FollowedFace; }
             if (Face.IsSet())
             {
                 const auto SupportPoint = Contacts.Down.IsSet() ? Contacts.Down->Hit.Get_Position() : Contacts.Candidate - InUp * Clearance;
@@ -380,7 +420,8 @@ namespace ck_procedural_surface_motion
                 else
                 {
                     const auto Room = Get_Room(InSettings, InRayCast, *Face, InUp);
-                    const auto Climbs = InSettings.Get_WallPolicy() == ck::EProceduralSurfaceWallPolicy::Climb && Room >= Clearance;
+                    const auto Climbs = InSettings.Get_WallPolicy() == ck::EProceduralSurfaceWallPolicy::Climb && Room >= Clearance
+                        && Get_HasClimbPlant(*Face, InUp, InPlantedContacts);
                     if (Climbs)
                     { Contacts.Proposal = Face; }
                     else
@@ -463,7 +504,11 @@ namespace ck_procedural_surface_motion
         // A refused face obstructs only while the steering points into it, the condition a followed wall is kept by: the
         // fan meets an upright face from beyond it, facing along the travel, and the body is walking away from that one.
         const auto FanRoom = Get_Room(InSettings, InRayCast, *Fan, InUp);
-        if (FanRoom >= Clearance)
+        const auto HasFanPlant = InSettings.Get_WallPolicy() != ck::EProceduralSurfaceWallPolicy::Climb
+            || Get_HasClimbPlant(*Fan, InUp, InPlantedContacts);
+        if (FanRoom >= Clearance && NOT HasFanPlant)
+        { Contacts.ClimbAcquisition = Fan->Hit; }
+        if (FanRoom >= Clearance && HasFanPlant)
         { Contacts.Proposal = Fan; }
         else if (FVector::DotProduct(InForward, Fan->Hit.Get_Normal()) < 0.0)
         { DoKeep_Standoff(InSettings, MakeObstruction(InSettings, *Fan, FanRoom), InOldPosition, StepSeconds, Contacts); }
@@ -582,6 +627,7 @@ namespace ck_procedural_surface_motion
         -> void
     {
         InOutState.Set_Obstruction(InObstruction.IsSet() ? ck::EProceduralSurfaceObstruction::Wall : ck::EProceduralSurfaceObstruction::None);
+        InOutState.Set_ObstructionPoint(InObstruction.IsSet() ? InObstruction->Point : FVector::ZeroVector);
         InOutState.Set_ObstructionNormal(InObstruction.IsSet() ? InObstruction->Normal : FVector::ZeroVector);
         InOutState.Set_ObstructionStandoff(InObstruction.IsSet() ? static_cast<float>(InObstruction->Standoff) : 0.0f);
     }
@@ -601,7 +647,8 @@ namespace ck
             const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
             FProceduralSurfaceMotionState& InOutState,
-            float InVoluntaryScale)
+            float InVoluntaryScale,
+            const TOptional<TArrayView<const FProceduralSurfacePlantedContact>>& InPlantedContacts)
         -> void
     {
         const auto Step = InStep.Get_Seconds();
@@ -612,13 +659,18 @@ namespace ck
         // alternates floor and wall hits during a corner turn.
         const auto Up = InOutState.Get_SupportNormal();
         const auto Forward = ck_procedural_surface_motion::DoGet_Forward(InSettings, InOutState, InSteerDirection, OldRotation);
+        InOutState.Set_StepForward(Forward);
         const auto Travel = Forward * (InSpeed * InVoluntaryScale * Step);
         const auto Moving = InSpeed > 0.0f;
 
-        auto Contacts = ck_procedural_surface_motion::DoFind_Contacts(InSettings, InRayCast, InFeetSupport, InOutState, InStep, OldPosition,
+        auto Contacts = ck_procedural_surface_motion::DoFind_Contacts(InSettings, InRayCast, InFeetSupport, InPlantedContacts, InOutState, InStep, OldPosition,
             Travel, Up, Forward, Moving);
         const auto& Candidate = Contacts.Candidate;
         ck_procedural_surface_motion::DoSet_Obstruction(Contacts.Obstruction, InOutState);
+        // Steering away from the current support withdraws acquisition even when tangent transport still points at
+        // the crest. Only the accepted trial publishes this observation; it never changes contact trust or adoption.
+        InOutState.Set_ClimbAcquisition(FVector::DotProduct(InSteerDirection, Up) <= UE_DOUBLE_SMALL_NUMBER
+            ? Contacts.ClimbAcquisition : TOptional<FProceduralSurfaceHit>{});
         if (Contacts.Proposal.IsSet())
         {
             const auto& Proposal = *Contacts.Proposal;
@@ -723,7 +775,8 @@ namespace ck
             TArrayView<const FProceduralSurfaceReachPaceAnchor> InAnchors,
             const TOptional<FTransform>& InPoseOffset,
             FTransform& InOutBody,
-            FProceduralSurfaceMotionState& InOutState)
+            FProceduralSurfaceMotionState& InOutState,
+            const TOptional<TArrayView<const FProceduralSurfacePlantedContact>>& InPlantedContacts)
         -> FProceduralSurfaceReachPaceOutcome
     {
         auto Outcome = FProceduralSurfaceReachPaceOutcome{};
@@ -734,7 +787,7 @@ namespace ck
             OutBody = StartBody;
             OutState = StartState;
             StepProceduralSurfaceMotion(InSettings, InSteerDirection, InSpeed, InStep, InRayCast, InFeetSupport,
-                OutBody, OutState, InScale);
+                OutBody, OutState, InScale, InPlantedContacts);
             Outcome.Set_Trials(Outcome.Get_Trials() + 1);
         };
 

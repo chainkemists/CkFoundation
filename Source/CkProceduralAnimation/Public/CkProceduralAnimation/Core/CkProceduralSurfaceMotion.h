@@ -27,7 +27,8 @@ namespace ck
     };
 
     // What the body does with a face the forward ray meets that is not a step: Climb makes it the next support once
-    // confirmed; Slide never makes it support and takes the travel into it away.
+    // confirmed and, for a gait-driven body, a trusted foot has planted on it; Slide never makes it support and takes the
+    // travel into it away.
     enum class EProceduralSurfaceWallPolicy : uint8
     {
         Climb,
@@ -105,6 +106,8 @@ namespace ck
     private:
         FVector _SupportNormal = FVector::UpVector;
         FVector _TravelTangent = FVector::ForwardVector;
+        // Effective forward used by the most recent Core step, including a stopped or paced accepted trial.
+        FVector _StepForward = FVector::ZeroVector;
         FVector _Velocity = FVector::ZeroVector;
         FCk_Time _MissingContact = FCk_Time::ZeroSecond();
         bool _Grounded = false;
@@ -118,12 +121,17 @@ namespace ck
         // The last substep's: Wall with the face's normal and the distance the body is kept off it while it was kept off a
         // face, None and zero otherwise. A body steered into the wall follows it on the next substep.
         EProceduralSurfaceObstruction _Obstruction = EProceduralSurfaceObstruction::None;
+        FVector _ObstructionPoint = FVector::ZeroVector;
         FVector _ObstructionNormal = FVector::ZeroVector;
         float _ObstructionStandoff = 0.0f;
+        // A room-valid fan contact withheld only for a missing planted foot. This substep's observation guides gait
+        // acquisition; it is neither accepted support nor an obstruction, and is withdrawn on the next miss or stop.
+        TOptional<FProceduralSurfaceHit> _ClimbAcquisition;
 
     public:
         CK_PROPERTY(_SupportNormal);
         CK_PROPERTY(_TravelTangent);
+        CK_PROPERTY(_StepForward);
         CK_PROPERTY(_Velocity);
         CK_PROPERTY(_MissingContact);
         CK_PROPERTY(_Grounded);
@@ -133,8 +141,10 @@ namespace ck
         CK_PROPERTY(_CandidatePoint);
         CK_PROPERTY(_CandidateSeen);
         CK_PROPERTY(_Obstruction);
+        CK_PROPERTY(_ObstructionPoint);
         CK_PROPERTY(_ObstructionNormal);
         CK_PROPERTY(_ObstructionStandoff);
+        CK_PROPERTY(_ClimbAcquisition);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
@@ -160,6 +170,23 @@ namespace ck
         CK_PROPERTY(_Origin);
         CK_PROPERTY(_FootprintMin);
         CK_PROPERTY(_FootprintMax);
+    };
+
+    // A trusted planted contact from a current, validated gait stance. Swing targets and guessed plants never qualify.
+    struct CKPROCEDURALANIMATION_API FProceduralSurfacePlantedContact
+    {
+        CK_GENERATED_BODY(FProceduralSurfacePlantedContact);
+
+    private:
+        FVector _Position = FVector::ZeroVector;
+        FVector _Normal = FVector::ZeroVector;
+
+    public:
+        CK_PROPERTY_GET(_Position);
+        CK_PROPERTY_GET(_Normal);
+
+    public:
+        CK_DEFINE_CONSTRUCTORS(FProceduralSurfacePlantedContact, _Position, _Normal);
     };
 
     // An already validated, trusted planted foot from the previous gait solve. HipLocal belongs to the simulation body;
@@ -269,6 +296,10 @@ namespace ck
     // It does not scale contact queries, obstruction separation, real-time confirmation/grace, or gravity. InSpeed still
     // describes steering intent for forward and fan probes even at scale zero. The caller keeps the settings valid, InStep
     // positive, the body finite and the scale finite and within [0, 1].
+    // An unset InPlantedContacts keeps standalone ray-driven climbing. A supplied view requires a finite planted contact
+    // on a newly proposed face before Climb can adopt it; an empty view holds the current support and wall standoff.
+    // Contacts must come from a validated current gait stance, never swing targets or guessed plants. The view is borrowed
+    // only for this call. Continuing on an already accepted face does not require another plant.
     CKPROCEDURALANIMATION_API auto
         StepProceduralSurfaceMotion(
             const FProceduralSurfaceMotionSettings& InSettings,
@@ -279,7 +310,8 @@ namespace ck
             const TOptional<FProceduralSurfaceFeetSupport>& InFeetSupport,
             FTransform& InOutBody,
             FProceduralSurfaceMotionState& InOutState,
-            float InVoluntaryScale = 1.0f)
+            float InVoluntaryScale = 1.0f,
+            const TOptional<TArrayView<const FProceduralSurfacePlantedContact>>& InPlantedContacts = {})
         -> void;
 
     // Replays the same substep from its original body and support state at bounded voluntary scales. Only a simulated
@@ -296,7 +328,8 @@ namespace ck
             TArrayView<const FProceduralSurfaceReachPaceAnchor> InAnchors,
             const TOptional<FTransform>& InPoseOffset,
             FTransform& InOutBody,
-            FProceduralSurfaceMotionState& InOutState)
+            FProceduralSurfaceMotionState& InOutState,
+            const TOptional<TArrayView<const FProceduralSurfacePlantedContact>>& InPlantedContacts = {})
         -> FProceduralSurfaceReachPaceOutcome;
 }
 

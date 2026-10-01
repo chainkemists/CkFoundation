@@ -100,6 +100,12 @@ namespace ck_procedural_gait
 
     // --------------------------------------------------------------------------------------------------------------------
 
+    struct FObservedBlockedFace
+    {
+        FVector Point = FVector::ZeroVector;
+        FVector Normal = FVector::ZeroVector;
+    };
+
     struct FFootholdQuery
     {
         UWorld* World = nullptr;
@@ -113,6 +119,7 @@ namespace ck_procedural_gait
         bool Planted = false;
         // The body's velocity in the support plane; zero at rest and at setup.
         FVector Travel = FVector::ZeroVector;
+        TOptional<FObservedBlockedFace> BlockedFace;
         float Reach = 0.0f;
         float RestDrop = 0.0f;
         const FCk_ProceduralGait_Probe* Probe = nullptr;
@@ -601,9 +608,25 @@ namespace ck_procedural_gait
         DoRecord_Candidate(Ideal, Candidates, InOutDebugLeg);
         const auto IdealIndex = Candidates.Num() - 1;
 
+        const auto MatchesBlockedFace = [&InQuery](const FFootholdCandidate& InCandidate) -> bool
+        {
+            if (NOT InQuery.BlockedFace.IsSet() || InCandidate.Verdict != ck::EProceduralFootholdVerdict::Usable)
+            { return false; }
+            const auto& Face = InQuery.BlockedFace.GetValue();
+            const auto Normal = Face.Normal.GetSafeNormal();
+            constexpr auto PlaneTolerance = 1.0f;
+            constexpr auto NormalAngleDegrees = 15.0f;
+            return FMath::Abs(FVector::DotProduct(InCandidate.Position - Face.Point, Normal)) <= PlaneTolerance
+                && FVector::DotProduct(InCandidate.Normal.GetSafeNormal(), Normal)
+                    >= FMath::Cos(FMath::DegreesToRadians(NormalAngleDegrees));
+        };
+
         // A swinging leg keeps the hold it swings to while the hold stays usable: switching to the ideal in flight would move
         // a foot already on its way, and at the freeze the swing would take the new target for the ground it validated.
         if (HoldIsUsable && NOT InQuery.Planted)
+        { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
+        if (HoldIsUsable && InQuery.Planted && Held.Cast == ck::EProceduralFootholdCast::Face
+            && MatchesBlockedFace(Held))
         { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
 
         const auto KeepRadius = FootholdTuning.Get_KeepRadius() > 0.0f
@@ -622,8 +645,9 @@ namespace ck_procedural_gait
             InQuery.Basis.Inverse().RotateVector(Ideal.Normal), FootholdTuning.Get_MaxAngle());
         const auto FaceChangesSurface = AdmittedIdealFace
             && (NOT HoldIsUsable || ck::FProceduralGaitSolver::Get_IsFaceNormal(Ideal.Normal, Held.Normal));
-        const auto HoldNeedsSearch = IdealOccluded || FaceChangesSurface;
-        if (IdealIsUsable && NOT IdealOnAFace)
+        const auto AcquireBlockedFace = InQuery.Planted && InQuery.BlockedFace.IsSet();
+        const auto HoldNeedsSearch = IdealOccluded || FaceChangesSurface || AcquireBlockedFace;
+        if (IdealIsUsable && NOT IdealOnAFace && NOT AcquireBlockedFace)
         {
             if (HoldAgrees)
             { return DoFinish(Held, HeldIndex, Ideal.Verdict, InOutDebugLeg); }
@@ -659,6 +683,42 @@ namespace ck_procedural_gait
         const auto SearchRadius = FootholdTuning.Get_SearchRadius() > 0.0f
             ? FootholdTuning.Get_SearchRadius()
             : DerivedSearchRadiusShareOfReach * InQuery.Reach;
+
+        if (AcquireBlockedFace)
+        {
+            const auto& Face = InQuery.BlockedFace.GetValue();
+            const auto Normal = Face.Normal.GetSafeNormal();
+            // Project this leg's ideal to the observed plane, then re-cast at its own height.
+            const auto Projected = InQuery.Ideal - Normal * FVector::DotProduct(InQuery.Ideal - Face.Point, Normal);
+            const auto SeedStart = Projected + Normal * FaceHoldProbeHalfSpan;
+            const auto SeedEnd = Projected - Normal * FaceHoldProbeHalfSpan;
+            const auto Hit = DoCast_Segment(InQuery, SeedStart, SeedEnd, InOutRayCount);
+            const auto NormalDot = Hit.IsSet() ? FVector::DotProduct(Hit->Get_Normal().GetSafeNormal(), Normal) : -1.0;
+            auto ProjectedUsableFace = false;
+            if (Hit.IsSet() && NormalDot > 0.95f)
+            {
+                const auto Candidate = DoProbe_Face(InQuery, Hit, Projected, ck::EProceduralFootholdSource::Front,
+                    EFootholdStage::Search, InOutRayCount);
+                DoRecord_Candidate(Candidate, Candidates, InOutDebugLeg);
+                ProjectedUsableFace = MatchesBlockedFace(Candidate);
+            }
+            if (NOT ProjectedUsableFace)
+            {
+                // The leg-height ray can meet the floor edge; retry once at this frame's observed face point.
+                const auto FaceStart = Face.Point + Normal * FaceHoldProbeHalfSpan;
+                const auto FaceEnd = Face.Point - Normal * FaceHoldProbeHalfSpan;
+                const auto FaceHit = DoCast_Segment(InQuery, FaceStart, FaceEnd, InOutRayCount);
+                const auto FaceNormalDot = FaceHit.IsSet()
+                    ? FVector::DotProduct(FaceHit->Get_Normal().GetSafeNormal(), Normal) : -1.0;
+                if (FaceHit.IsSet() && FaceNormalDot > 0.95f)
+                {
+                    const auto Candidate = DoProbe_Face(InQuery, FaceHit, Face.Point, ck::EProceduralFootholdSource::Front,
+                        EFootholdStage::Search, InOutRayCount);
+                    if (MatchesBlockedFace(Candidate))
+                    { DoRecord_Candidate(Candidate, Candidates, InOutDebugLeg); }
+                }
+            }
+        }
 
         if (Ideal.Verdict == ck::EProceduralFootholdVerdict::Occluded && Ideal.Occluder.IsSet())
         {
@@ -795,6 +855,100 @@ namespace ck_procedural_gait
             }
         }
 
+        // A narrow usable strip can fall between the ring points while their nearby hits are reserved. Only after the
+        // ordinary search fails, sample the edge of the first blocking reservation around at most two down-ray hits.
+        // These are new queries, not adjusted plants: every actual hit still passes the ordinary admission checks.
+        if (SearchPick == INDEX_NONE && FMath::IsFinite(InQuery.FootContactRadius) && InQuery.FootContactRadius > 0.0f)
+        {
+            constexpr auto MaxReservedCandidates = 2;
+            constexpr auto ReservationBoundaryMargin = 0.1;
+            constexpr auto ReservationBoundaryAngleDegrees = 22.5;
+            const auto OrdinaryCandidateCount = Candidates.Num();
+            auto ReservedCandidatesProbed = 0;
+            for (auto CandidateIndex = FirstPickIndex; CandidateIndex < OrdinaryCandidateCount
+                && ReservedCandidatesProbed < MaxReservedCandidates; ++CandidateIndex)
+            {
+                const auto Candidate = Candidates[CandidateIndex];
+                if (Candidate.Verdict != ck::EProceduralFootholdVerdict::Reserved
+                    || Candidate.Cast != ck::EProceduralFootholdCast::Down
+                    || Candidate.Position.ContainsNaN() || Candidate.Normal.ContainsNaN() || Candidate.Normal.IsNearlyZero())
+                { continue; }
+
+                for (const auto& Reservation : InQuery.Reservations)
+                {
+                    if (NOT FMath::IsFinite(Reservation.Get_Radius()) || Reservation.Get_Radius() <= 0.0f
+                        || Reservation.Get_LegIndex() < 0 || Reservation.Get_LegIndex() == InQuery.LegIndex
+                        || Reservation.Get_Position().ContainsNaN())
+                    { continue; }
+
+                    const auto Radius = static_cast<double>(InQuery.FootContactRadius) + Reservation.Get_Radius();
+                    if (FVector::DistSquared(Candidate.Position, Reservation.Get_Position()) >= Radius * Radius)
+                    { continue; }
+
+                    const auto Normal = Candidate.Normal.GetSafeNormal();
+                    const auto PlaneDistance = FVector::DotProduct(Reservation.Get_Position() - Candidate.Position, Normal);
+                    const auto Center = Reservation.Get_Position() - Normal * PlaneDistance;
+                    auto Direction = (Candidate.Position - Center).GetSafeNormal();
+                    if (Direction.IsNearlyZero())
+                    { Direction = FVector::VectorPlaneProject(InQuery.Outboard, Normal).GetSafeNormal(); }
+                    if (Normal.IsNearlyZero() || Direction.IsNearlyZero())
+                    { break; }
+
+                    const auto BoundaryRadius = FMath::Sqrt(FMath::Max(0.0, Radius * Radius - PlaneDistance * PlaneDistance))
+                        + ReservationBoundaryMargin;
+                    ++ReservedCandidatesProbed;
+                    for (const auto Angle : {-ReservationBoundaryAngleDegrees, ReservationBoundaryAngleDegrees})
+                    {
+                        const auto Point = Center + Direction.RotateAngleAxis(Angle, Normal) * BoundaryRadius;
+                        DoRecord_Candidate(DoProbe_Down(InQuery, Point, ck::EProceduralFootholdSource::Ring,
+                            EGroundProbeAttempts::RetryFromInsideSolid, EFootholdReprobe::None, EFootholdStage::Search,
+                            InOutRayCount, nullptr), Candidates, InOutDebugLeg);
+                    }
+                    break;
+                }
+            }
+            SearchPick = Get_SearchPick();
+        }
+
+        // Rank all validated candidates on the freshly observed plane, including an ordinary face ideal or search hit.
+        auto PromotedFace = TOptional<FFootholdCandidate>{};
+        if (AcquireBlockedFace)
+        {
+            auto Matching = TArray<ck::FProceduralFootholdCandidate, TInlineAllocator<24>>{};
+            auto MatchingIndexes = TArray<int32, TInlineAllocator<24>>{};
+            auto MatchingCandidates = TArray<FFootholdCandidate, TInlineAllocator<24>>{};
+            for (auto Index = FirstPickIndex; Index < Candidates.Num(); ++Index)
+            {
+                const auto& Candidate = Candidates[Index];
+                if (NOT MatchesBlockedFace(Candidate)) { continue; }
+                auto Admitted = Candidate;
+                // A wall hold must re-probe along its normal, and every promoted hit must pass face reach and search gates.
+                Admitted.Cast = ck::EProceduralFootholdCast::Face;
+                if (Index == IdealIndex) { Admitted.Source = ck::EProceduralFootholdSource::Front; }
+                if (Index == HeldIndex || Index == IdealIndex)
+                { DoValidate(InQuery, Admitted, EFootholdStage::Search, InOutRayCount); }
+                else if (FVector::Dist(Admitted.Position, InQuery.Hip)
+                    > InQuery.Step->Get_TargetReachFraction() * InQuery.Reach)
+                { continue; }
+                if (Admitted.Verdict != ck::EProceduralFootholdVerdict::Usable) { continue; }
+                Matching.Add(ck::FProceduralFootholdCandidate{InverseBasis.RotateVector(Admitted.Position),
+                    InverseBasis.RotateVector(Admitted.Normal), Admitted.Source, Admitted.Verdict});
+                MatchingIndexes.Add(Index);
+                MatchingCandidates.Add(Admitted);
+            }
+            if (NOT Matching.IsEmpty())
+            {
+                const auto FacePick = ck::SelectProceduralFoothold(TArrayView<const ck::FProceduralFootholdCandidate>{Matching},
+                    InverseBasis.RotateVector(CostOrigin), InverseBasis.RotateVector(InQuery.Plant), InQuery.Planted,
+                    InQuery.Reach, Settings);
+                if (FacePick != INDEX_NONE)
+                {
+                    SearchPick = MatchingIndexes[FacePick] - FirstPickIndex;
+                    PromotedFace = MatchingCandidates[FacePick];
+                }
+            }
+        }
+
         if (SearchPick == INDEX_NONE)
         {
             InOutState.Set_SearchedSolve(InOutBudget.Solve);
@@ -803,6 +957,19 @@ namespace ck_procedural_gait
         }
 
         const auto Chosen = FirstPickIndex + SearchPick;
+        if (PromotedFace.IsSet())
+        {
+            const auto& Face = PromotedFace.GetValue();
+            InOutState = ck::FProceduralFootholdState{}
+                .Set_Position(Face.Position)
+                .Set_Normal(Face.Normal)
+                .Set_Source(Face.Source)
+                .Set_Hold(ck::EProceduralFootholdHold::Held)
+                .Set_Cast(Face.Cast);
+            if (ck::IsValid(InOutDebugLeg, ck::IsValid_Policy_NullptrOnly{}))
+            { InOutDebugLeg->Get_Footholds()[Chosen].Set_Source(Face.Source); }
+            return DoFinish(Face, Chosen, Ideal.Verdict, InOutDebugLeg);
+        }
         // The hold stays the target; a search that found nothing better backs off like one that found nothing.
         if (Chosen == HeldIndex)
         {
@@ -1372,15 +1539,46 @@ namespace ck
         InGaitComp._Solver.TransformState(InverseBasis * InGaitComp._Basis);
 
         const FFragment_SurfaceMotion_Support* PaceSupport = nullptr;
+        TOptional<ck_procedural_gait::FObservedBlockedFace> BlockedFace;
         if (Dt > 0.0 && InHandle.Has<FFragment_SurfaceMotion>() && InHandle.Has<FFragment_SurfaceMotion_Support>()
             && UCk_Utils_SurfaceMotion_UE::Get_Status(UCk_Utils_SurfaceMotion_UE::Cast(InHandle)) == ECk_ProceduralAnimation_Status::Ready)
         {
             const auto& Support = InHandle.Get<FFragment_SurfaceMotion_Support>();
+            const auto& Motion = InHandle.Get<FFragment_SurfaceMotion>();
             if (Support._EvaluatedFrame == GFrameCounter && Support._EvaluatedBody.Equals(Body, 1.0e-3)
                 && Support._State.Get_Grounded() && Support._AttemptedStanceSpeed > 0.0f
                 && (Support._ReachPaceState == ECk_SurfaceMotion_ReachPaceState::Pacing
                     || Support._ReachPaceState == ECk_SurfaceMotion_ReachPaceState::Blocked))
             { PaceSupport = &Support; }
+            if (InHandle.Has<FFragment_SurfaceMotion_Params>()
+                && InHandle.Get<FFragment_SurfaceMotion_Params>().Get_Contact().Get_WallPolicy() == ECk_SurfaceMotion_WallPolicy::Climb
+                && Support._EvaluatedFrame == GFrameCounter && Support._EvaluatedBody.Equals(Body, 1.0e-3)
+                && Motion._Speed > 0.0f && Support._ReachPaceState != ECk_SurfaceMotion_ReachPaceState::PhysicalOverride)
+            {
+                const auto& StepForward = Support._State.Get_StepForward();
+                if (Support._State.Get_Grounded() && Support._State.Get_Obstruction() == ck::EProceduralSurfaceObstruction::Wall
+                    && NOT Support._State.Get_ObstructionPoint().ContainsNaN()
+                    && NOT Support._State.Get_ObstructionNormal().ContainsNaN()
+                    && NOT Support._State.Get_ObstructionNormal().IsNearlyZero()
+                    && NOT StepForward.ContainsNaN() && NOT StepForward.IsNearlyZero()
+                    && FVector::DotProduct(StepForward, Support._State.Get_ObstructionNormal()) < 0.0f)
+                {
+                    BlockedFace = ck_procedural_gait::FObservedBlockedFace{
+                        Support._State.Get_ObstructionPoint(), Support._State.Get_ObstructionNormal()};
+                }
+                else if (Support._State.Get_ClimbAcquisition().IsSet())
+                {
+                    // A convex crest can be visible before a foot reaches its top, without opposing steering or
+                    // supporting the body. Treat that current observation only as a budgeted search objective.
+                    const auto& Contact = Support._State.Get_ClimbAcquisition().GetValue();
+                    if (Contact.Get_Hit() && FMath::IsFinite(Contact.Get_Fraction()) && Contact.Get_Fraction() > 0.0f
+                        && NOT Contact.Get_Position().ContainsNaN() && NOT Contact.Get_Normal().ContainsNaN()
+                        && NOT Contact.Get_Normal().IsNearlyZero())
+                    {
+                        BlockedFace = ck_procedural_gait::FObservedBlockedFace{Contact.Get_Position(), Contact.Get_Normal()};
+                    }
+                }
+            }
         }
 
         const auto LegCount = InGaitComp._Legs.Num();
@@ -1536,6 +1734,7 @@ namespace ck
                 .Plant = LegComp._Foot.Get_Position(),
                 .Planted = Planted,
                 .Travel = FVector::VectorPlaneProject(Velocity, Up),
+                .BlockedFace = BlockedFace,
                 .Reach = Reach,
                 .RestDrop = ck_procedural_gait::Get_RestDrop(Placement),
                 .Probe = &Probe,

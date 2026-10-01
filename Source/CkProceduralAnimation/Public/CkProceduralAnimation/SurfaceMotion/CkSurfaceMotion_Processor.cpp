@@ -193,7 +193,9 @@ namespace ck
         // The gait writes this after the previous physics pass. Changes since that solve invalidate the snapshot rather
         // than making SurfaceMotion pace against a stale body transform or leg plant.
         auto ReachAnchors = TArray<FProceduralGaitReachAnchor, TInlineAllocator<64>>{};
-        if (InHandle.Has<FFragment_ProceduralGait>()
+        auto PlantedContacts = TArray<FProceduralSurfacePlantedContact, TInlineAllocator<64>>{};
+        const auto HasGait = InHandle.Has<FFragment_ProceduralGait>();
+        if (HasGait
             && UCk_Utils_ProceduralGait_UE::Get_Status(UCk_Utils_ProceduralGait_UE::Cast(InHandle)) == ECk_ProceduralAnimation_Status::Ready)
         {
             const auto& Gait = InHandle.Get<FFragment_ProceduralGait>();
@@ -213,7 +215,10 @@ namespace ck
                     if (Foot.Get_Phase() == ECk_ProceduralLeg_FootPhase::Planted
                         && Foot.Get_Contact() == ECk_ProceduralLeg_FootContact::Trusted
                         && Foot.Get_Position().Equals(Anchor.Get_FootWorld(), 1.0e-3))
-                    { ReachAnchors.Add(Anchor); }
+                    {
+                        ReachAnchors.Add(Anchor);
+                        PlantedContacts.Emplace(Foot.Get_Position(), Foot.Get_Normal());
+                    }
                 }
             }
         }
@@ -232,12 +237,16 @@ namespace ck
                 Anchor.Get_FootWorld(), Anchor.Get_HipLocal(), Anchor.Get_Reach()});
         }
         const auto CorePoseOffset = HasPose ? TOptional<FTransform>{PoseOffset} : TOptional<FTransform>{};
+        const auto PlantedContactView = TArrayView<const FProceduralSurfacePlantedContact>{PlantedContacts};
+        const auto CorePlantedContacts = HasGait
+            ? TOptional<TArrayView<const FProceduralSurfacePlantedContact>>{PlantedContactView}
+            : TOptional<TArrayView<const FProceduralSurfacePlantedContact>>{};
         auto AttemptedStanceDistance = 0.0;
         for (auto Iteration = 0; Iteration < Substeps; ++Iteration)
         {
             const auto Outcome = StepProceduralSurfaceMotionPaced(Settings, InMotionComp._Direction, InMotionComp._Speed,
                 Step, RayCast, FeetSupport, TArrayView<const FProceduralSurfaceReachPaceAnchor>{CoreAnchors},
-                CorePoseOffset, Body, InSupportComp._State);
+                CorePoseOffset, Body, InSupportComp._State, CorePlantedContacts);
             // Earlier rejected trials are not unioned with the final accepted-body stamp. Only the final substep can
             // request release, and any physical override in this frame withdraws that request below.
             if (Iteration == Substeps - 1 && Outcome.Get_RejectedFullBody().IsSet())

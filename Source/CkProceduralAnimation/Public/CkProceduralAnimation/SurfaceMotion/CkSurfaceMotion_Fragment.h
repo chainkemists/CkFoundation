@@ -105,10 +105,14 @@ namespace ck
         TArray<FProceduralSurfaceReachPaceFeedback, TInlineAllocator<8>> _ReachPaceFeedback;
 
     public:
+        CK_PROPERTY_GET(_EvaluatedFrame);
+        CK_PROPERTY_GET(_EvaluatedBody);
         CK_PROPERTY_GET(_ReachPaceScale);
         CK_PROPERTY_GET(_ReachPaceState);
         CK_PROPERTY_GET(_ReachPaceTrials);
         CK_PROPERTY_GET(_ReachPaceRays);
+        CK_PROPERTY_GET(_AttemptedStanceSpeed);
+        CK_PROPERTY_GET(_ReachPaceFeedback);
     };
 
     // --------------------------------------------------------------------------------------------------------------------
