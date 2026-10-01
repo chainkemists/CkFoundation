@@ -330,6 +330,19 @@ auto
 {
     if (NOT UCk_Utils_Usf_Outline_Settings_UE::TryValidate_ThicknessSettings(InSettings))
     { return false; }
+    for (const auto& Active : _ActivePresets)
+    {
+        const auto Slot = Active.Value.Value - _StencilMin;
+        const auto Scale = _SlotThicknessScales[Slot];
+        const auto ThicknessIsRepresentable =
+            FMath::IsFinite(InSettings.Get_WorldSpaceThickness() * Scale) &&
+            FMath::IsFinite(InSettings.Get_ScreenSpaceThickness() * Scale);
+        CK_ENSURE_IF_NOT(ThicknessIsRepresentable,
+            TEXT("Outline thickness settings overflow active stencil [{}]; settings not assigned"),
+            Active.Value.Value) {}
+        if (NOT ThicknessIsRepresentable)
+        { return false; }
+    }
     _ThicknessSettings = InSettings;
     _ThicknessSettingsAreValid = true;
     DoUpload_Lut();
@@ -345,6 +358,25 @@ auto
     if (ck::Is_NOT_Valid(InPreset))
     { return 0; }
 
+    // A non-finite scale would poison the renderer's MaxThickness and blank every outline in the world.
+    const auto ThicknessScaleIsValid = FMath::IsFinite(InPreset->_ThicknessScale) && InPreset->_ThicknessScale >= 0.0f;
+    CK_ENSURE_IF_NOT(ThicknessScaleIsValid,
+        TEXT("Outline preset [{}]: thickness scale [{}] must be finite and non-negative; outline not assigned"),
+        GetNameSafe(InPreset), InPreset->_ThicknessScale) {}
+    if (NOT ThicknessScaleIsValid)
+    { return 0; }
+    if (_ThicknessSettingsAreValid)
+    {
+        const auto ThicknessIsRepresentable =
+            FMath::IsFinite(_ThicknessSettings.Get_WorldSpaceThickness() * InPreset->_ThicknessScale) &&
+            FMath::IsFinite(_ThicknessSettings.Get_ScreenSpaceThickness() * InPreset->_ThicknessScale);
+        CK_ENSURE_IF_NOT(ThicknessIsRepresentable,
+            TEXT("Outline preset [{}]: thickness scale [{}] overflows authored width; outline not assigned"),
+            GetNameSafe(InPreset), InPreset->_ThicknessScale) {}
+        if (NOT ThicknessIsRepresentable)
+        { return 0; }
+    }
+
     // External renderers allocate directly. Validate the view/configuration before publishing any slot.
     if (NOT DoEnsure_ViewEffect()) { return 0; }
 
@@ -355,13 +387,6 @@ auto
         ++Found->RefCount;
         return Found->Value;
     }
-
-    // A non-finite scale would poison the renderer's MaxThickness and blank every outline in the world.
-    const auto ThicknessScaleIsValid = FMath::IsFinite(InPreset->_ThicknessScale) && InPreset->_ThicknessScale >= 0.0f;
-    CK_ENSURE_IF_NOT(ThicknessScaleIsValid,
-        TEXT("Outline preset [{}]: thickness scale [{}] must be finite and non-negative; outline not assigned"),
-        GetNameSafe(InPreset), InPreset->_ThicknessScale)
-    { return 0; }
 
     TSet<uint8> UsedStencilValues;
     for (const auto& Active : _ActivePresets)
