@@ -2,6 +2,8 @@
 
 #include "CkCamera/Camera/CkCamera_Fragment_Data.h"
 
+#include "CkCore/Macros/CkMacros.h"
+
 #include <Camera/CameraComponent.h>
 
 #include "CkCamera_Component.generated.h"
@@ -17,6 +19,9 @@ UCLASS(ClassGroup = (Ck), meta = (BlueprintSpawnableComponent))
 class CKCAMERA_API UCk_CameraComponent : public UCameraComponent
 {
     GENERATED_BODY()
+
+public:
+    CK_GENERATED_BODY(UCk_CameraComponent);
 
 public:
     virtual void
@@ -35,6 +40,15 @@ public:
 private:
     UPROPERTY(Transient)
     FCk_Handle_Camera _DirectorEntity;
+
+private:
+    // FollowView: GetCameraView also moves this component onto the composed view, so attached Unreal children follow
+    // the rendered view. Untouched (default) leaves the component where the actor placed it.
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ck|Camera", meta = (AllowPrivateAccess = true))
+    ECk_Camera_OutputComponentPlacement _Placement = ECk_Camera_OutputComponentPlacement::Untouched;
+
+public:
+    CK_PROPERTY_GET(_Placement);
 };
 
 // --------------------------------------------------------------------------------------------------------------------

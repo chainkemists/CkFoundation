@@ -14,6 +14,10 @@ void
     if (ck::IsValid(_DirectorEntity))
     {
         DesiredView = UCk_Utils_Camera_UE::Get_ViewInfo(_DirectorEntity);
+
+        if (_Placement == ECk_Camera_OutputComponentPlacement::FollowView)
+        { SetWorldLocationAndRotation(DesiredView.Location, DesiredView.Rotation); }
+
         return;
     }
 

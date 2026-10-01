@@ -59,6 +59,19 @@ enum class ECk_Camera_StackingBehavior : uint8
     OneOnly
 };
 
+// Whether UCk_CameraComponent moves ITSELF to the composed view when it delivers it (GetCameraView).
+UENUM(BlueprintType)
+enum class ECk_Camera_OutputComponentPlacement : uint8
+{
+    // The component's own transform is left alone; only the delivered FMinimalViewInfo matters.
+    Untouched,
+    // The component is moved to the composed view's location and rotation before the view is delivered, so Unreal
+    // children attached to it (first-person meshes, audio, VFX) render where the view renders.
+    FollowView
+};
+
+CK_DEFINE_CUSTOM_FORMATTER_ENUM(ECk_Camera_OutputComponentPlacement);
+
 // --------------------------------------------------------------------------------------------------------------------
 // CAMERA TARGET
 // --------------------------------------------------------------------------------------------------------------------
