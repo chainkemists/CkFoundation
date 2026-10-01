@@ -8,6 +8,7 @@
 #include "CkEcsExt/SceneNode/CkSceneNode_Fragment.h"
 #include "CkEcsExt/SceneNode/CkSceneNode_Utils.h"
 #include "CkTimer/CkTimer_Utils.h"
+#include "CkTween/CkTween_Easing_Utils.h"
 #include "CkTween/CkTween_Fragment.h"
 
 #include "CkSpline/CkSpline_Utils.h"
@@ -485,6 +486,16 @@ auto
     -> float
 {
     return ck_tween_utils::DoGet_MaxTime(ck_tween_utils::DoResolve_ResidentChannels(InChannels));
+}
+
+auto
+    UCk_Utils_Tween_UE::
+    Get_EasedProgress(
+        ECk_TweenEasing InEasing,
+        FCk_FloatRange_0to1 InProgress)
+    -> float
+{
+    return UCk_Utils_TweenEasing_UE::Apply(InEasing, InProgress);
 }
 
 auto
