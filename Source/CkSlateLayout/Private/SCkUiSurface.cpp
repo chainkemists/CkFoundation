@@ -21,6 +21,7 @@
 #include "Misc/ScopeExit.h"
 #include "Styling/CoreStyle.h"
 #include "Styling/SlateBrush.h"
+#include "Types/SlateAttributeMetaData.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SSearchBox.h"
 #include "Widgets/Images/SImage.h"
@@ -36,6 +37,20 @@
 
 namespace ck_ui_surface
 {
+    auto NativeVisibility(const TWeakPtr<SWidget>& InNative) -> EVisibility
+    {
+        const TSharedPtr<SWidget> Native = InNative.Pin();
+        if (!Native.IsValid()) { return EVisibility::Collapsed; }
+        // A collapsed port skips its child during prepass. Refresh the child's
+        // visibility before mirroring it so the port can return to layout.
+        if (Native->HasRegisteredSlateAttribute() && Native->IsAttributesUpdatesEnabled())
+        {
+            FSlateAttributeMetaData::UpdateOnlyVisibilityAttributes(*Native,
+                FSlateAttributeMetaData::EInvalidationPermission::AllowInvalidationIfConstructed);
+        }
+        return Native->GetVisibility();
+    }
+
     // Native Slate parents measure bottom-up without a width constraint. Retain the
     // allotted width so their next prepass receives the authored content's wrapped height.
     class SCkUiRegion final : public SBox
@@ -1067,8 +1082,7 @@ auto FCkUiView::MakePort(const FCkUiNode& InNode, FStagedDocument& InOutStaged) 
     const auto Styled = ApplyStyle(InNode.Style, Port);
     Styled->SetVisibility(TAttribute<EVisibility>::CreateLambda([WeakNative = TWeakPtr<SWidget>(Native)]()
     {
-        const TSharedPtr<SWidget> Pinned = WeakNative.Pin();
-        return Pinned.IsValid() ? Pinned->GetVisibility() : EVisibility::Collapsed;
+        return ck_ui_surface::NativeVisibility(WeakNative);
     }));
     return Styled;
 }
@@ -2006,9 +2020,8 @@ auto FCkUiView::StageNode(const FCkUiNode& InNode, FStagedDocument& InOutStaged,
                 {
                     const TSharedPtr<FCkUiView> View = WeakView.Pin();
                     const TAttribute<bool>* Value = View.IsValid() ? View->_Data.Visibility.Find(Binding) : nullptr;
-                    const TSharedPtr<SWidget> Native = WeakNative.Pin();
                     if (Value == nullptr || !Value->Get(true)) { return EVisibility::Collapsed; }
-                    return Native.IsValid() ? Native->GetVisibility() : EVisibility::Collapsed;
+                    return ck_ui_surface::NativeVisibility(WeakNative);
                 }));
             }
             else
