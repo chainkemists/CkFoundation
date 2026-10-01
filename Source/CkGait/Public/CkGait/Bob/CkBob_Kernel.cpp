@@ -90,7 +90,9 @@ auto
     const auto A = InClock._Amount;
     const auto Sway = FMath::Sin(InClock._Phase);
     const auto Step = FMath::Abs(Sway);
-    const auto Breath = InSpec.Get_BreathCm() * FMath::Sin(InClock._BreathPhase) * (1.0f - A);
+    // Breath fades out as the stride fades in. Amount passes 1 above the reference speed, so the weight is clamped:
+    // at a sprint the breath is off, never inverted.
+    const auto Breath = InSpec.Get_BreathCm() * FMath::Sin(InClock._BreathPhase) * FMath::Max(1.0f - A, 0.0f);
 
     auto Target = FTarget{};
     Target._LocationCm = FVector{

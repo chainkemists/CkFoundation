@@ -88,6 +88,7 @@ Each frame `FProcessor_Gait_Update` samples one motion from the spec's movement 
 - `Phase = wrap2pi(Phase + 2pi x _StridesPerSecond x max(SpeedRatio, _MinCadenceScale) x dt)` (all `_Stride`): the clock keeps
   turning slowly at rest so the next step does not restart at a fixed phase
 - `BreathPhase = wrap2pi(BreathPhase + 2pi x dt / _BreathPeriodSeconds)`
+- a non-finite ground speed counts as 0 (the Update processor also ensures and samples rest motion)
 - no-op when dt is not positive or non-finite
 
 Landing edge (`ck::gait::Detect_Landing`): previous sample Airborne and current Grounded →
@@ -99,7 +100,7 @@ flag, so consumers and tests are immune to processor ordering: each consumer dif
 With `A = Amount`, `Step = |sin phase|`, `Sway = sin phase` from the gait clock:
 
 - stride location (rest frame, X fwd / Y right / Z up, cm), `Compute_StrideTarget` (amplitudes from `_Stride`):
-  `(_ForwardCm x A, _LateralCm x Sway x A, -_VerticalCm x Step x A + _BreathCm x sin(breathPhase) x (1 - A))`
+  `(_ForwardCm x A, _LateralCm x Sway x A, -_VerticalCm x Step x A + _BreathCm x sin(breathPhase) x max(1 - A, 0))`
 - stride rotation (Roll, Pitch, Yaw deg): `(_RollDeg x Sway x A, -_PitchDeg x Step x A, 0)` (`_Stride`)
 - vertical spring (`_Air._Spring`, an `FCk_Bob_SpringResponse { _FrequencyHz, _DampingRatio }`, `Step_Spring`): target =
   airborne ? `clamp(-VerticalSpeed x _Air._LiftCmPerFallSpeed, +-_Air._MaxLiftCm)` : 0 (`Compute_AirLiftTarget`); on

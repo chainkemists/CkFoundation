@@ -138,6 +138,10 @@ auto
                 Movement->Velocity,
                 Movement->IsFalling() ? ECk_Gait_Footing::Airborne : ECk_Gait_Footing::Grounded,
                 Movement->IsCrouching() ? ECk_Gait_Stance::Crouched : ECk_Gait_Stance::Standing};
+
+            CK_ENSURE_IF_NOT(NOT Movement->Velocity.ContainsNaN(),
+                TEXT("Gait [{}] sampled a non-finite velocity [{}]; the gait rests this frame"), InHandle, Movement->Velocity)
+            { Motion = gait::Get_RestMotion(); }
         }
         // else: a dead component after a valid Add means its owner went first in teardown; rest, no ensure.
     }
