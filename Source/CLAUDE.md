@@ -113,6 +113,7 @@ Before writing any code, navigate the documentation in this order:
 | a custom widget primitive, a Common* style, rasterize a widget, project to screen | `CkWidgets` |
 | drive a UMG widget from an entity's world transform (screen projection, clamping, distance scale/fade, occlusion) | `CkWorldSpaceWidget` (+ `UCk_WidgetComponent_UE` for the world-component path) |
 | dependency-gated loading screen | `CkLoadingScreen` (subsystem + `ICk_LoadingProcess` holders) |
+| hold the loading screen until PSOs are precached, PSO drain progress for a loading bar, runtime PSO hitch counts | `CkPso` (`UCk_Pso_Subsystem_UE` - an `ICk_LoadingProcess` holder; inert in the editor) |
 | Enhanced Input IMC lifecycle | `CkInput` |
 | query/remap/swap/reset player key bindings, detect conflicts, resolve a key's icon brush | `CkInput` — `UCk_Utils_KeyBinding_UE`, `UCk_KeyBinding_Subsystem`, `UCk_Utils_KeyIcon_UE` |
 | show an input-action key prompt that survives rebinds AND an unapplied Mapping Context | `CkUI` — `UCk_InputActionWidget_UE` |
@@ -131,7 +132,7 @@ Before writing any code, navigate the documentation in this order:
 
 ## Module tier table
 
-All **83 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29; CkRotateTowards added 2026-09-29), regenerated from every `Source/<Module>/<Module>.Build.cs` on
+All **84 non-editor modules** (CkVat added 2026-07-09; CkChain added 2026-09-29; CkDialog added 2026-07-23; CkVoiceChat added 2026-08-03; CkEntityVisualizer added 2026-08-04; CkDebugScene added 2026-08-17; CkSway added 2026-09-29; CkRotateTowards added 2026-09-29; CkPso added 2026-10-01), regenerated from every `Source/<Module>/<Module>.Build.cs` on
 2026-07-02. **Deps column = Ck-only** (Public + Private combined, `Ck` prefix stripped); engine
 modules are not listed. Tiers are semantic bands; a module may sit higher than its minimal depth,
 but **deps must never point to a higher band**. Editor/UncookedOnly modules are excluded (see T5).
@@ -168,6 +169,7 @@ but **deps must never point to a higher band**. Editor/UncookedOnly modules are 
 | CkInput | Core,Ecs,Log,Settings |
 | CkLabel | Core,Ecs,Log |
 | CkLoadingScreen | Core,Log,Settings |
+| CkPso | Core,LoadingScreen,Log,Settings (subsystem-shaped like CkLoadingScreen, no ECS quartet; engine deps RenderCore/RHI; added 2026-10-01) |
 | CkProvider | Core,Ecs,Log |
 | CkRecord | Core,Ecs,Label,Log |
 | CkResourceLoader | Core,Ecs,Log,Settings |

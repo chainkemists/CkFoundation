@@ -163,6 +163,8 @@ line also suppresses (non-Shipping, Lyra parity).
 
 - BusterBlock `docs/superpowers/notes/2026-07-08-loading-screen-system-plan.md` — the full system
   plan this module is Phase 1 of (game-side holders, MapDefinition travel wrapper, preload).
+- `Source/CkPso/Claude.md` - the PSO drain gate: an `ICk_LoadingProcess` holder that keeps this screen up
+  until pending PSO work drains (inert in the editor), plus PSO drain progress and gameplay hitch telemetry.
 
 ## CkSnapshot holds the screen for the whole of a load
 
