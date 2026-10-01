@@ -126,7 +126,10 @@ auto
     { return; }
 
     const auto& Stride = InSpec.Get_Stride();
-    const auto SpeedRatio = Compute_GroundSpeed(InMotion) / Stride.Get_ReferenceSpeed();
+
+    // A non-finite velocity is no motion: the clock eases to rest instead of poisoning Amount for good.
+    const auto GroundSpeed = Compute_GroundSpeed(InMotion);
+    const auto SpeedRatio = FMath::IsFinite(GroundSpeed) ? GroundSpeed / Stride.Get_ReferenceSpeed() : 0.0f;
     const auto StanceScale = InMotion.Get_Stance() == ECk_Gait_Stance::Crouched ? Stride.Get_CrouchScale() : 1.0f;
     const auto TargetAmount = FMath::Min(SpeedRatio, Stride.Get_MaxAmountScale()) * StanceScale;
 

@@ -34,7 +34,7 @@ namespace ck::gait
     /** Wraps into [0, 2pi). */
     CKGAIT_API auto Wrap_Phase(float InPhase) -> float;
 
-    /** Advances the clock by one sample: SpeedRatio, Amount toward min(ratio, max) x crouch, Phase at 2pi x strides x max(ratio, minCadence), Breath. No-op when InDeltaSeconds <= 0 or non-finite. */
+    /** Advances the clock by one sample: SpeedRatio, Amount toward min(ratio, max) x crouch, Phase at 2pi x strides x max(ratio, minCadence), Breath. A non-finite ground speed counts as 0. No-op when InDeltaSeconds <= 0 or non-finite. */
     CKGAIT_API auto Step_Clock(FClockState& InOutState, const FCk_Gait_Spec& InSpec, const FCk_Gait_Motion& InMotion, float InDeltaSeconds) -> void;
 
     /** Set, to the impact speed max(-InPrev.Velocity.Z, 0), exactly when InPrev is Airborne and InCurr is Grounded; unset otherwise. */

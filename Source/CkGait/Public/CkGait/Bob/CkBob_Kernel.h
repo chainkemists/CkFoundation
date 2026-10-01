@@ -32,7 +32,7 @@ namespace ck::bob
     /** Every tunable, not the gait: Get_IsStrideValid, Get_IsAirValid, LagRate/BreathCm/MaxOffsetCm finite and non-negative, Intensity in [0,1]. */
     CKGAIT_API auto Get_IsSpecValid(const FCk_Bob_Spec& InSpec) -> bool;
 
-    /** Stride shapes from the gait clock, WITHOUT spring and intensity: Step = |sin phase|, Sway = sin phase. */
+    /** Stride shapes from the gait clock, WITHOUT spring and intensity: Step = |sin phase|, Sway = sin phase. Breath is weighted by max(1 - Amount, 0): off, never inverted, once Amount passes 1. */
     CKGAIT_API auto Compute_StrideTarget(const FCk_Bob_Spec& InSpec, const gait::FClockState& InClock) -> FTarget;
 
     /** Airborne: clamp(-Velocity.Z * Air.LiftCmPerFallSpeed, +-Air.MaxLiftCm); Grounded: 0. */
