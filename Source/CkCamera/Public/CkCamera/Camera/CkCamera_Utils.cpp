@@ -88,7 +88,7 @@ auto
         auto Input = ck::camera::FPov_Input{};
         Input._AnchorTransform  = Director.Get<ck::FFragment_Transform>().Get_Transform();
         Input._World            = UCk_Utils_EntityLifetime_UE::Get_WorldForEntity(Director);
-        Input._TraceIgnoreActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor(Director);
+        Input._TraceIgnoreActor = UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(Director);
 
         ck::camera::FPov::Run(Current.Get_ComposedProfile(), Input, Pov._PovState);
 
@@ -182,6 +182,15 @@ auto
     -> FCk_Handle_Transform
 {
     return InCamera.Get<ck::FFragment_Camera>().Get_ViewAnchor();
+}
+
+auto
+    UCk_Utils_Camera_UE::
+    Get_OwningActor(
+        const FCk_Handle_Camera& InCamera)
+    -> AActor*
+{
+    return UCk_Utils_OwningActor_UE::TryGet_EntityOwningActor_Recursive(InCamera);
 }
 
 auto

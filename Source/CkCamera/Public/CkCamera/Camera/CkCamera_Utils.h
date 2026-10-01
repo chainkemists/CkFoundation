@@ -269,6 +269,16 @@ public:
     Get_ViewAnchor(
         const FCk_Handle_Camera& InCamera);
 
+    // The actor the director treats as its own: the collision trace ignores it and, with
+    // _DriveControllerControlRotation, its LOCAL player controller receives the view rotation. Resolved up the
+    // entity's ownership chain, so a director on a child transform entity (e.g. a head node) still finds its pawn.
+    UFUNCTION(BlueprintPure,
+              Category = "Ck|Utils|Camera",
+              DisplayName = "[Ck][Camera] Get Owning Actor")
+    static AActor*
+    Get_OwningActor(
+        const FCk_Handle_Camera& InCamera);
+
     // The resolved camera view rotation (this frame's composed POV).
     UFUNCTION(BlueprintPure,
               Category = "Ck|Utils|Camera",
