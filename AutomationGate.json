@@ -1,0 +1,15 @@
+{
+  "_about": [
+    "Known reds for THIS plugin's tests (UnrealToolbox v1.52+ reads this file in every project that contains the plugin). Only reds reproduced in the Ck home project (CkPlugins) belong here; a red that only one host shows stays in that host's own AutomationGate.json with the host coupling named.",
+    "Seeding rule: red = red in two full gates on one build AND red when run alone; flaky = red in at least one gate and green alone. Remove an entry in the PR that fixes the test."
+  ],
+  "knownReds": [
+    {
+      "test": "Ck.Particles.PrewarmTemplates",
+      "status": "red",
+      "reason": "Editor died mid-test in a gate. (no Error line captured; see gate log)",
+      "evidence": "CkPlugins feature/automation-gate-known-reds (CkFoundation 5c5a61d33, CkTests 096ccb07, CkGameplayDebugger 243c0cd4 = their dev tips), UnrealToolbox v1.51, 2 full raw gates on one build 2026-10-01 (G1 3966 run/47 red, G2 3966/49) + a solo fresh-boot run: gates FF, solo RED",
+      "added": "2026-10-01"
+    }
+  ]
+}
