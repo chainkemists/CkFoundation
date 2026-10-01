@@ -356,6 +356,13 @@ auto
         return Found->Value;
     }
 
+    // A non-finite scale would poison the renderer's MaxThickness and blank every outline in the world.
+    const auto ThicknessScaleIsValid = FMath::IsFinite(InPreset->_ThicknessScale) && InPreset->_ThicknessScale >= 0.0f;
+    CK_ENSURE_IF_NOT(ThicknessScaleIsValid,
+        TEXT("Outline preset [{}]: thickness scale [{}] must be finite and non-negative; outline not assigned"),
+        GetNameSafe(InPreset), InPreset->_ThicknessScale)
+    { return 0; }
+
     TSet<uint8> UsedStencilValues;
     for (const auto& Active : _ActivePresets)
     { UsedStencilValues.Add(Active.Value.Value); }
@@ -399,6 +406,7 @@ auto
     {
         _LutData[kLutRow_Outline * kLutWidth + Slot] = FFloat16Color(FLinearColor::Black);
         _LutData[kLutRow_Fill * kLutWidth + Slot] = FFloat16Color(FLinearColor(0.0f, 0.0f, 0.0f, 0.0f));
+        _SlotThicknessScales[Slot] = 0.0f;
         DoUpload_Lut();
     }
 }
@@ -446,6 +454,7 @@ auto
 
     _LutData[kLutRow_Outline * kLutWidth + InSlot] = FFloat16Color(OutlineColor);
     _LutData[kLutRow_Fill * kLutWidth + InSlot] = FFloat16Color(FillColor);
+    _SlotThicknessScales[InSlot] = InPreset->_ThicknessScale;
 }
 
 auto
@@ -458,10 +467,15 @@ auto
     State.StencilMin = _StencilMin;
     State.WorldSpace = _ThicknessSettings.Get_Space() == ECk_Usf_OutlineThicknessSpace::WorldSpace;
     State.SquareCorners = _ThicknessSettings.Get_SquareCorners();
-    State.Thickness = State.WorldSpace ? _ThicknessSettings.Get_WorldSpaceThickness() :
+    const auto BaseThickness = State.WorldSpace ? _ThicknessSettings.Get_WorldSpaceThickness() :
         _ThicknessSettings.Get_ScreenSpaceThickness();
     for (const auto& Active : _ActivePresets)
-    { State.ActiveMask |= 1u << (Active.Value.Value - _StencilMin); }
+    {
+        const auto Slot = Active.Value.Value - _StencilMin;
+        State.ActiveMask |= 1u << Slot;
+        State.Thickness[Slot] = BaseThickness * _SlotThicknessScales[Slot];
+        State.MaxThickness = FMath::Max(State.MaxThickness, State.Thickness[Slot]);
+    }
     for (auto Index = 0; Index < kLutWidth; ++Index)
     {
         const auto Outline = _LutData[kLutRow_Outline * kLutWidth + Index].GetFloats();

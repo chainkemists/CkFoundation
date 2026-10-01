@@ -10,7 +10,8 @@ uint ActiveMask;
 uint StencilMin;
 uint WorldSpace;
 uint SquareCorners;
-float Thickness;
+float4 Thicknesses[4];  // per stencil slot, packed four to a register
+float MaxThickness;     // widest ACTIVE slot: the search bound must cover every slot it may find
 uint DebugMode;
 int2 HierarchySize;
 int2 ColorMin;
@@ -30,6 +31,12 @@ bool Active(uint stencil)
 {
     if (stencil < StencilMin || stencil >= StencilMin + 16) { return false; }
     return (ActiveMask & (1u << (stencil - StencilMin))) != 0;
+}
+
+float SlotThickness(uint stencil)
+{
+    uint slot = stencil - StencilMin;
+    return Thicknesses[slot >> 2][slot & 3];
 }
 
 float2 BufferUV(int2 pixel)
@@ -146,7 +153,8 @@ void CompositeCS(uint3 id : SV_DispatchThreadID)
         float lowerDistance = Metric(delta * scale);
         // Conservative pixel-space radius bound also includes outer-edge AA. minDepth gives
         // the largest projected radius in this node, never a smaller-than-actual search region.
-        float maxRadius = (Thickness + 0.5 * max(scale.x, scale.y)) / min(scale.x, scale.y);
+        // A node does not know its stencils, so the bound takes the widest active slot.
+        float maxRadius = (MaxThickness + 0.5 * max(scale.x, scale.y)) / min(scale.x, scale.y);
         bool visit = minDepth < EmptyDepth && lowerDistance <= best && Metric(delta) <= maxRadius;
         if (visit && level > 0)
         {
@@ -161,8 +169,8 @@ void CompositeCS(uint3 id : SV_DispatchThreadID)
             float gradient = SquareCorners != 0
                 ? (delta.x * scale.x >= delta.y * scale.y ? scale.x : scale.y)
                 : length(delta * scale * scale) / max(distance, 1e-30);
-            float alpha = saturate((Thickness - distance) / gradient + 0.5);
             uint stencil = ReadStencil(node);
+            float alpha = saturate((SlotThickness(stencil) - distance) / gradient + 0.5);
             float centerDistance = dot(float2(node) - pixel, float2(node) - pixel);
             float depth = CalcSceneCustomDepth(BufferUV(node));
             bool better = distance < best || (distance == best && (centerDistance < bestCenter ||
