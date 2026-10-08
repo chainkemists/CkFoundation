@@ -10,10 +10,26 @@ Module doc: `Source/CkPso/Claude.md`. Engine research for P2: `P2_WARMUP_RESEARC
 |---|---|---|
 | P1 drain gate, progress, hitch telemetry | Implemented; editor-side gate run | see "Gate" below |
 | P3 miss-log parser (pure text → record) | Implemented and unit-tested; nothing consumes it yet | `Ck.Pso.MissLogParser.*` 14/14 |
-| Measurement stop | **Next. Neil's step** — packaged BusterBlock run | not started |
+| Port onto the CommitAndChill history | **Next, once the adoption is submitted** — see "Parked 2026-10-02" | not started |
+| Measurement stop | Parked behind the port; runbook written, not run | `CONTINUATION_PROMPT_CkPsoMeasurement.md` |
 | P2 manifest warm-up | Research only (`P2_WARMUP_RESEARCH.md`); scope waits on the measurement | — |
 | P3 capture device, miss report, debugger tab | Not started | — |
 | BusterBlock adoption | Separate follow-up | — |
+
+## Parked 2026-10-02
+
+No code changed, nothing built, nothing pushed on 2026-10-02. The session was planning and read-only recon.
+
+- `feature/ck-pso` is based on chainkemists dev `faa395509`. BusterBlock is moving its CkFoundation and CkTests
+  submodules to CommitAndChill, whose history is rewritten and shares no merge-base with `faa395509`. That adoption
+  (BusterBlock branch `feature/ckf-rename-adoption-cnc`) is unsubmitted work in another conversation.
+- Neil's call: wait for the adoption to be submitted and the machine to go quiet, then port CkPso onto the new
+  history, gate it in the editor there, and measure the game from the post-adoption line.
+- Push and PRs stay on hold; the PR target now depends on where the adoption lands.
+- The runbook (three runs, flags, what each outcome decides) and the recon facts are in the continuation prompt
+  beside this file and in the parked plan `C:\Users\neilj\.claude\plans\pasted-content-id-26ee-start-with-glimmering-leaf.md`.
+- Read against engine 5.7.4, not yet compiled: every symbol the `PSO_PRECACHING_VALIDATE` branch uses exists with
+  the signature CkPso expects (`PSOPrecacheValidation.h:81,162,225-228,244,327`).
 
 ## What P1 is
 
@@ -75,8 +91,14 @@ build is its first compile.
    CkIskmRenderer batched clusters (`CkIskmVF4/8` lack `SupportsPSOPrecaching` and a collector), CkPmg procedural
    meshes, the CkPixelArtRenderer upscaler, and the CkUsf outline compute shaders. Details and citations in
    `P2_WARMUP_RESEARCH.md` §6. Confirmed by reading code, not observed in a packaged run.
+   **Correction (2026-10-02):** §6 calls the CkUsf outline compute shaders a miss because
+   `r.PSOPrecache.GlobalShaders` is 0. It is 1 on Windows (`Engine/Config/Windows/BaseWindowsEngine.ini:26`), so
+   that row is unproven either way; the measurement's miss list decides it. §6 itself is not yet edited.
 3. P3 remainder: capture `FOutputDevice`, miss report, debugger surface. The parser reports blocks it recognises but
    cannot decode as unset; the capture layer must count and surface those (engine format drift would otherwise read
    as "0 misses").
 4. Progress ratio stays at 100% if a window re-opens. Knob: `DoUpdate_ProgressRatio` in `CkPso_DrainTracker.cpp`.
 5. Host-side, not CkPso: the `GetRestoredDimensions` headless crash, and the order-dependent Crowd AutoTest above.
+6. Port `feature/ck-pso` (CkFoundation and CkTests) onto the CommitAndChill history. Outside `Source/CkPso/` the two
+   code commits touch only `CkFoundation.uplugin`, `Source/CLAUDE.md` and `Source/CkLoadingScreen/Claude.md`; the
+   rename may also have touched CkCore / CkLoadingScreen identifiers CkPso includes — not yet checked on that history.
